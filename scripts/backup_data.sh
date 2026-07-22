@@ -148,7 +148,6 @@ restore() {
   sed -i "s|/home/$BIRDNET_USER/|/home/$CURRENT_BIRDNET_USER/|g" "/home/$CURRENT_BIRDNET_USER/BirdNET-Pi/birdnet.conf"
   /home/$CURRENT_BIRDNET_USER/BirdNET-Pi/scripts/install_language_label.sh
   rm -fr ${UNPACK}
-  [ -n "${CADDY_PWD}" ] && sudo /usr/local/bin/update_caddyfile.sh > /dev/null 2>&1
   log "Restore done"
 }
 

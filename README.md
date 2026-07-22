@@ -46,15 +46,13 @@ Check out birds from around the world
 * **Live audio stream and spectrogram**
 * **Automatic disk space management** that periodically purges old audio files
 * [BirdWeather](https://app.birdweather.com) integration -- you can request a BirdWeather ID from BirdNET-Pi's "Tools" > "Settings" page
-* Web interface access to all data and logs provided by [Caddy](https://caddyserver.com)
-* [GoTTY](https://github.com/yudai/gotty) and [GoTTY x86](https://github.com/sorenisanerd/gotty) Web Terminal
-* [Tiny File Manager](https://tinyfilemanager.github.io/)
 * FTP server included
 * SQLite3 Database
-* [Adminer](https://www.adminer.org/) database maintenance
-* [phpSysInfo](https://github.com/phpsysinfo/phpsysinfo)
 * [Apprise Notifications](https://github.com/caronc/apprise) supporting 90+ notification platforms
 * Localization supported
+
+## Web UI
+This fork's web interface lives entirely in [`web-ui/`](web-ui/), a TanStack Start application. The legacy PHP dashboard, Streamlit stats page, GoTTY web terminal, Adminer, and phpSysInfo from upstream BirdNET-Pi have been removed.
 
 ## Requirements
 * A Raspberry Pi 5, Raspberry 4B, Raspberry Pi 400, Raspberry Pi 3B+, or Raspberry Pi 0W2 (The 3B+ and 0W2 must run on RaspiOS-ARM64-**Lite**)
@@ -78,8 +76,6 @@ The installation creates a log in `$HOME/installation-$(date "+%F").txt`.
 ## Access
 The BirdNET-Pi can be accessed from any web browser on the same network:
 - http://birdnetpi.local OR your Pi's IP address
-- Default Basic Authentication Username: birdnet
-- Password is empty by default. Set this in "Tools" > "Settings" > "Advanced Settings"
 
 Please take a look at the [wiki](https://github.com/mcguirepr89/BirdNET-Pi/wiki) and [discussions](https://github.com/mcguirepr89/BirdNET-Pi/discussions) for information on
 - [BirdNET-Pi's Deep Convolutional Neural Network(s)](https://github.com/mcguirepr89/BirdNET-Pi/wiki/BirdNET-Pi:-some-theory-on-classification-&-some-practical-hints)

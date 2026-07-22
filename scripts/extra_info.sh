@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#Display network info for phpsysinfo
+#Display network and system info
 
 echo "........................................IPs....................................."
 echo "LAN IP: $(hostname -I|cut -d' ' -f1)"
@@ -64,7 +64,5 @@ if which vcgencmd &>/dev/null ; then
     echo -e "${i}:\t$(sudo -u$USER vcgencmd measure_volts ${i})"
   done
 fi
-echo ".....................................Caddyfile.................................."
-cat /etc/caddy/Caddyfile
 echo ".................................... Crontab...................................."
 cat /etc/crontab | grep -ve '^#'

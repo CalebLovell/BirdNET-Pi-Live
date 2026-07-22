@@ -18,12 +18,7 @@ for i in "${services[@]}";do
 done
 
 # Create password-removed birdnet.conf
-sed -e '/PWD=/d' ${HOME}/BirdNET-Pi/birdnet.conf > ${LOG_DIR}/birdnet.conf 
-
-# Create password-removed Caddyfile
-if [ -f /etc/caddy/Caddyfile ];then
-  sed -e '/basicauth/,+2d' /etc/caddy/Caddyfile > ${LOG_DIR}/Caddyfile
-fi  
+sed -e '/PWD=/d' ${HOME}/BirdNET-Pi/birdnet.conf > ${LOG_DIR}/birdnet.conf
 
 # Get sound card specs
 SOUND_CARD="$(aplay -L \

@@ -12,12 +12,9 @@ export HOME=$HOME
 export PYTHON_VIRTUAL_ENV="$HOME/BirdNET-Pi/birdnet/bin/python3"
 
 install_depends() {
-  apt install -y debian-keyring debian-archive-keyring apt-transport-https
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --yes --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
-  curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
   apt -qqq update && apt -qqy upgrade
   echo "icecast2 icecast2/icecast-setup boolean false" | debconf-set-selections
-  apt install --no-install-recommends -qqy caddy sqlite3 php-sqlite3 php-fpm php-curl php-xml php-zip php-mbstring php icecast2 \
+  apt install --no-install-recommends -qqy sqlite3 icecast2 \
     pulseaudio avahi-utils sox libsox-fmt-mp3 alsa-utils ffmpeg \
     wget curl unzip bc \
     python3-pip python3-venv lsof net-tools inotify-tools
@@ -31,7 +28,7 @@ set_hostname() {
 }
 
 update_etc_hosts() {
-  sed -ie s/'$(hostname).local'/"$(hostname).local ${BIRDNETPI_URL//https:\/\/} ${WEBTERMINAL_URL//https:\/\/} ${BIRDNETLOG_URL//https:\/\/}"/g /etc/hosts
+  sed -ie s/'$(hostname).local'/"$(hostname).local ${BIRDNETPI_URL//https:\/\/}"/g /etc/hosts
 }
 
 install_scripts() {
@@ -68,21 +65,6 @@ create_necessary_dirs() {
   sudo -u ${USER} ln -fs $my_dir/confirmed_species_list.txt $my_dir/scripts
   sudo -u ${USER} ln -fs $my_dir/include_species_list.txt $my_dir/scripts
   sudo -u ${USER} ln -fs $my_dir/whitelist_species_list.txt $my_dir/scripts
-  sudo -u ${USER} ln -fs $my_dir/homepage/* ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/model/labels.txt ${my_dir}/scripts
-  sudo -u ${USER} ln -fs $my_dir/scripts ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/scripts/play.php ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/scripts/spectrogram.php ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/scripts/overview.php ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/scripts/stats.php ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/scripts/todays_detections.php ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/scripts/history.php ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/scripts/weekly_report.php ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/homepage/images/favicon.ico ${EXTRACTED}
-  sudo -u ${USER} ln -fs ${HOME}/phpsysinfo ${EXTRACTED}
-  sudo -u ${USER} ln -fs $my_dir/templates/phpsysinfo.ini ${HOME}/phpsysinfo/
-  sudo -u ${USER} ln -fs $my_dir/templates/green_bootstrap.css ${HOME}/phpsysinfo/templates/
-  sudo -u ${USER} ln -fs $my_dir/templates/index_bootstrap.html ${HOME}/phpsysinfo/templates/html
   sudo -u ${USER} ln -sf $my_dir/model/labels_nm/labels_en.txt $my_dir/model/labels_flickr.txt
   chmod -R g+rw $my_dir
   chmod -R g+rw ${RECS_DIR}
@@ -149,74 +131,6 @@ EOF
   ln -sf $HOME/BirdNET-Pi/templates/custom_recording.service /usr/lib/systemd/system
 }
 
-install_Caddyfile() {
-  [ -d /etc/caddy ] || mkdir /etc/caddy
-  if [ -f /etc/caddy/Caddyfile ];then
-    cp /etc/caddy/Caddyfile{,.original}
-  fi
-  if ! [ -z ${CADDY_PWD} ];then
-  HASHWORD=$(caddy hash-password --plaintext ${CADDY_PWD})
-  cat << EOF > /etc/caddy/Caddyfile
-http:// ${BIRDNETPI_URL} {
-  root * ${EXTRACTED}
-  file_server browse
-  handle /By_Date/* {
-    file_server browse
-  }
-  handle /Charts/* {
-    file_server browse
-  }
-  basicauth /views.php?view=File* {
-    birdnet ${HASHWORD}
-  }
-  basicauth /Processed* {
-    birdnet ${HASHWORD}
-  }
-  basicauth /scripts* {
-    birdnet ${HASHWORD}
-  }
-  basicauth /stream {
-    birdnet ${HASHWORD}
-  }
-  basicauth /phpsysinfo* {
-    birdnet ${HASHWORD}
-  }
-  basicauth /terminal* {
-    birdnet ${HASHWORD}
-  }
-  reverse_proxy /stream localhost:8000
-  php_fastcgi unix//run/php/php-fpm.sock
-  reverse_proxy /log* localhost:8080
-  reverse_proxy /stats* localhost:8501
-  reverse_proxy /terminal* localhost:8888
-}
-EOF
-  else
-    cat << EOF > /etc/caddy/Caddyfile
-http:// ${BIRDNETPI_URL} {
-  root * ${EXTRACTED}
-  file_server browse
-  handle /By_Date/* {
-    file_server browse
-  }
-  handle /Charts/* {
-    file_server browse
-  }
-  reverse_proxy /stream localhost:8000
-  php_fastcgi unix//run/php/php-fpm.sock
-  reverse_proxy /log* localhost:8080
-  reverse_proxy /stats* localhost:8501
-  reverse_proxy /terminal* localhost:8888
-}
-EOF
-  fi
-
-  systemctl enable caddy
-  usermod -aG $USER caddy
-  usermod -aG video caddy
-  chmod g+r+x $HOME
-}
-
 install_avahi_aliases() {
   cat << 'EOF' > $HOME/BirdNET-Pi/templates/avahi-alias@.service
 [Unit]
@@ -233,27 +147,7 @@ WantedBy=multi-user.target
 EOF
   ln -sf $HOME/BirdNET-Pi/templates/avahi-alias@.service /usr/lib/systemd/system
   systemctl enable avahi-alias@"$(hostname)".local.service
-  # symbolic link does not work here, so just copy
-  cp -f $HOME/BirdNET-Pi/templates/http.service /etc/avahi/services/
   systemctl restart avahi-daemon.service
-}
-
-install_birdnet_stats_service() {
-  cat << EOF > $HOME/BirdNET-Pi/templates/birdnet_stats.service
-[Unit]
-Description=BirdNET Stats
-[Service]
-Restart=on-failure
-RestartSec=5
-Type=simple
-User=${USER}
-ExecStart=$HOME/BirdNET-Pi/birdnet/bin/streamlit run $HOME/BirdNET-Pi/scripts/plotly_streamlit.py --browser.gatherUsageStats false --server.address localhost --server.baseUrlPath "/stats"
-
-[Install]
-WantedBy=multi-user.target
-EOF
-  ln -sf $HOME/BirdNET-Pi/templates/birdnet_stats.service /usr/lib/systemd/system
-  systemctl enable birdnet_stats.service
 }
 
 install_spectrogram_service() {
@@ -271,77 +165,6 @@ WantedBy=multi-user.target
 EOF
   ln -sf $HOME/BirdNET-Pi/templates/spectrogram_viewer.service /usr/lib/systemd/system
   systemctl enable spectrogram_viewer.service
-}
-
-install_chart_viewer_service() {
-  echo "Installing the chart_viewer.service"
-  cat << EOF > $HOME/BirdNET-Pi/templates/chart_viewer.service
-[Unit]
-Description=BirdNET-Pi Chart Viewer Service
-[Service]
-Restart=always
-RestartSec=120
-Type=simple
-User=$USER
-ExecStart=$PYTHON_VIRTUAL_ENV /usr/local/bin/daily_plot.py --daemon --sleep 2
-[Install]
-WantedBy=multi-user.target
-EOF
-  ln -sf $HOME/BirdNET-Pi/templates/chart_viewer.service /usr/lib/systemd/system
-  systemctl enable chart_viewer.service
-}
-
-install_gotty_logs() {
-  sudo -u ${USER} ln -sf $my_dir/templates/gotty \
-    ${HOME}/.gotty
-  sudo -u ${USER} ln -sf $my_dir/templates/bashrc \
-    ${HOME}/.bashrc
-  cat << EOF > $HOME/BirdNET-Pi/templates/birdnet_log.service
-[Unit]
-Description=BirdNET Analysis Log
-[Service]
-Restart=on-failure
-RestartSec=3
-Type=simple
-User=${USER}
-Environment=TERM=xterm-256color
-ExecStart=/usr/local/bin/gotty --address localhost -p 8080 --path log --title-format "BirdNET-Pi Log" birdnet_log.sh
-[Install]
-WantedBy=multi-user.target
-EOF
-  ln -sf $HOME/BirdNET-Pi/templates/birdnet_log.service /usr/lib/systemd/system
-  systemctl enable birdnet_log.service
-  cat << EOF > $HOME/BirdNET-Pi/templates/web_terminal.service
-[Unit]
-Description=BirdNET-Pi Web Terminal
-[Service]
-Restart=on-failure
-RestartSec=3
-Type=simple
-User=${USER}
-Environment=TERM=xterm-256color
-ExecStart=/usr/local/bin/gotty --address localhost -w -p 8888 --path terminal --title-format "BirdNET-Pi Terminal" bash -c 'read -p "Login: " username && [[ "\$username" =~ ^[-_.a-z0-9]{1,30}$ ]] && su --pty -l \$username'
-[Install]
-WantedBy=multi-user.target
-EOF
-  ln -sf $HOME/BirdNET-Pi/templates/web_terminal.service /usr/lib/systemd/system
-  systemctl enable web_terminal.service
-}
-
-configure_caddy_php() {
-  echo "Configuring PHP for Caddy"
-  sed -i 's/www-data/caddy/g' /etc/php/*/fpm/pool.d/www.conf
-  systemctl restart php\*-fpm.service
-  echo "Adding Caddy sudoers rule"
-  cat << EOF > /etc/sudoers.d/010_caddy-nopasswd
-caddy ALL=(ALL) NOPASSWD: ALL
-EOF
-  chmod 0440 /etc/sudoers.d/010_caddy-nopasswd
-}
-
-install_phpsysinfo() {
-  sudo -u ${USER} git clone https://github.com/phpsysinfo/phpsysinfo.git \
-    ${HOME}/phpsysinfo
 }
 
 config_icecast() {
@@ -381,25 +204,12 @@ install_cleanup_cron() {
   sed "s/\$USER/$USER/g" $my_dir/templates/cleanup.cron >> /etc/crontab
 }
 
-install_weekly_cron() {
-  sed "s/\$USER/$USER/g" $my_dir/templates/weekly_report.cron >> /etc/crontab
-}
-
 install_automatic_update_cron() {
   sed "s/\$USER/$USER/g" $my_dir/templates/automatic_update.cron >> /etc/crontab
 }
 
 chown_things() {
   chown -R $USER:$USER $HOME/Bird*
-}
-
-increase_caddy_timeout() {
-  mkdir /etc/systemd/system/caddy.service.d
-  cat << EOF > /etc/systemd/system/caddy.service.d/override.conf
-[Service]
-TimeoutSec=300s
-EOF
-  systemctl daemon-reload
 }
 
 install_services() {
@@ -410,26 +220,18 @@ install_services() {
 
   install_depends
   install_scripts
-  install_Caddyfile
   install_avahi_aliases
   install_birdnet_analysis
-  install_birdnet_stats_service
   install_recording_service
   install_custom_recording_service # But does not enable
   install_spectrogram_service
-  install_chart_viewer_service
-  install_gotty_logs
-  install_phpsysinfo
   install_livestream_service
   install_birdnet_mount
   install_cleanup_cron
-  install_weekly_cron
   install_automatic_update_cron
-  increase_caddy_timeout
 
   create_necessary_dirs
   generate_BirdDB
-  configure_caddy_php
   config_icecast
   USER=$USER HOME=$HOME ${my_dir}/scripts/createdb.sh
 }

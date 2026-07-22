@@ -53,16 +53,6 @@ DATA_MODEL_VERSION=1
 
 BIRDWEATHER_ID=
 
-#-----------------------  Web Interface User Password  ------------------------#
-#____________________The variable below sets the 'birdnet'_____________________#
-#___________________user password for the Live Audio Stream,___________________#
-#_________________Tools, System Links, and the Processed files ________________#
-
-## CADDY_PWD is the plaintext password (that will be hashed) and used to access
-## certain parts of the web interface
-
-CADDY_PWD=
-
 #-------------------------  Live Audio Stream  --------------------------------#
 #_____________The variable below configures/enables the live___________________#
 #_____________________________audio stream.____________________________________#
@@ -74,7 +64,7 @@ CADDY_PWD=
 
 ICE_PWD=birdnetpi
 
-#-----------------------  Web-hosting/Caddy File-server -----------------------#
+#-------------------------------  Web-hosting  ---------------------------------#
 #_______The three variables below can be set to enable internet access_________#
 #____________to your data,(e.g., extractions, raw data, live___________________#
 #______________audio stream, BirdNET.selection.txt files)______________________#
