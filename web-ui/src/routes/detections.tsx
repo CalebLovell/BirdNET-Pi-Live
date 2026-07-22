@@ -48,11 +48,15 @@ function Detections() {
 								<TableRow
 									key={`${detection.Date}-${detection.Time}-${detection.File_Name}`}
 								>
-									<TableCell>{detection.Date}</TableCell>
-									<TableCell>{detection.Time}</TableCell>
+									<TableCell className="tabular-data">
+										{detection.Date}
+									</TableCell>
+									<TableCell className="tabular-data">
+										{detection.Time}
+									</TableCell>
 									<TableCell>{detection.Com_Name}</TableCell>
 									<TableCell className="italic">{detection.Sci_Name}</TableCell>
-									<TableCell className="text-right">
+									<TableCell className="tabular-data text-right">
 										{detection.Confidence == null
 											? "—"
 											: `${Math.round(detection.Confidence * 100)}%`}

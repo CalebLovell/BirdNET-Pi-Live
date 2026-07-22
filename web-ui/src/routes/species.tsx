@@ -48,9 +48,13 @@ function Species() {
 								<TableRow key={s.comName}>
 									<TableCell>{s.comName}</TableCell>
 									<TableCell className="italic">{s.sciName}</TableCell>
-									<TableCell>{s.lastDetected}</TableCell>
+									<TableCell className="tabular-data">
+										{s.lastDetected}
+									</TableCell>
 									<TableCell className="text-right">
-										<Badge variant="secondary">{s.count}</Badge>
+										<Badge variant="secondary" className="tabular-data">
+											{s.count}
+										</Badge>
 									</TableCell>
 								</TableRow>
 							))
