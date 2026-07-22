@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
 	ArrowDownAZ,
 	Binoculars,
@@ -11,6 +11,7 @@ import {
 	Play,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { z } from "zod";
 
 import { Button } from "#/components/ui/button.tsx";
 import { Input } from "#/components/ui/input.tsx";
@@ -25,20 +26,42 @@ import {
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group.tsx";
 import { getLifeListCards, type LifeListCard } from "#/lib/detections.ts";
 
+const SORT_KEYS = ["count", "recent", "alpha"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+
+const DEFAULT_SEARCH = { q: "", sort: "count" as SortKey, page: 1 };
+
+// Search/sort/page all live in the URL (not component state), so filtering
+// is shareable/bookmarkable and survives back/forward navigation.
+const speciesSearchSchema = z.object({
+	q: z.string().default(DEFAULT_SEARCH.q).catch(DEFAULT_SEARCH.q),
+	sort: z
+		.enum(SORT_KEYS)
+		.default(DEFAULT_SEARCH.sort)
+		.catch(DEFAULT_SEARCH.sort),
+	page: z
+		.number()
+		.int()
+		.min(1)
+		.default(DEFAULT_SEARCH.page)
+		.catch(DEFAULT_SEARCH.page),
+});
+
 export const Route = createFileRoute("/species")({
+	validateSearch: speciesSearchSchema,
+	search: {
+		middlewares: [stripSearchParams(DEFAULT_SEARCH)],
+	},
 	component: Species,
 	loader: () => getLifeListCards(),
 });
-
-type SortKey = "count" | "recent" | "alpha";
 
 const PAGE_SIZE = 24;
 
 function Species() {
 	const cards = Route.useLoaderData();
-	const [search, setSearch] = useState("");
-	const [sort, setSort] = useState<SortKey>("count");
-	const [page, setPage] = useState(1);
+	const { q: search, sort, page } = Route.useSearch();
+	const navigate = Route.useNavigate();
 
 	const filtered = useMemo(() => {
 		const query = search.trim().toLowerCase();
@@ -79,8 +102,9 @@ function Species() {
 					value={sort}
 					onValueChange={(value) => {
 						if (!value) return;
-						setSort(value as SortKey);
-						setPage(1);
+						navigate({
+							search: (prev) => ({ ...prev, sort: value as SortKey, page: 1 }),
+						});
 					}}
 				>
 					<ToggleGroupItem value="count">
@@ -100,8 +124,8 @@ function Species() {
 					placeholder="Search species..."
 					value={search}
 					onChange={(e) => {
-						setSearch(e.target.value);
-						setPage(1);
+						const value = e.target.value;
+						navigate({ search: (prev) => ({ ...prev, q: value, page: 1 }) });
 					}}
 					className="sm:max-w-xs"
 				/>
@@ -127,7 +151,12 @@ function Species() {
 								href="#"
 								onClick={(e) => {
 									e.preventDefault();
-									setPage((p) => Math.max(1, p - 1));
+									navigate({
+										search: (prev) => ({
+											...prev,
+											page: Math.max(1, currentPage - 1),
+										}),
+									});
 								}}
 								className={
 									currentPage === 1 ? "pointer-events-none opacity-50" : ""
@@ -141,7 +170,7 @@ function Species() {
 									isActive={p === currentPage}
 									onClick={(e) => {
 										e.preventDefault();
-										setPage(p);
+										navigate({ search: (prev) => ({ ...prev, page: p }) });
 									}}
 								>
 									{p}
@@ -153,7 +182,12 @@ function Species() {
 								href="#"
 								onClick={(e) => {
 									e.preventDefault();
-									setPage((p) => Math.min(pageCount, p + 1));
+									navigate({
+										search: (prev) => ({
+											...prev,
+											page: Math.min(pageCount, currentPage + 1),
+										}),
+									});
 								}}
 								className={
 									currentPage === pageCount
