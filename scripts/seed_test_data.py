@@ -6,18 +6,33 @@ clustering, a mix of common/rare species, and a handful of detections in
 the last hour so "today"/"last hour" stats aren't empty. Matches the exact
 schema scripts/createdb.sh creates.
 
+Also generates one placeholder audio clip per species (for its most recent
+detection) at BirdNET-Pi's real extraction path, so web-ui's play button
+has something real to play locally -- the same BIRDNET_EXTRACTED_DIR
+default web-ui itself uses.
+
 Usage:
-    python3 scripts/seed_test_data.py            # wipes and reseeds
-    python3 scripts/seed_test_data.py --append    # adds on top of existing rows
-    python3 scripts/seed_test_data.py --days 14   # shorter history
+    python3 scripts/seed_test_data.py              # wipes and reseeds
+    python3 scripts/seed_test_data.py --append      # adds on top of existing rows
+    python3 scripts/seed_test_data.py --days 14     # shorter history
+    python3 scripts/seed_test_data.py --no-audio    # skip placeholder audio clips
 """
 import argparse
+import math
 import os
 import random
 import sqlite3
+import struct
+import wave
 from datetime import datetime, timedelta
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'birds.db')
+
+# Mirrors web-ui's default BIRDNET_EXTRACTED_DIR: BirdSongs lives as a
+# sibling of the BirdNET-Pi checkout, never inside the repo itself.
+DEFAULT_EXTRACTED_DIR = os.path.normpath(
+    os.path.join(os.path.dirname(__file__), '..', '..', 'BirdSongs', 'Extracted')
+)
 
 # (common_name, scientific_name, relative frequency weight)
 REGULAR_SPECIES = [
@@ -154,12 +169,74 @@ def generate_rows(days: int):
     return rows
 
 
+def write_placeholder_wav(path: str, seed_text: str, duration: float = 1.2, framerate: int = 22050):
+    """Writes a short synthesized tone, distinct per species, so the
+    web-ui's play button has something real to play during local dev."""
+    freq = 350 + (abs(hash(seed_text)) % 700)
+    frame_count = int(duration * framerate)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with wave.open(path, 'w') as wav_file:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(framerate)
+        frames = bytearray()
+        for i in range(frame_count):
+            t = i / framerate
+            envelope = max(0.0, min(1.0, t * 8, (duration - t) * 8))
+            sample = int(32767 * 0.3 * envelope * math.sin(2 * math.pi * freq * t))
+            frames += struct.pack('<h', sample)
+        wav_file.writeframes(bytes(frames))
+
+
+def seed_placeholder_audio(con: sqlite3.Connection, extracted_dir: str):
+    """Generates one placeholder clip per species (its most recent
+    detection) at BirdNET-Pi's real extraction path (By_Date/<date>/
+    <species>/<file>), and repoints that one row's File_Name at the
+    matching .wav so the DB and the file on disk agree."""
+    cur = con.cursor()
+    cur.execute("""
+        SELECT Com_Name, Date, Time, File_Name FROM detections
+        ORDER BY Date DESC, Time DESC
+    """)
+    seen = set()
+    updates = []
+    for com_name, date, time, file_name in cur.fetchall():
+        if com_name in seen:
+            continue
+        seen.add(com_name)
+
+        com_name_safe = com_name.replace("'", '').replace(' ', '_')
+        # ':' is valid in filenames on the Pi's Linux filesystem (where the
+        # real format comes from) but illegal on Windows dev machines, so
+        # the placeholder file itself uses a filesystem-safe name.
+        stem = os.path.splitext(file_name)[0].replace(':', '-')
+        wav_name = f'{stem}.wav'
+        full_path = os.path.join(extracted_dir, 'By_Date', date, com_name_safe, wav_name)
+        write_placeholder_wav(full_path, com_name)
+        updates.append((wav_name, com_name, date, time))
+
+    cur.executemany(
+        'UPDATE detections SET File_Name = ? WHERE Com_Name = ? AND Date = ? AND Time = ?',
+        updates,
+    )
+    con.commit()
+    print(f'Generated {len(updates)} placeholder audio clips under {extracted_dir}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--db', default=DB_PATH, help='Path to birds.db')
     parser.add_argument('--days', type=int, default=28, help='Number of days of history to generate, including today')
     parser.add_argument('--append', action='store_true', help="Don't clear existing rows first")
     parser.add_argument('--seed', type=int, default=None, help='Random seed, for reproducible output')
+    parser.add_argument(
+        '--extracted-dir',
+        default=os.environ.get('BIRDNET_EXTRACTED_DIR', DEFAULT_EXTRACTED_DIR),
+        help='Directory to write placeholder audio clips into',
+    )
+    parser.add_argument(
+        '--no-audio', action='store_true', help='Skip generating placeholder audio clips'
+    )
     args = parser.parse_args()
 
     if args.seed is not None:
@@ -192,6 +269,9 @@ def main():
         rows,
     )
     con.commit()
+
+    if not args.no_audio:
+        seed_placeholder_audio(con, args.extracted_dir)
 
     total = cur.execute('SELECT COUNT(*) FROM detections').fetchone()[0]
     species = cur.execute('SELECT COUNT(DISTINCT Com_Name) FROM detections').fetchone()[0]

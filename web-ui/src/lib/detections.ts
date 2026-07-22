@@ -1,8 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { count, countDistinct, desc, sql } from "drizzle-orm";
-
 import { db } from "#/db/index.ts";
 import { type Detection, detections } from "#/db/schema.ts";
+import { audioUrlFor } from "#/lib/audio.ts";
+import { ebirdSearchUrl, getSpeciesInfo } from "#/lib/wikipedia.ts";
 
 const isToday = sql`${detections.Date} = date('now', 'localtime')`;
 const isLastHour = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-1 hour', 'localtime')`;
@@ -58,24 +59,77 @@ export const getDetections = createServerFn({ method: "GET" }).handler(
 	},
 );
 
-export type SpeciesSummary = {
+export type LifeListCard = {
 	comName: string;
 	sciName: string;
-	count: number;
+	hourCount: number;
+	allTimeCount: number;
 	lastDetected: string;
+	audioUrl: string | null;
+	imageUrl: string | null;
+	wikipediaUrl: string;
+	ebirdUrl: string;
 };
 
-export const getSpecies = createServerFn({ method: "GET" }).handler(
-	async (): Promise<SpeciesSummary[]> => {
-		return db
+export const getLifeListCards = createServerFn({ method: "GET" }).handler(
+	async (): Promise<LifeListCard[]> => {
+		const totals = await db
 			.select({
 				comName: detections.Com_Name,
 				sciName: detections.Sci_Name,
-				count: count(),
-				lastDetected: sql<string>`max(${detections.Date})`,
+				allTimeCount: count(),
 			})
 			.from(detections)
-			.groupBy(detections.Com_Name, detections.Sci_Name)
-			.orderBy(sql`count(*) desc`);
+			.groupBy(detections.Com_Name, detections.Sci_Name);
+
+		const hourly = await db
+			.select({ comName: detections.Com_Name, hourCount: count() })
+			.from(detections)
+			.where(isLastHour)
+			.groupBy(detections.Com_Name);
+		const hourByName = new Map(
+			hourly.map((row) => [row.comName, row.hourCount]),
+		);
+
+		// Most-recent detection per species, ordered so the first occurrence
+		// of each Com_Name we see is the latest one.
+		const recent = await db
+			.select({
+				comName: detections.Com_Name,
+				date: detections.Date,
+				time: detections.Time,
+				fileName: detections.File_Name,
+			})
+			.from(detections)
+			.orderBy(desc(detections.Date), desc(detections.Time));
+		const latestByName = new Map<
+			string,
+			{ date: string; time: string; fileName: string }
+		>();
+		for (const row of recent) {
+			if (!latestByName.has(row.comName)) {
+				latestByName.set(row.comName, row);
+			}
+		}
+
+		return Promise.all(
+			totals.map(async (row) => {
+				const latest = latestByName.get(row.comName);
+				const { imageUrl, wikipediaUrl } = await getSpeciesInfo(row.comName);
+				return {
+					comName: row.comName,
+					sciName: row.sciName,
+					allTimeCount: row.allTimeCount,
+					hourCount: hourByName.get(row.comName) ?? 0,
+					lastDetected: latest ? `${latest.date} ${latest.time}` : "",
+					audioUrl: latest
+						? audioUrlFor(latest.date, row.comName, latest.fileName)
+						: null,
+					imageUrl,
+					wikipediaUrl,
+					ebirdUrl: ebirdSearchUrl(row.comName),
+				};
+			}),
+		);
 	},
 );
