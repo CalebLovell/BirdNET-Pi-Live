@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { HeroBand } from "#/components/HeroBand.tsx";
 import {
 	Card,
 	CardContent,
@@ -33,8 +32,7 @@ function Home() {
 
 	return (
 		<div className="page-wrap py-8">
-			<HeroBand />
-			<h1 className="display-title mt-4 text-3xl font-semibold">
+			<h1 className="display-title text-3xl font-semibold">
 				What's singing right now
 			</h1>
 			<p className="mt-2 text-muted-foreground">
@@ -52,7 +50,7 @@ function Home() {
 			<h2 className="display-title mt-10 text-xl font-semibold">
 				Recent detections
 			</h2>
-			<div className="feature-card mt-4 rounded-xl p-2">
+			<div className="feature-card mt-4 rounded-lg p-2">
 				<Table>
 					<TableHeader>
 						<TableRow>

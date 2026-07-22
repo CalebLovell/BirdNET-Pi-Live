@@ -46,7 +46,7 @@
   --chart-3: var(--sage);
   --chart-4: var(--clay);
   --chart-5: var(--ink);
-  --radius: 0.625rem;
+  --radius: 0.375rem;
   --sidebar: var(--paper-raised);
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--moss);
@@ -98,6 +98,13 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+html {
+  /* Reserves the scrollbar's width always, so content that changes height
+     (e.g. filtering a grid) never shifts horizontally when the scrollbar
+     appears or disappears. */
+  scrollbar-gutter: stable;
+}
+
 html,
 body,
 #app {
@@ -112,18 +119,6 @@ body {
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* A faint paper grain -- texture, not glow. */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  opacity: 0.5;
-  background-image: radial-gradient(color-mix(in oklab, var(--moss) 35%, transparent) 0.6px, transparent 0.6px);
-  background-size: 3px 3px;
 }
 
 a {

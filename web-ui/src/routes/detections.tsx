@@ -25,7 +25,7 @@ function Detections() {
 				The last {detections.length} detections, most recent first.
 			</p>
 
-			<div className="feature-card mt-6 rounded-xl p-2">
+			<div className="feature-card mt-6 rounded-lg p-2">
 				<Table>
 					<TableHeader>
 						<TableRow>
