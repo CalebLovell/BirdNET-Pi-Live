@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DetectionsRouteImport } from './routes/detections'
 import { Route as SpeciesRouteImport } from './routes/species'
+import { Route as StatsRouteImport } from './routes/stats'
 import { Route as ApiAudioDateSpeciesAndFileRouteImport } from './routes/api/audio/$date/$speciesAndFile'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const SpeciesRoute = SpeciesRouteImport.update({
   path: '/species',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatsRoute = StatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAudioDateSpeciesAndFileRoute =
   ApiAudioDateSpeciesAndFileRouteImport.update({
     id: '/api/audio/$date/$speciesAndFile',
@@ -40,12 +46,14 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/species': typeof SpeciesRoute
+  '/stats': typeof StatsRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/species': typeof SpeciesRoute
+  '/stats': typeof StatsRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
 }
 export interface FileRoutesById {
@@ -53,19 +61,30 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/species': typeof SpeciesRoute
+  '/stats': typeof StatsRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/detections' | '/species' | '/api/audio/$date/$speciesAndFile'
+    | '/'
+    | '/detections'
+    | '/species'
+    | '/stats'
+    | '/api/audio/$date/$speciesAndFile'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/detections' | '/species' | '/api/audio/$date/$speciesAndFile'
+  to:
+    | '/'
+    | '/detections'
+    | '/species'
+    | '/stats'
+    | '/api/audio/$date/$speciesAndFile'
   id:
     | '__root__'
     | '/'
     | '/detections'
     | '/species'
+    | '/stats'
     | '/api/audio/$date/$speciesAndFile'
   fileRoutesById: FileRoutesById
 }
@@ -73,6 +92,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DetectionsRoute: typeof DetectionsRoute
   SpeciesRoute: typeof SpeciesRoute
+  StatsRoute: typeof StatsRoute
   ApiAudioDateSpeciesAndFileRoute: typeof ApiAudioDateSpeciesAndFileRoute
 }
 
@@ -99,6 +119,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SpeciesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stats': {
+      id: '/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof StatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/audio/$date/$speciesAndFile': {
       id: '/api/audio/$date/$speciesAndFile'
       path: '/api/audio/$date/$speciesAndFile'
@@ -113,6 +140,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DetectionsRoute: DetectionsRoute,
   SpeciesRoute: SpeciesRoute,
+  StatsRoute: StatsRoute,
   ApiAudioDateSpeciesAndFileRoute: ApiAudioDateSpeciesAndFileRoute,
 }
 export const routeTree = rootRouteImport
