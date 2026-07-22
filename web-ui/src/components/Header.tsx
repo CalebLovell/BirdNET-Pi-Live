@@ -1,7 +1,5 @@
 import { Link } from "@tanstack/react-router";
 
-import { ThemeToggle } from "#/components/ThemeToggle.tsx";
-
 export function Header() {
 	return (
 		<header className="border-b" style={{ background: "var(--header-bg)" }}>
@@ -32,7 +30,6 @@ export function Header() {
 					>
 						Species
 					</Link>
-					<ThemeToggle />
 				</nav>
 			</div>
 		</header>

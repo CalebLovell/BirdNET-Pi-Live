@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { HeroBand } from "#/components/HeroBand.tsx";
 import {
 	Card,
 	CardContent,
@@ -32,7 +33,8 @@ function Home() {
 
 	return (
 		<div className="page-wrap py-8">
-			<h1 className="display-title text-3xl font-semibold">
+			<HeroBand />
+			<h1 className="display-title mt-4 text-3xl font-semibold">
 				What's singing right now
 			</h1>
 			<p className="mt-2 text-muted-foreground">
@@ -47,7 +49,9 @@ function Home() {
 				<StatCard label="All-time species" value={stats.speciesAllTime} />
 			</div>
 
-			<h2 className="mt-10 text-xl font-semibold">Recent detections</h2>
+			<h2 className="display-title mt-10 text-xl font-semibold">
+				Recent detections
+			</h2>
 			<div className="feature-card mt-4 rounded-xl p-2">
 				<Table>
 					<TableHeader>
@@ -71,12 +75,12 @@ function Home() {
 								<TableRow
 									key={`${detection.Date}-${detection.Time}-${detection.File_Name}`}
 								>
-									<TableCell>
+									<TableCell className="tabular-data">
 										{detection.Date} {detection.Time}
 									</TableCell>
 									<TableCell>{detection.Com_Name}</TableCell>
 									<TableCell className="italic">{detection.Sci_Name}</TableCell>
-									<TableCell className="text-right">
+									<TableCell className="tabular-data text-right">
 										{detection.Confidence == null
 											? "—"
 											: `${Math.round(detection.Confidence * 100)}%`}
@@ -95,7 +99,9 @@ function StatCard({ label, value }: { label: string; value: number }) {
 	return (
 		<Card className="feature-card">
 			<CardHeader>
-				<CardTitle className="display-title text-3xl">{value}</CardTitle>
+				<CardTitle className="tabular-data text-3xl font-semibold">
+					{value}
+				</CardTitle>
 			</CardHeader>
 			<CardContent className="text-sm text-muted-foreground">
 				{label}

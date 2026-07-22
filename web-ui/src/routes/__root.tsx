@@ -5,16 +5,6 @@ import { Footer } from "#/components/Footer.tsx";
 import { Header } from "#/components/Header.tsx";
 import appCss from "../styles.css?url";
 
-// Applies the persisted theme before first paint, so there's no flash of the
-// wrong theme while React hydrates.
-const THEME_INIT_SCRIPT = `
-(function () {
-  var stored = localStorage.getItem('theme');
-  var dark = stored ? stored === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
-  document.documentElement.classList.toggle('dark', dark);
-})();
-`;
-
 export const Route = createRootRoute({
 	head: () => ({
 		meta: [
@@ -41,11 +31,9 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" suppressHydrationWarning>
+		<html lang="en">
 			<head>
 				<HeadContent />
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: static constant, no user input */}
-				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 			</head>
 			<body>
 				<div className="flex min-h-screen flex-col">
