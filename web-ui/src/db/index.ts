@@ -1,3 +1,5 @@
+import "@tanstack/react-start/server-only";
+
 import { DatabaseSync } from "node:sqlite";
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 

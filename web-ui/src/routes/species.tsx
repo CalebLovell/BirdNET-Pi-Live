@@ -1,66 +1,307 @@
 import { createFileRoute } from "@tanstack/react-router";
-
-import { Badge } from "#/components/ui/badge.tsx";
 import {
-	Table,
-	TableBody,
-	TableCell,
-	TableHead,
-	TableHeader,
-	TableRow,
-} from "#/components/ui/table.tsx";
-import { getSpecies } from "#/lib/detections.ts";
+	ArrowDownAZ,
+	Binoculars,
+	Bird,
+	BookOpen,
+	Clock,
+	Loader2,
+	Mic2,
+	Pause,
+	Play,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { Button } from "#/components/ui/button.tsx";
+import { Input } from "#/components/ui/input.tsx";
+import {
+	Pagination,
+	PaginationContent,
+	PaginationItem,
+	PaginationLink,
+	PaginationNext,
+	PaginationPrevious,
+} from "#/components/ui/pagination.tsx";
+import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group.tsx";
+import { getLifeListCards, type LifeListCard } from "#/lib/detections.ts";
 
 export const Route = createFileRoute("/species")({
 	component: Species,
-	loader: () => getSpecies(),
+	loader: () => getLifeListCards(),
 });
 
+type SortKey = "count" | "recent" | "alpha";
+
+const PAGE_SIZE = 24;
+
 function Species() {
-	const species = Route.useLoaderData();
+	const cards = Route.useLoaderData();
+	const [search, setSearch] = useState("");
+	const [sort, setSort] = useState<SortKey>("count");
+	const [page, setPage] = useState(1);
+
+	const filtered = useMemo(() => {
+		const query = search.trim().toLowerCase();
+		const matches = query
+			? cards.filter(
+					(c) =>
+						c.comName.toLowerCase().includes(query) ||
+						c.sciName.toLowerCase().includes(query),
+				)
+			: cards;
+
+		return [...matches].sort((a, b) => {
+			if (sort === "alpha") return a.comName.localeCompare(b.comName);
+			if (sort === "recent")
+				return b.lastDetected.localeCompare(a.lastDetected);
+			return b.allTimeCount - a.allTimeCount;
+		});
+	}, [cards, search, sort]);
+
+	const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+	const currentPage = Math.min(page, pageCount);
+	const pageItems = filtered.slice(
+		(currentPage - 1) * PAGE_SIZE,
+		currentPage * PAGE_SIZE,
+	);
 
 	return (
 		<div className="page-wrap py-8">
 			<h1 className="display-title text-3xl font-semibold">Species</h1>
 			<p className="mt-2 text-muted-foreground">
-				{species.length} species detected so far.
+				{cards.length} species detected so far.
 			</p>
 
-			<div className="feature-card mt-6 rounded-xl p-2">
-				<Table>
-					<TableHeader>
-						<TableRow>
-							<TableHead>Species</TableHead>
-							<TableHead>Scientific name</TableHead>
-							<TableHead>Last detected</TableHead>
-							<TableHead className="text-right">Detections</TableHead>
-						</TableRow>
-					</TableHeader>
-					<TableBody>
-						{species.length === 0 ? (
-							<TableRow>
-								<TableCell colSpan={4} className="text-muted-foreground">
-									No species detected yet.
-								</TableCell>
-							</TableRow>
+			<div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<ToggleGroup
+					type="single"
+					variant="outline"
+					value={sort}
+					onValueChange={(value) => {
+						if (!value) return;
+						setSort(value as SortKey);
+						setPage(1);
+					}}
+				>
+					<ToggleGroupItem value="count">
+						<Mic2 className="size-4" />
+						Most
+					</ToggleGroupItem>
+					<ToggleGroupItem value="recent">
+						<Clock className="size-4" />
+						Recent
+					</ToggleGroupItem>
+					<ToggleGroupItem value="alpha">
+						<ArrowDownAZ className="size-4" />
+						A&ndash;Z
+					</ToggleGroupItem>
+				</ToggleGroup>
+				<Input
+					placeholder="Search species..."
+					value={search}
+					onChange={(e) => {
+						setSearch(e.target.value);
+						setPage(1);
+					}}
+					className="sm:max-w-xs"
+				/>
+			</div>
+
+			{pageItems.length === 0 ? (
+				<p className="mt-10 text-muted-foreground">
+					No species match &ldquo;{search}&rdquo;.
+				</p>
+			) : (
+				<div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+					{pageItems.map((card) => (
+						<SpeciesCard key={card.comName} card={card} />
+					))}
+				</div>
+			)}
+
+			{pageCount > 1 && (
+				<Pagination className="mt-8">
+					<PaginationContent>
+						<PaginationItem>
+							<PaginationPrevious
+								href="#"
+								onClick={(e) => {
+									e.preventDefault();
+									setPage((p) => Math.max(1, p - 1));
+								}}
+								className={
+									currentPage === 1 ? "pointer-events-none opacity-50" : ""
+								}
+							/>
+						</PaginationItem>
+						{Array.from({ length: pageCount }, (_, i) => i + 1).map((p) => (
+							<PaginationItem key={p}>
+								<PaginationLink
+									href="#"
+									isActive={p === currentPage}
+									onClick={(e) => {
+										e.preventDefault();
+										setPage(p);
+									}}
+								>
+									{p}
+								</PaginationLink>
+							</PaginationItem>
+						))}
+						<PaginationItem>
+							<PaginationNext
+								href="#"
+								onClick={(e) => {
+									e.preventDefault();
+									setPage((p) => Math.min(pageCount, p + 1));
+								}}
+								className={
+									currentPage === pageCount
+										? "pointer-events-none opacity-50"
+										: ""
+								}
+							/>
+						</PaginationItem>
+					</PaginationContent>
+				</Pagination>
+			)}
+		</div>
+	);
+}
+
+function SpeciesCard({ card }: { card: LifeListCard }) {
+	const audioRef = useRef<HTMLAudioElement>(null);
+	const objectUrlRef = useRef<string | null>(null);
+	const [isPlaying, setIsPlaying] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
+
+	useEffect(() => {
+		return () => {
+			if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+		};
+	}, []);
+
+	async function togglePlay() {
+		const audio = audioRef.current;
+		if (!audio || !card.audioUrl) return;
+
+		if (isPlaying) {
+			audio.pause();
+			return;
+		}
+
+		// The browser's native <audio src> loading doesn't reliably reach
+		// this app's dynamic audio route (some Sec-Fetch-Dest-specific
+		// behavior in this dev stack), but a plain fetch() always does --
+		// so fetch it ourselves and play from a local blob instead.
+		if (!objectUrlRef.current) {
+			setIsLoading(true);
+			try {
+				const response = await fetch(card.audioUrl);
+				if (!response.ok) throw new Error("Failed to fetch audio");
+				objectUrlRef.current = URL.createObjectURL(await response.blob());
+				audio.src = objectUrlRef.current;
+			} catch {
+				setIsLoading(false);
+				return;
+			}
+			setIsLoading(false);
+		}
+
+		audio.play().catch(() => setIsPlaying(false));
+	}
+
+	return (
+		<div className="feature-card flex flex-col overflow-hidden rounded-lg">
+			<div className="p-4 pb-0">
+				<h2 className="display-title text-lg font-bold">{card.comName}</h2>
+				<p className="text-sm text-muted-foreground italic">{card.sciName}</p>
+			</div>
+
+			<div className="relative mt-3 h-48 w-full overflow-hidden bg-muted">
+				{card.imageUrl ? (
+					<img
+						src={card.imageUrl}
+						alt={card.comName}
+						className="absolute inset-0 h-full w-full object-cover"
+						loading="lazy"
+					/>
+				) : (
+					<div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+						<Bird className="size-12" />
+					</div>
+				)}
+			</div>
+
+			<div className="flex flex-1 flex-col gap-3 p-4">
+				<div className="flex gap-5 text-sm">
+					<div>
+						<div className="tabular-data font-semibold">{card.hourCount}</div>
+						<div className="text-xs text-muted-foreground">This hour</div>
+					</div>
+					<div>
+						<div className="tabular-data font-semibold">
+							{card.allTimeCount}
+						</div>
+						<div className="text-xs text-muted-foreground">All time</div>
+					</div>
+				</div>
+
+				<div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
+					<Button
+						variant="outline"
+						size="xs"
+						disabled={!card.audioUrl || isLoading}
+						onClick={togglePlay}
+						aria-label={
+							isPlaying
+								? `Pause ${card.comName} call`
+								: `Play ${card.comName} call`
+						}
+					>
+						{isLoading ? (
+							<Loader2 className="size-3 animate-spin" />
+						) : isPlaying ? (
+							<Pause className="size-3" />
 						) : (
-							species.map((s) => (
-								<TableRow key={s.comName}>
-									<TableCell>{s.comName}</TableCell>
-									<TableCell className="italic">{s.sciName}</TableCell>
-									<TableCell className="tabular-data">
-										{s.lastDetected}
-									</TableCell>
-									<TableCell className="text-right">
-										<Badge variant="secondary" className="tabular-data">
-											{s.count}
-										</Badge>
-									</TableCell>
-								</TableRow>
-							))
+							<Play className="size-3" />
 						)}
-					</TableBody>
-				</Table>
+						{isPlaying ? "Pause" : "Play"}
+					</Button>
+					<Button variant="outline" size="xs" asChild>
+						<a
+							href={card.wikipediaUrl}
+							target="_blank"
+							rel="noreferrer"
+							aria-label={`${card.comName} on Wikipedia`}
+						>
+							<BookOpen className="size-3" />
+							Wiki
+						</a>
+					</Button>
+					<Button variant="outline" size="xs" asChild>
+						<a
+							href={card.ebirdUrl}
+							target="_blank"
+							rel="noreferrer"
+							aria-label={`${card.comName} on eBird`}
+						>
+							<Binoculars className="size-3" />
+							eBird
+						</a>
+					</Button>
+					{card.audioUrl && (
+						<audio
+							ref={audioRef}
+							preload="none"
+							onPlay={() => setIsPlaying(true)}
+							onPause={() => setIsPlaying(false)}
+							onEnded={() => setIsPlaying(false)}
+						>
+							<track kind="captions" />
+						</audio>
+					)}
+				</div>
 			</div>
 		</div>
 	);
