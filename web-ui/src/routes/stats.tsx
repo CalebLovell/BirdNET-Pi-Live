@@ -19,12 +19,12 @@ import {
 import { z } from "zod";
 
 import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group.tsx";
+import { getStatsForPeriod } from "#/lib/stats.ts";
 import {
-	getStatsForPeriod,
 	STATS_PERIOD_LABELS,
 	STATS_PERIODS,
 	type StatsPeriod,
-} from "#/lib/stats.ts";
+} from "#/lib/stats-periods.ts";
 
 const DEFAULT_PERIOD: StatsPeriod = "week";
 
@@ -62,7 +62,7 @@ function Stats() {
 	const stats = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap py-8">
+		<div className="page-wrap py-4">
 			<h1 className="display-title text-3xl font-semibold">Stats</h1>
 			<p className="mt-2 text-muted-foreground">
 				Trends and activity for your BirdNET-Pi station.
@@ -113,7 +113,7 @@ function Stats() {
 			<h2 className="display-title mt-10 text-xl font-semibold">
 				Detections over time
 			</h2>
-			<div className="feature-card mt-4 rounded-lg p-4">
+			<div className="feature-card mt-4 rounded-md p-4">
 				<ResponsiveContainer width="100%" height={280}>
 					<AreaChart data={stats.trend}>
 						<defs>
@@ -161,7 +161,7 @@ function Stats() {
 			<div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2">
 				<div>
 					<h2 className="display-title text-xl font-semibold">Top species</h2>
-					<div className="feature-card mt-4 rounded-lg p-4">
+					<div className="feature-card mt-4 rounded-md p-4">
 						<ResponsiveContainer
 							width="100%"
 							height={Math.max(240, stats.topSpeciesList.length * 32)}
@@ -213,7 +213,7 @@ function Stats() {
 					<h2 className="display-title text-xl font-semibold">
 						Activity by hour of day
 					</h2>
-					<div className="feature-card mt-4 rounded-lg p-4">
+					<div className="feature-card mt-4 rounded-md p-4">
 						<ResponsiveContainer width="100%" height={280}>
 							<BarChart data={stats.hourActivity}>
 								<CartesianGrid stroke="var(--line)" vertical={false} />
@@ -277,7 +277,7 @@ function StatCard({
 	sub?: string;
 }) {
 	return (
-		<div className="feature-card rounded-lg p-4">
+		<div className="feature-card rounded-md p-4">
 			<div
 				className={
 					typeof value === "number"

@@ -31,7 +31,7 @@ function Home() {
 	const { stats, recent } = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap py-8">
+		<div className="page-wrap py-4">
 			<h1 className="display-title text-3xl font-semibold">
 				What's singing right now
 			</h1>
@@ -50,7 +50,7 @@ function Home() {
 			<h2 className="display-title mt-10 text-xl font-semibold">
 				Recent detections
 			</h2>
-			<div className="feature-card mt-4 rounded-lg p-2">
+			<div className="feature-card mt-4 rounded-md p-2">
 				<Table>
 					<TableHeader>
 						<TableRow>

@@ -19,13 +19,13 @@ function Detections() {
 	const detections = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap py-8">
+		<div className="page-wrap py-4">
 			<h1 className="display-title text-3xl font-semibold">Detections</h1>
 			<p className="mt-2 text-muted-foreground">
 				The last {detections.length} detections, most recent first.
 			</p>
 
-			<div className="feature-card mt-6 rounded-lg p-2">
+			<div className="feature-card mt-6 rounded-md p-2">
 				<Table>
 					<TableHeader>
 						<TableRow>

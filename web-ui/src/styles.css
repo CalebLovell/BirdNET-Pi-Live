@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
@@ -21,7 +21,6 @@
   --surface: color-mix(in oklab, var(--paper-raised) 88%, white 12%);
   --surface-strong: var(--paper-raised);
   --line: color-mix(in oklab, var(--moss) 22%, transparent);
-  --inset-glint: color-mix(in oklab, white 70%, var(--paper-raised));
   --kicker: var(--moss);
   --header-bg: color-mix(in oklab, var(--paper) 92%, var(--paper-raised) 8%);
   --link-bg-hover: color-mix(in oklab, var(--sage) 18%, var(--paper-raised));
@@ -62,7 +61,7 @@
 }
 
 @theme inline {
-  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Georgia', 'Times New Roman', serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -156,20 +155,18 @@ code {
 }
 
 .display-title {
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: 'Georgia', 'Times New Roman', serif;
 }
 
 .island-shell,
 .feature-card {
   border: 1px solid var(--line);
   background: linear-gradient(165deg, var(--surface-strong), var(--surface));
-  box-shadow:
-    0 1px 0 var(--inset-glint) inset,
-    0 14px 30px color-mix(in oklab, var(--ink) 10%, transparent),
-    0 4px 12px color-mix(in oklab, var(--ink) 6%, transparent);
 }
 
-.feature-card:hover {
+/* Only cards that are actually links get the hover lift -- plain
+   informational cards (Stats, Now, Overview) stay static. */
+.feature-card-link:hover {
   transform: translateY(-2px);
   border-color: color-mix(in oklab, var(--moss) 45%, var(--line));
 }
@@ -265,11 +262,9 @@ a {
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--moss) 45%, transparent);
   }
   50% {
-    opacity: 0.7;
-    box-shadow: 0 0 0 4px transparent;
+    opacity: 0.5;
   }
 }
 
