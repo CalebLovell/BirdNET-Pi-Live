@@ -1,12 +1,12 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
 	ArrowDownAZ,
+	BarChart3,
 	Binoculars,
 	Bird,
 	BookOpen,
 	Clock,
 	Loader2,
-	Mic2,
 	Pause,
 	Play,
 } from "lucide-react";
@@ -108,7 +108,7 @@ function Species() {
 					}}
 				>
 					<ToggleGroupItem value="count">
-						<Mic2 className="size-4" />
+						<BarChart3 className="size-4" />
 						Most
 					</ToggleGroupItem>
 					<ToggleGroupItem value="recent">
@@ -117,7 +117,7 @@ function Species() {
 					</ToggleGroupItem>
 					<ToggleGroupItem value="alpha">
 						<ArrowDownAZ className="size-4" />
-						A&ndash;Z
+						Alphabetical
 					</ToggleGroupItem>
 				</ToggleGroup>
 				<Input
@@ -136,7 +136,7 @@ function Species() {
 					No species match &ldquo;{search}&rdquo;.
 				</p>
 			) : (
-				<div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+				<div className="mt-6 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-[22px]">
 					{pageItems.map((card) => (
 						<SpeciesCard key={card.comName} card={card} />
 					))}
@@ -247,27 +247,27 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 
 	return (
 		<div className="feature-card flex flex-col overflow-hidden rounded-lg">
-			<div className="p-4 pb-0">
+			<div className="p-3 pb-0">
 				<h2 className="display-title text-lg font-bold">{card.comName}</h2>
 				<p className="text-sm text-muted-foreground italic">{card.sciName}</p>
 			</div>
 
-			<div className="relative mt-3 h-48 w-full overflow-hidden bg-muted">
+			<div className="mt-2 flex h-40 w-full items-center justify-center overflow-hidden">
 				{card.imageUrl ? (
 					<img
 						src={card.imageUrl}
 						alt={card.comName}
-						className="absolute inset-0 h-full w-full object-cover"
+						className="max-h-full max-w-[160px] object-contain"
 						loading="lazy"
 					/>
 				) : (
-					<div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
+					<div className="flex size-full items-center justify-center bg-muted text-muted-foreground">
 						<Bird className="size-12" />
 					</div>
 				)}
 			</div>
 
-			<div className="flex flex-1 flex-col gap-3 p-4">
+			<div className="flex flex-1 flex-col gap-2 p-3">
 				<div className="flex gap-5 text-sm">
 					<div>
 						<div className="tabular-data font-semibold">{card.hourCount}</div>
@@ -281,9 +281,9 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 					</div>
 				</div>
 
-				<div className="mt-auto flex flex-wrap items-center gap-2 pt-2">
+				<div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
 					<Button
-						variant="outline"
+						variant="default"
 						size="xs"
 						disabled={!card.audioUrl || isLoading}
 						onClick={togglePlay}
@@ -302,28 +302,30 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 						)}
 						{isPlaying ? "Pause" : "Play"}
 					</Button>
-					<Button variant="outline" size="xs" asChild>
-						<a
-							href={card.wikipediaUrl}
-							target="_blank"
-							rel="noreferrer"
-							aria-label={`${card.comName} on Wikipedia`}
-						>
-							<BookOpen className="size-3" />
-							Wiki
-						</a>
-					</Button>
-					<Button variant="outline" size="xs" asChild>
-						<a
-							href={card.ebirdUrl}
-							target="_blank"
-							rel="noreferrer"
-							aria-label={`${card.comName} on eBird`}
-						>
-							<Binoculars className="size-3" />
-							eBird
-						</a>
-					</Button>
+					<div className="flex items-center gap-2">
+						<Button variant="outline" size="xs" asChild>
+							<a
+								href={card.wikipediaUrl}
+								target="_blank"
+								rel="noreferrer"
+								aria-label={`${card.comName} on Wikipedia`}
+							>
+								<BookOpen className="size-3" />
+								Wiki
+							</a>
+						</Button>
+						<Button variant="outline" size="xs" asChild>
+							<a
+								href={card.ebirdUrl}
+								target="_blank"
+								rel="noreferrer"
+								aria-label={`${card.comName} on eBird`}
+							>
+								<Binoculars className="size-3" />
+								eBird
+							</a>
+						</Button>
+					</div>
 					{card.audioUrl && (
 						<audio
 							ref={audioRef}

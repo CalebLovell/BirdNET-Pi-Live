@@ -5,14 +5,18 @@
 @import 'tw-animate-css';
 
 :root {
-  /* Named palette -- a field naturalist's paper, not a screen glow. */
-  --paper: #f3ede0;
-  --paper-raised: #faf6ec;
-  --ink: #26301f;
-  --moss: #4f6144;
-  --sage: #a7b494;
+  /* Named palette -- greens borrowed from adaline.ai's site: a near-white
+     paper ground, deep forest-green primary, and a muted sage secondary. */
+  --paper: #fbfdf6;
+  --paper-raised: #fdfef9;
+  --ink: #0a1d08;
+  --moss: #203b14;
+  --sage: #c5ccb6;
   --sand: #c69a58;
   --clay: #9c4a34;
+  /* Pale green pill background from adaline.ai's "meadow-100" swatch --
+     used for hover states instead of the warmer sand tone. */
+  --meadow: #ecf2df;
 
   --surface: color-mix(in oklab, var(--paper-raised) 88%, white 12%);
   --surface-strong: var(--paper-raised);
@@ -34,13 +38,13 @@
   --secondary-foreground: var(--ink);
   --muted: color-mix(in oklab, var(--sage) 20%, var(--paper-raised));
   --muted-foreground: color-mix(in oklab, var(--ink) 62%, var(--moss) 38%);
-  --accent: var(--sand);
+  --accent: var(--meadow);
   --accent-foreground: var(--ink);
   --destructive: var(--clay);
   --destructive-foreground: var(--paper-raised);
   --border: var(--line);
   --input: var(--line);
-  --ring: var(--sand);
+  --ring: var(--moss);
   --chart-1: var(--moss);
   --chart-2: var(--sand);
   --chart-3: var(--sage);
@@ -51,10 +55,10 @@
   --sidebar-foreground: var(--ink);
   --sidebar-primary: var(--moss);
   --sidebar-primary-foreground: var(--paper-raised);
-  --sidebar-accent: var(--sand);
+  --sidebar-accent: var(--meadow);
   --sidebar-accent-foreground: var(--ink);
   --sidebar-border: var(--line);
-  --sidebar-ring: var(--sand);
+  --sidebar-ring: var(--moss);
 }
 
 @theme inline {
@@ -86,7 +90,7 @@
   --color-chart-5: var(--chart-5);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-lg: 0.625rem; /* 10px -- cards (feature-card, shadcn Card) */
   --radius-xl: calc(var(--radius) + 4px);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -147,7 +151,7 @@ code {
 }
 
 .page-wrap {
-  width: min(1080px, calc(100% - 2rem));
+  width: min(1440px, calc(100% - 2rem));
   margin-inline: auto;
 }
 
@@ -167,7 +171,7 @@ code {
 
 .feature-card:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in oklab, var(--sand) 45%, var(--line));
+  border-color: color-mix(in oklab, var(--moss) 45%, var(--line));
 }
 
 button,
@@ -204,7 +208,7 @@ a {
   height: 2px;
   transform: scaleX(0);
   transform-origin: left;
-  background: var(--sand);
+  background: var(--moss);
   transition: transform 170ms ease;
 }
 

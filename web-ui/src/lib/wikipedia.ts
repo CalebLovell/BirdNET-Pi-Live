@@ -43,11 +43,3 @@ export async function getSpeciesInfo(commonName: string): Promise<SpeciesInfo> {
 		return fallback;
 	}
 }
-
-// eBird gates species/search pages behind a login wall for anonymous
-// requests, and a precise deep link needs a 6-letter species code we don't
-// have without their (key-gated) taxonomy API. A scoped web search reliably
-// gets a person to the right page regardless of their eBird auth state.
-export function ebirdSearchUrl(commonName: string): string {
-	return `https://www.google.com/search?q=${encodeURIComponent(`${commonName} ebird`)}`;
-}

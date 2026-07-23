@@ -3,7 +3,9 @@ import { count, countDistinct, desc, sql } from "drizzle-orm";
 import { db } from "#/db/index.ts";
 import { type Detection, detections } from "#/db/schema.ts";
 import { audioUrlFor } from "#/lib/audio.ts";
-import { ebirdSearchUrl, getSpeciesInfo } from "#/lib/wikipedia.ts";
+import { ebirdUrlFor } from "#/lib/ebird.ts";
+import { illustrationUrlFor } from "#/lib/illustrations.ts";
+import { getSpeciesInfo } from "#/lib/wikipedia.ts";
 
 const isToday = sql`${detections.Date} = date('now', 'localtime')`;
 const isLastHour = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-1 hour', 'localtime')`;
@@ -115,7 +117,9 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 		return Promise.all(
 			totals.map(async (row) => {
 				const latest = latestByName.get(row.comName);
-				const { imageUrl, wikipediaUrl } = await getSpeciesInfo(row.comName);
+				const { imageUrl: wikiImageUrl, wikipediaUrl } = await getSpeciesInfo(
+					row.comName,
+				);
 				return {
 					comName: row.comName,
 					sciName: row.sciName,
@@ -125,9 +129,9 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 					audioUrl: latest
 						? audioUrlFor(latest.date, row.comName, latest.fileName)
 						: null,
-					imageUrl,
+					imageUrl: illustrationUrlFor(row.sciName) ?? wikiImageUrl,
 					wikipediaUrl,
-					ebirdUrl: ebirdSearchUrl(row.comName),
+					ebirdUrl: ebirdUrlFor(row.sciName, row.comName),
 				};
 			}),
 		);
