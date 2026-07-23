@@ -31,7 +31,7 @@ function Home() {
 	const { stats, recent } = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap py-4">
+		<div className="page-wrap pt-4">
 			<h1 className="display-title text-3xl font-semibold">
 				What's singing right now
 			</h1>

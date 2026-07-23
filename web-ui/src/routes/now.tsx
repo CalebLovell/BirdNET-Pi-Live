@@ -42,7 +42,7 @@ function Now() {
 	const rest = detections.slice(1);
 
 	return (
-		<div className="page-wrap py-4">
+		<div className="page-wrap pt-4">
 			<div className="flex items-center justify-between">
 				<div>
 					<h1 className="display-title text-3xl font-semibold">Now</h1>

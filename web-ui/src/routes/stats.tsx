@@ -1,10 +1,5 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import {
-	CalendarDays,
-	CalendarRange,
-	Clock,
-	Infinity as InfinityIcon,
-} from "lucide-react";
+import { CalendarRange, Infinity as InfinityIcon } from "lucide-react";
 import {
 	Area,
 	AreaChart,
@@ -26,7 +21,7 @@ import {
 	type StatsPeriod,
 } from "~/lib/stats-periods.ts";
 
-const DEFAULT_PERIOD: StatsPeriod = "week";
+const DEFAULT_PERIOD: StatsPeriod = "year";
 
 // .default() makes `period` optional on input (so <Link to="/stats"> doesn't
 // need to pass search) while guaranteeing a concrete value on output (so
@@ -50,9 +45,7 @@ const PERIOD_ICONS: Record<
 	StatsPeriod,
 	React.ComponentType<{ className?: string }>
 > = {
-	day: Clock,
-	week: CalendarDays,
-	month: CalendarRange,
+	year: CalendarRange,
 	all: InfinityIcon,
 };
 
@@ -62,7 +55,7 @@ function Stats() {
 	const stats = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap py-4">
+		<div className="page-wrap pt-4">
 			<h1 className="display-title text-3xl font-semibold">Stats</h1>
 			<p className="mt-2 text-muted-foreground">
 				Trends and activity for your BirdNET-Pi station.

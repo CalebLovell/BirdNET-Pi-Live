@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
@@ -64,7 +63,7 @@
 
 @theme inline {
   --font-sans: 'Georgia', 'Times New Roman', serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  --font-mono: ui-monospace, 'SF Mono', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -147,7 +146,7 @@ code {
 }
 
 .tabular-data {
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
 }
 
@@ -271,7 +270,6 @@ a {
 }
 
 .site-footer {
-  border-top: 1px solid var(--line);
   background: var(--header-bg);
 }
 

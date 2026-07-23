@@ -4,20 +4,14 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import type { StatsPeriod } from "~/lib/stats-periods.ts";
 
-// Rolling windows (not calendar-day boundaries) so "Last 24 Hours" never
-// looks emptied out right after midnight or early in the morning.
+// Rolling windows (not calendar-day boundaries) keep the year view stable
+// around midnight and across timezone changes.
 const PERIOD_HOURS: Record<StatsPeriod, number | null> = {
-	day: 24,
-	week: 24 * 7,
-	month: 24 * 30,
+	year: 365 * 24,
 	all: null,
 };
 
 export type TrendPoint = { bucket: string; label: string; count: number };
-
-function pad(n: number): string {
-	return n.toString().padStart(2, "0");
-}
 
 export function periodFilter(period: StatsPeriod): SQL {
 	const hours = PERIOD_HOURS[period];
@@ -25,20 +19,18 @@ export function periodFilter(period: StatsPeriod): SQL {
 	return sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', ${`-${hours} hours`}, 'localtime')`;
 }
 
-function hourBuckets(hoursBack: number): { key: string; label: string }[] {
-	const now = new Date();
-	const buckets: { key: string; label: string }[] = [];
-	for (let i = hoursBack - 1; i >= 0; i--) {
-		const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-		d.setMinutes(0, 0, 0);
-		const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:00:00`;
-		const label = d.toLocaleTimeString([], { hour: "numeric" });
-		buckets.push({ key, label });
-	}
-	return buckets;
+export function calendarYearFilter(year: number): SQL {
+	return sql`${detections.Date} >= ${`${year}-01-01`} AND ${detections.Date} < ${`${year + 1}-01-01`}`;
+}
+
+export function yearFilter(year: number): SQL {
+	return year === new Date().getFullYear()
+		? periodFilter("year")
+		: calendarYearFilter(year);
 }
 
 function dayBuckets(daysBack: number): { key: string; label: string }[] {
+	const pad = (value: number) => value.toString().padStart(2, "0");
 	const now = new Date();
 	const buckets: { key: string; label: string }[] = [];
 	for (let i = daysBack - 1; i >= 0; i--) {
@@ -48,6 +40,28 @@ function dayBuckets(daysBack: number): { key: string; label: string }[] {
 		const label = d.toLocaleDateString([], { month: "short", day: "numeric" });
 		buckets.push({ key, label });
 	}
+	return buckets;
+}
+
+function calendarDayBuckets(year: number): { key: string; label: string }[] {
+	const pad = (value: number) => value.toString().padStart(2, "0");
+	const buckets: { key: string; label: string }[] = [];
+	const start = new Date(year, 0, 1);
+	const daysInYear =
+		(Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1)) / (24 * 60 * 60 * 1000);
+
+	for (let index = 0; index < daysInYear; index += 1) {
+		const date = new Date(start);
+		date.setDate(start.getDate() + index);
+		const key = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+		const label = date.toLocaleDateString([], {
+			month: "short",
+			day: "numeric",
+			year: "numeric",
+		});
+		buckets.push({ key, label });
+	}
+
 	return buckets;
 }
 
@@ -71,10 +85,7 @@ export async function getTrend(
 	period: StatsPeriod,
 	extraFilter?: SQL,
 ): Promise<TrendPoint[]> {
-	const isHourly = period === "day";
-	const bucketExpr = isHourly
-		? sql<string>`strftime('%Y-%m-%dT%H:00:00', ${detections.Date} || ' ' || ${detections.Time})`
-		: sql<string>`${detections.Date}`;
+	const bucketExpr = sql<string>`${detections.Date}`;
 
 	const where = extraFilter
 		? sql`(${periodFilter(period)}) AND (${extraFilter})`
@@ -87,19 +98,45 @@ export async function getTrend(
 		.groupBy(bucketExpr);
 	const countByBucket = new Map(rows.map((r) => [r.bucket, r.count]));
 
-	const expected = isHourly
-		? hourBuckets(PERIOD_HOURS.day as number)
-		: dayBuckets(
-				period === "week"
-					? 7
-					: period === "month"
-						? 30
-						: await daysSinceEarliestDetection(extraFilter),
-			);
+	const expected = dayBuckets(
+		period === "year" ? 365 : await daysSinceEarliestDetection(extraFilter),
+	);
 
 	return expected.map(({ key, label }) => ({
 		bucket: key,
 		label,
 		count: countByBucket.get(key) ?? 0,
 	}));
+}
+
+export async function getCalendarYearTrend(
+	year: number,
+	extraFilter?: SQL,
+): Promise<TrendPoint[]> {
+	const filter = calendarYearFilter(year);
+	const where = extraFilter ? sql`(${filter}) AND (${extraFilter})` : filter;
+	const bucketExpr = sql<string>`${detections.Date}`;
+	const rows = await db
+		.select({ bucket: bucketExpr, count: count() })
+		.from(detections)
+		.where(where)
+		.groupBy(bucketExpr);
+	const countByBucket = new Map(rows.map((row) => [row.bucket, row.count]));
+
+	return calendarDayBuckets(year).map(({ key, label }) => ({
+		bucket: key,
+		label,
+		count: countByBucket.get(key) ?? 0,
+	}));
+}
+
+export async function getYearTrend(
+	year: number,
+	extraFilter?: SQL,
+): Promise<TrendPoint[]> {
+	if (year !== new Date().getFullYear()) {
+		return getCalendarYearTrend(year, extraFilter);
+	}
+
+	return getTrend("year", extraFilter);
 }

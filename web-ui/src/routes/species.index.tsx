@@ -7,20 +7,15 @@ import Fuse from "fuse.js";
 import {
 	ArrowDownAZ,
 	BarChart3,
-	Binoculars,
 	Bird,
 	ChevronDown,
 	ChevronUp,
 	Clock,
-	Loader2,
-	Pause,
-	Volume2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
 
-import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import {
 	Pagination,
@@ -31,9 +26,9 @@ import {
 	PaginationPrevious,
 } from "~/components/ui/pagination.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
+import { SpeciesActions } from "~/components/species-actions.tsx";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { sciNameToSlug } from "~/lib/species-slug.ts";
-import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
@@ -123,7 +118,7 @@ function Species() {
 	);
 
 	return (
-		<div className="page-wrap py-4">
+		<div className="page-wrap pt-4">
 			<h1 className="display-title text-3xl font-semibold">Species</h1>
 			<p className="mt-4 text-muted-foreground">
 				{cards.length} species detected so far.
@@ -279,16 +274,6 @@ function Species() {
 }
 
 function SpeciesCard({ card }: { card: LifeListCard }) {
-	const {
-		audioRef,
-		isPlaying,
-		isLoading,
-		togglePlay,
-		onPlay,
-		onPause,
-		onEnded,
-	} = usePlayableAudio(card.audioUrl);
-
 	const parsedLastDetected = card.lastDetected
 		? new Date(card.lastDetected.replace(" ", "T"))
 		: null;
@@ -342,60 +327,13 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 					<h2 className="display-title text-base font-bold">{card.comName}</h2>
 					<p className="text-xs text-[var(--bark)] italic">{card.sciName}</p>
 				</div>
-				<div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
-					<Button
-						variant="default"
-						size="xs"
-						className="gap-1.5 px-2.5 text-[11px] has-[>svg]:px-2.5"
-						disabled={!card.audioUrl || isLoading}
-						onClick={togglePlay}
-						aria-label={
-							isPlaying
-								? `Pause ${card.comName} call`
-								: `Play ${card.comName} call`
-						}
-					>
-						{isLoading ? (
-							<Loader2 className="size-3 animate-spin" />
-						) : isPlaying ? (
-							<Pause className="size-3" />
-						) : (
-							<Volume2 className="size-3" />
-						)}
-						{isPlaying ? "Pause" : "Bird Call"}
-					</Button>
-					<div className="flex items-center gap-3">
-						<Button
-							variant="outline"
-							size="xs"
-							className="gap-1.5 px-2.5 text-[11px] has-[>svg]:px-2.5"
-							asChild
-						>
-							<a
-								href={card.ebirdUrl}
-								target="_blank"
-								rel="noreferrer"
-								aria-label={`${card.comName} on eBird`}
-							>
-								<Binoculars className="size-3" />
-								eBird
-							</a>
-						</Button>
-					</div>
-					<div className="w-full self-end text-right text-[10px] leading-none text-muted-foreground/70">
-						Last heard · {lastHeard}
-					</div>
-					{card.audioUrl && (
-						<audio
-							ref={audioRef}
-							preload="none"
-							onPlay={onPlay}
-							onPause={onPause}
-							onEnded={onEnded}
-						>
-							<track kind="captions" />
-						</audio>
-					)}
+				<SpeciesActions
+					audioUrl={card.audioUrl}
+					ebirdUrl={card.ebirdUrl}
+					comName={card.comName}
+				/>
+				<div className="w-full self-end text-right text-[10px] leading-none text-muted-foreground/70">
+					Last heard · {lastHeard}
 				</div>
 			</div>
 		</div>

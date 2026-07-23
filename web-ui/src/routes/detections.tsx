@@ -19,7 +19,7 @@ function Detections() {
 	const detections = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap py-4">
+		<div className="page-wrap pt-4">
 			<h1 className="display-title text-3xl font-semibold">Detections</h1>
 			<p className="mt-2 text-muted-foreground">
 				The last {detections.length} detections, most recent first.

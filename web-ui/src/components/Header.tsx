@@ -2,12 +2,12 @@ import { Link } from "@tanstack/react-router";
 
 export function Header() {
 	return (
-		<header className="border-b" style={{ background: "var(--header-bg)" }}>
-			<div className="page-wrap flex h-16 items-center justify-between">
+		<header style={{ background: "var(--header-bg)" }}>
+			<div className="page-wrap flex h-16 items-center justify-between border-b">
 				<Link to="/" className="display-title text-xl font-semibold">
 					BirdNET-Pi Live
 				</Link>
-				<nav className="flex items-center gap-6">
+				<nav className="flex items-center gap-4">
 					<Link
 						to="/"
 						className="nav-link"
