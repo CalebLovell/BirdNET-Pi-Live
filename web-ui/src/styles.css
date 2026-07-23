@@ -17,7 +17,7 @@
 	--clay: #9c4a34;
   /* Pale green pill background from adaline.ai's "meadow-100" swatch --
      used for hover states instead of the warmer sand tone. */
-  --meadow: #ecf2df;
+	--meadow: #f8faf2;
 
   --surface: color-mix(in oklab, var(--paper-raised) 88%, white 12%);
   --surface-strong: var(--paper-raised);

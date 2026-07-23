@@ -6,10 +6,11 @@ import {
 import Fuse from "fuse.js";
 import {
 	ArrowDownAZ,
-	ArrowUpDown,
 	BarChart3,
 	Binoculars,
 	Bird,
+	ChevronDown,
+	ChevronUp,
 	Clock,
 	Loader2,
 	Pause,
@@ -107,7 +108,7 @@ function Species() {
 		const direction = reverse ? -1 : 1;
 		return [...matches].sort((a, b) => {
 			if (sort === "alpha")
-				return direction * a.comName.localeCompare(b.comName);
+				return direction * b.comName.localeCompare(a.comName);
 			if (sort === "recent")
 				return direction * b.lastDetected.localeCompare(a.lastDetected);
 			return direction * (b.allTimeCount - a.allTimeCount);
@@ -145,7 +146,16 @@ function Species() {
 						variant="outline"
 						value={sort}
 						onValueChange={(value) => {
-							if (!value) return;
+							if (!value) {
+								navigate({
+									search: (prev) => ({
+										...prev,
+										reverse: !prev.reverse,
+										page: 1,
+									}),
+								});
+								return;
+							}
 							navigate({
 								search: (prev) => ({
 									...prev,
@@ -156,38 +166,43 @@ function Species() {
 							});
 						}}
 					>
-						<ToggleGroupItem value="count">
+						<ToggleGroupItem
+							value="count"
+							aria-label={`Total sort (${sort === "count" && reverse ? "ascending" : "descending"})`}
+						>
 							<BarChart3 className="size-4" />
 							Total
+							{sort === "count" && reverse ? (
+								<ChevronUp className="size-3" aria-hidden="true" />
+							) : (
+								<ChevronDown className="size-3" aria-hidden="true" />
+							)}
 						</ToggleGroupItem>
-						<ToggleGroupItem value="recent">
+						<ToggleGroupItem
+							value="recent"
+							aria-label={`Recent sort (${sort === "recent" && reverse ? "ascending" : "descending"})`}
+						>
 							<Clock className="size-4" />
 							Recent
+							{sort === "recent" && reverse ? (
+								<ChevronUp className="size-3" aria-hidden="true" />
+							) : (
+								<ChevronDown className="size-3" aria-hidden="true" />
+							)}
 						</ToggleGroupItem>
-						<ToggleGroupItem value="alpha">
+						<ToggleGroupItem
+							value="alpha"
+							aria-label={`Alphabetical sort (${sort === "alpha" && reverse ? "ascending" : "descending"})`}
+						>
 							<ArrowDownAZ className="size-4" />
 							Alphabetical
+							{sort === "alpha" && reverse ? (
+								<ChevronUp className="size-3" aria-hidden="true" />
+							) : (
+								<ChevronDown className="size-3" aria-hidden="true" />
+							)}
 						</ToggleGroupItem>
 					</ToggleGroup>
-					<Button
-						variant={reverse ? "default" : "outline"}
-						size="icon"
-						aria-label={
-							reverse ? "Reverse sort order (on)" : "Default sort order"
-						}
-						aria-pressed={reverse}
-						onClick={() =>
-							navigate({
-								search: (prev) => ({
-									...prev,
-									reverse: !prev.reverse,
-									page: 1,
-								}),
-							})
-						}
-					>
-						<ArrowUpDown className="size-4" />
-					</Button>
 				</div>
 			</div>
 
@@ -298,7 +313,7 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 			/>
 			<div className="flex flex-col gap-1">
 				<div className="flex items-baseline gap-1">
-						<div className="tabular-data text-lg font-semibold leading-none text-foreground">
+					<div className="tabular-data text-lg font-semibold leading-none text-foreground">
 						{card.allTimeCount}
 					</div>
 					<div className="text-[10px] leading-none text-muted-foreground/70">
