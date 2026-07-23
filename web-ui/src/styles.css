@@ -8,19 +8,21 @@
   /* Named palette -- greens borrowed from adaline.ai's site: a near-white
      paper ground, deep forest-green primary, and a muted sage secondary. */
   --paper: #fbfdf6;
-  --paper-raised: #fdfef9;
+	--paper-raised: #ffffff;
   --ink: #0a1d08;
   --moss: #203b14;
-  --sage: #c5ccb6;
-  --sand: #c69a58;
-  --clay: #9c4a34;
+	--sage: #c5ccb6;
+	--sand: #c69a58;
+	--bark: #472f1d;
+	--clay: #9c4a34;
   /* Pale green pill background from adaline.ai's "meadow-100" swatch --
      used for hover states instead of the warmer sand tone. */
   --meadow: #ecf2df;
 
   --surface: color-mix(in oklab, var(--paper-raised) 88%, white 12%);
   --surface-strong: var(--paper-raised);
-  --line: color-mix(in oklab, var(--moss) 22%, transparent);
+	--line: color-mix(in oklab, var(--moss) 15%, transparent);
+	--hover-line: color-mix(in oklab, var(--moss) 45%, var(--line));
   --kicker: var(--moss);
   --header-bg: color-mix(in oklab, var(--paper) 92%, var(--paper-raised) 8%);
   --link-bg-hover: color-mix(in oklab, var(--sage) 18%, var(--paper-raised));
@@ -167,8 +169,8 @@ code {
 /* Only cards that are actually links get the hover lift -- plain
    informational cards (Stats, Now, Overview) stay static. */
 .feature-card-link:hover {
-  transform: translateY(-2px);
-  border-color: color-mix(in oklab, var(--moss) 45%, var(--line));
+	transform: translateY(-2px);
+	border-color: var(--hover-line);
 }
 
 button,

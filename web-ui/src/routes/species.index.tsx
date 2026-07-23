@@ -10,11 +10,10 @@ import {
 	BarChart3,
 	Binoculars,
 	Bird,
-	BookOpen,
 	Clock,
 	Loader2,
 	Pause,
-	Play,
+	Volume2,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
@@ -275,20 +274,40 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 		onEnded,
 	} = usePlayableAudio(card.audioUrl);
 
+	const parsedLastDetected = card.lastDetected
+		? new Date(card.lastDetected.replace(" ", "T"))
+		: null;
+	const lastHeard =
+		parsedLastDetected && !Number.isNaN(parsedLastDetected.getTime())
+			? new Intl.DateTimeFormat(undefined, {
+					month: "short",
+					day: "numeric",
+					year: "numeric",
+					hour: "numeric",
+					minute: "2-digit",
+				}).format(parsedLastDetected)
+			: card.lastDetected || "—";
+
 	return (
-		<div className="feature-card feature-card-link relative flex flex-col overflow-hidden rounded-md">
+		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-3">
 			<Link
 				to="/species/$sciName"
 				params={{ sciName: sciNameToSlug(card.sciName) }}
 				className="absolute inset-0 z-0"
 				aria-label={`View ${card.comName}`}
 			/>
-			<div className="p-3 pb-0">
-				<h2 className="display-title text-lg font-bold">{card.comName}</h2>
-				<p className="text-sm text-muted-foreground italic">{card.sciName}</p>
+			<div className="flex flex-col gap-1">
+				<div className="flex items-baseline gap-1">
+						<div className="tabular-data text-lg font-semibold leading-none text-foreground">
+						{card.allTimeCount}
+					</div>
+					<div className="text-[10px] leading-none text-muted-foreground/70">
+						total recordings
+					</div>
+				</div>
 			</div>
 
-			<div className="mt-2 flex h-40 w-full items-center justify-center overflow-hidden">
+			<div className="flex h-40 w-full items-center justify-center overflow-hidden">
 				{card.imageUrl ? (
 					<img
 						src={card.imageUrl}
@@ -303,24 +322,16 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 				)}
 			</div>
 
-			<div className="flex flex-1 flex-col gap-2 p-3">
-				<div className="flex gap-5 text-sm">
-					<div>
-						<div className="tabular-data font-semibold">{card.hourCount}</div>
-						<div className="text-xs text-muted-foreground">This hour</div>
-					</div>
-					<div>
-						<div className="tabular-data font-semibold">
-							{card.allTimeCount}
-						</div>
-						<div className="text-xs text-muted-foreground">All time</div>
-					</div>
+			<div className="flex flex-1 flex-col gap-3">
+				<div>
+					<h2 className="display-title text-base font-bold">{card.comName}</h2>
+					<p className="text-xs text-[var(--bark)] italic">{card.sciName}</p>
 				</div>
-
-				<div className="relative z-10 mt-auto flex flex-wrap items-center justify-between gap-2 pt-2">
+				<div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
 					<Button
 						variant="default"
 						size="xs"
+						className="gap-1.5 px-2.5 text-[11px] has-[>svg]:px-2.5"
 						disabled={!card.audioUrl || isLoading}
 						onClick={togglePlay}
 						aria-label={
@@ -334,23 +345,17 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 						) : isPlaying ? (
 							<Pause className="size-3" />
 						) : (
-							<Play className="size-3" />
+							<Volume2 className="size-3" />
 						)}
-						{isPlaying ? "Pause" : "Play"}
+						{isPlaying ? "Pause" : "Bird Call"}
 					</Button>
-					<div className="flex items-center gap-2">
-						<Button variant="outline" size="xs" asChild>
-							<a
-								href={card.wikipediaUrl}
-								target="_blank"
-								rel="noreferrer"
-								aria-label={`${card.comName} on Wikipedia`}
-							>
-								<BookOpen className="size-3" />
-								Wiki
-							</a>
-						</Button>
-						<Button variant="outline" size="xs" asChild>
+					<div className="flex items-center gap-3">
+						<Button
+							variant="outline"
+							size="xs"
+							className="gap-1.5 px-2.5 text-[11px] has-[>svg]:px-2.5"
+							asChild
+						>
 							<a
 								href={card.ebirdUrl}
 								target="_blank"
@@ -361,6 +366,9 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 								eBird
 							</a>
 						</Button>
+					</div>
+					<div className="w-full self-end text-right text-[10px] leading-none text-muted-foreground/70">
+						Last heard · {lastHeard}
 					</div>
 					{card.audioUrl && (
 						<audio

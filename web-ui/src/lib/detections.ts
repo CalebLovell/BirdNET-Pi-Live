@@ -64,12 +64,10 @@ export const getDetections = createServerFn({ method: "GET" }).handler(
 export type LifeListCard = {
 	comName: string;
 	sciName: string;
-	hourCount: number;
 	allTimeCount: number;
 	lastDetected: string;
 	audioUrl: string | null;
 	imageUrl: string | null;
-	wikipediaUrl: string;
 	ebirdUrl: string;
 };
 
@@ -83,15 +81,6 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 			})
 			.from(detections)
 			.groupBy(detections.Com_Name, detections.Sci_Name);
-
-		const hourly = await db
-			.select({ comName: detections.Com_Name, hourCount: count() })
-			.from(detections)
-			.where(isLastHour)
-			.groupBy(detections.Com_Name);
-		const hourByName = new Map(
-			hourly.map((row) => [row.comName, row.hourCount]),
-		);
 
 		// Most-recent detection per species, ordered so the first occurrence
 		// of each Com_Name we see is the latest one.
@@ -117,20 +106,16 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 		return Promise.all(
 			totals.map(async (row) => {
 				const latest = latestByName.get(row.comName);
-				const { imageUrl: wikiImageUrl, wikipediaUrl } = await getSpeciesInfo(
-					row.comName,
-				);
+				const { imageUrl: wikiImageUrl } = await getSpeciesInfo(row.comName);
 				return {
 					comName: row.comName,
 					sciName: row.sciName,
 					allTimeCount: row.allTimeCount,
-					hourCount: hourByName.get(row.comName) ?? 0,
 					lastDetected: latest ? `${latest.date} ${latest.time}` : "",
 					audioUrl: latest
 						? audioUrlFor(latest.date, row.comName, latest.fileName)
 						: null,
 					imageUrl: illustrationUrlFor(row.sciName) ?? wikiImageUrl,
-					wikipediaUrl,
 					ebirdUrl: ebirdUrlFor(row.sciName, row.comName),
 				};
 			}),
