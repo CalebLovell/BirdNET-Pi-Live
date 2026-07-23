@@ -233,6 +233,42 @@ a {
   }
 }
 
+/* Plays once when a freshly-arrived row/card mounts (or remounts via a
+   changed `key`) -- a brief highlight that fades back to nothing. */
+.flash-in {
+  animation: flash-in 2.4s ease-out;
+}
+
+@keyframes flash-in {
+  0% {
+    background-color: color-mix(in oklab, var(--sand) 55%, transparent);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.live-dot {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--moss);
+  animation: live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--moss) 45%, transparent);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
 .site-footer {
   border-top: 1px solid var(--line);
   background: var(--header-bg);
