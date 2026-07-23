@@ -3,6 +3,7 @@ import {
 	Link,
 	stripSearchParams,
 } from "@tanstack/react-router";
+import Fuse from "fuse.js";
 import {
 	ArrowDownAZ,
 	ArrowUpDown,
@@ -15,11 +16,12 @@ import {
 	Pause,
 	Play,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
 
-import { Button } from "#/components/ui/button.tsx";
-import { Input } from "#/components/ui/input.tsx";
+import { Button } from "~/components/ui/button.tsx";
+import { Input } from "~/components/ui/input.tsx";
 import {
 	Pagination,
 	PaginationContent,
@@ -27,11 +29,11 @@ import {
 	PaginationLink,
 	PaginationNext,
 	PaginationPrevious,
-} from "#/components/ui/pagination.tsx";
-import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group.tsx";
-import { getLifeListCards, type LifeListCard } from "#/lib/detections.ts";
-import { sciNameToSlug } from "#/lib/species-slug.ts";
-import { usePlayableAudio } from "#/lib/use-playable-audio.ts";
+} from "~/components/ui/pagination.tsx";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
+import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
+import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
@@ -79,15 +81,29 @@ function Species() {
 	const { q: search, sort, reverse, page } = Route.useSearch();
 	const navigate = Route.useNavigate();
 
+	// Local state keeps typing responsive; the URL (and the Fuse search it
+	// drives) only updates after a short debounce, so back/forward history
+	// doesn't get a new entry on every keystroke.
+	const [queryInput, setQueryInput] = useState(search);
+	useEffect(() => setQueryInput(search), [search]);
+
+	const debouncedSetQuery = useDebouncedCallback((value: string) => {
+		navigate({ search: (prev) => ({ ...prev, q: value, page: 1 }) });
+	}, 200);
+
+	const fuse = useMemo(
+		() =>
+			new Fuse(cards, {
+				keys: ["comName", "sciName"],
+				threshold: 0.2,
+				ignoreLocation: true,
+			}),
+		[cards],
+	);
+
 	const filtered = useMemo(() => {
-		const query = search.trim().toLowerCase();
-		const matches = query
-			? cards.filter(
-					(c) =>
-						c.comName.toLowerCase().includes(query) ||
-						c.sciName.toLowerCase().includes(query),
-				)
-			: cards;
+		const query = search.trim();
+		const matches = query ? fuse.search(query).map((r) => r.item) : cards;
 
 		const direction = reverse ? -1 : 1;
 		return [...matches].sort((a, b) => {
@@ -97,7 +113,7 @@ function Species() {
 				return direction * b.lastDetected.localeCompare(a.lastDetected);
 			return direction * (b.allTimeCount - a.allTimeCount);
 		});
-	}, [cards, search, sort, reverse]);
+	}, [cards, fuse, search, sort, reverse]);
 
 	const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 	const currentPage = Math.min(page, pageCount);
@@ -116,10 +132,11 @@ function Species() {
 			<div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<Input
 					placeholder="Search species..."
-					value={search}
+					value={queryInput}
 					onChange={(e) => {
 						const value = e.target.value;
-						navigate({ search: (prev) => ({ ...prev, q: value, page: 1 }) });
+						setQueryInput(value);
+						debouncedSetQuery(value);
 					}}
 					className="sm:max-w-sm"
 				/>

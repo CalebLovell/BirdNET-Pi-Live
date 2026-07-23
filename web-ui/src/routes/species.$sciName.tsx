@@ -29,19 +29,19 @@ import {
 } from "recharts";
 import { z } from "zod";
 
-import { Button } from "#/components/ui/button.tsx";
-import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group.tsx";
+import { Button } from "~/components/ui/button.tsx";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
 	getSpeciesDetail,
 	type SpeciesDetail,
 	type Visit,
-} from "#/lib/species-detail.ts";
+} from "~/lib/species-detail.ts";
 import {
 	STATS_PERIOD_LABELS,
 	STATS_PERIODS,
 	type StatsPeriod,
-} from "#/lib/stats-periods.ts";
-import { usePlayableAudio } from "#/lib/use-playable-audio.ts";
+} from "~/lib/stats-periods.ts";
+import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 const DEFAULT_PERIOD: StatsPeriod = "week";
 

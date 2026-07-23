@@ -18,13 +18,13 @@ import {
 } from "recharts";
 import { z } from "zod";
 
-import { ToggleGroup, ToggleGroupItem } from "#/components/ui/toggle-group.tsx";
-import { getStatsForPeriod } from "#/lib/stats.ts";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
+import { getStatsForPeriod } from "~/lib/stats.ts";
 import {
 	STATS_PERIOD_LABELS,
 	STATS_PERIODS,
 	type StatsPeriod,
-} from "#/lib/stats-periods.ts";
+} from "~/lib/stats-periods.ts";
 
 const DEFAULT_PERIOD: StatsPeriod = "week";
 

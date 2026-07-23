@@ -1,4 +1,4 @@
-import ebirdCodes from "#/lib/ebird-codes.json";
+import ebirdCodes from "~/lib/ebird-codes.json";
 
 // Scientific name -> eBird's stable 6-char species code, lifted from
 // BirdNET-Pi's own scripts/ebird.php lookup table (same source data the

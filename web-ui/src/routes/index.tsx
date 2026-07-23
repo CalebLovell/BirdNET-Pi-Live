@@ -5,7 +5,7 @@ import {
 	CardContent,
 	CardHeader,
 	CardTitle,
-} from "#/components/ui/card.tsx";
+} from "~/components/ui/card.tsx";
 import {
 	Table,
 	TableBody,
@@ -13,8 +13,8 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
-} from "#/components/ui/table.tsx";
-import { getDetectionStats, getRecentDetections } from "#/lib/detections.ts";
+} from "~/components/ui/table.tsx";
+import { getDetectionStats, getRecentDetections } from "~/lib/detections.ts";
 
 export const Route = createFileRoute("/")({
 	component: Home,

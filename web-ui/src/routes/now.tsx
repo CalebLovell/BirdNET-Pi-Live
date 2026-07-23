@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import type { Detection } from "#/db/schema.ts";
-import { getRecentDetections } from "#/lib/detections.ts";
-import { usePolledData } from "#/lib/use-polled-data.ts";
+import type { Detection } from "~/db/schema.ts";
+import { getRecentDetections } from "~/lib/detections.ts";
+import { usePolledData } from "~/lib/use-polled-data.ts";
 
 const POLL_INTERVAL_MS = 10_000;
 

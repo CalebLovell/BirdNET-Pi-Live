@@ -7,8 +7,8 @@ import {
 	TableHead,
 	TableHeader,
 	TableRow,
-} from "#/components/ui/table.tsx";
-import { getDetections } from "#/lib/detections.ts";
+} from "~/components/ui/table.tsx";
+import { getDetections } from "~/lib/detections.ts";
 
 export const Route = createFileRoute("/detections")({
 	component: Detections,

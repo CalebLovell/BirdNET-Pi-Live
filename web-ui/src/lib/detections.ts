@@ -1,11 +1,11 @@
 import { createServerFn } from "@tanstack/react-start";
 import { count, countDistinct, desc, sql } from "drizzle-orm";
-import { db } from "#/db/index.ts";
-import { type Detection, detections } from "#/db/schema.ts";
-import { audioUrlFor } from "#/lib/audio.ts";
-import { ebirdUrlFor } from "#/lib/ebird.ts";
-import { illustrationUrlFor } from "#/lib/illustrations.ts";
-import { getSpeciesInfo } from "#/lib/wikipedia.ts";
+import { db } from "~/db/index.ts";
+import { type Detection, detections } from "~/db/schema.ts";
+import { audioUrlFor } from "~/lib/audio.ts";
+import { ebirdUrlFor } from "~/lib/ebird.ts";
+import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 const isToday = sql`${detections.Date} = date('now', 'localtime')`;
 const isLastHour = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-1 hour', 'localtime')`;

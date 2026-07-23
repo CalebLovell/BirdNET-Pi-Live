@@ -1,8 +1,8 @@
 import { count, type SQL, sql } from "drizzle-orm";
 
-import { db } from "#/db/index.ts";
-import { detections } from "#/db/schema.ts";
-import type { StatsPeriod } from "#/lib/stats-periods.ts";
+import { db } from "~/db/index.ts";
+import { detections } from "~/db/schema.ts";
+import type { StatsPeriod } from "~/lib/stats-periods.ts";
 
 // Rolling windows (not calendar-day boundaries) so "Last 24 Hours" never
 // looks emptied out right after midnight or early in the morning.

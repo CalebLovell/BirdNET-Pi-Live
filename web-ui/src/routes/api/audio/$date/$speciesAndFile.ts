@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { createFileRoute } from "@tanstack/react-router";
-import { mimeTypeFor, resolveExtractedFile } from "#/lib/audio.server.ts";
-import { splitSpeciesAndFile } from "#/lib/audio.ts";
+import { mimeTypeFor, resolveExtractedFile } from "~/lib/audio.server.ts";
+import { splitSpeciesAndFile } from "~/lib/audio.ts";
 
 export const Route = createFileRoute("/api/audio/$date/$speciesAndFile")({
 	server: {

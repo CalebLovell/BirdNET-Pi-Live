@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { count, countDistinct, sql } from "drizzle-orm";
 
-import { db } from "#/db/index.ts";
-import { detections } from "#/db/schema.ts";
-import type { StatsPeriod } from "#/lib/stats-periods.ts";
-import { getTrend, periodFilter, type TrendPoint } from "#/lib/trend.ts";
+import { db } from "~/db/index.ts";
+import { detections } from "~/db/schema.ts";
+import type { StatsPeriod } from "~/lib/stats-periods.ts";
+import { getTrend, periodFilter, type TrendPoint } from "~/lib/trend.ts";
 
 export type SpeciesCount = { comName: string; count: number };
 export type HourActivity = { hour: number; count: number };

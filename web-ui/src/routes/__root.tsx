@@ -1,8 +1,8 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { Footer } from "#/components/Footer.tsx";
-import { Header } from "#/components/Header.tsx";
+import { Footer } from "~/components/Footer.tsx";
+import { Header } from "~/components/Header.tsx";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({

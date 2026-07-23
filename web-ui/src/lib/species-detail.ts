@@ -1,15 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { avg, countDistinct, desc, sql } from "drizzle-orm";
 
-import { db } from "#/db/index.ts";
-import { detections } from "#/db/schema.ts";
-import { audioUrlFor } from "#/lib/audio.ts";
-import { ebirdUrlFor } from "#/lib/ebird.ts";
-import { illustrationUrlFor } from "#/lib/illustrations.ts";
-import { slugToSciNameQuery } from "#/lib/species-slug.ts";
-import type { StatsPeriod } from "#/lib/stats-periods.ts";
-import { getTrend, type TrendPoint } from "#/lib/trend.ts";
-import { getSpeciesInfo } from "#/lib/wikipedia.ts";
+import { db } from "~/db/index.ts";
+import { detections } from "~/db/schema.ts";
+import { audioUrlFor } from "~/lib/audio.ts";
+import { ebirdUrlFor } from "~/lib/ebird.ts";
+import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { slugToSciNameQuery } from "~/lib/species-slug.ts";
+import type { StatsPeriod } from "~/lib/stats-periods.ts";
+import { getTrend, type TrendPoint } from "~/lib/trend.ts";
+import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type HourActivity = { hour: number; count: number };
 export type Visit = { date: string; time: string; confidence: number | null };
