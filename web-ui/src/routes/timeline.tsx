@@ -157,18 +157,6 @@ function Timeline() {
 									))}
 								</div>
 							</div>
-
-							<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
-								<span>Less</span>
-								{HEAT_COLORS.map((color, index) => (
-									<span
-										key={`legend-${index}`}
-										className="size-3 rounded-[3px] border border-[var(--line)]"
-										style={{ backgroundColor: color }}
-									/>
-								))}
-								<span>More</span>
-							</div>
 						</div>
 
 						<div className="feature-card min-w-0 flex-1 rounded-md p-4">
@@ -180,10 +168,6 @@ function Timeline() {
 							{rows.map((row) => (
 								<BarRow key={row.comName} row={row} maxTotal={maxTotal} />
 							))}
-
-							<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
-								<span>Bar length relative to the most-detected species</span>
-							</div>
 						</div>
 					</div>
 				</TooltipProvider>
