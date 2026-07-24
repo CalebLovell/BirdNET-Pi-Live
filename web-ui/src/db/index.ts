@@ -48,6 +48,10 @@ function openDetectionsDb(): DatabaseSync {
 	}
 }
 
+export function openWritableDetectionsDb(): DatabaseSync {
+	return new DatabaseSync(dbPath, { readOnly: false });
+}
+
 export const sqlite = openDetectionsDb();
 
 export const db = drizzle(

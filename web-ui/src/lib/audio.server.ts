@@ -7,7 +7,7 @@ import path from "node:path";
 // never inside the git repo itself. Point BIRDNET_EXTRACTED_DIR at the
 // real path in production. Read lazily (not at module scope) so this
 // works correctly under edge runtimes that inject env per-request too.
-function extractedDir(): string {
+export function extractedDir(): string {
 	return path.resolve(
 		process.env.BIRDNET_EXTRACTED_DIR ?? "../../BirdSongs/Extracted",
 	);
