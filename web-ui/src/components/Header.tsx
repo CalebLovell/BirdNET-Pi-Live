@@ -18,6 +18,12 @@ export function Header() {
 					</Link>
 					<Link
 						to="/detections"
+						search={{
+							page: 1,
+							pageSize: 50,
+							sort: "recorded",
+							direction: "desc",
+						}}
 						className="nav-link"
 						activeProps={{ className: "nav-link is-active" }}
 					>
