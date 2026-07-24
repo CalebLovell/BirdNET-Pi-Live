@@ -38,6 +38,13 @@ export function Header() {
 						Stats
 					</Link>
 					<Link
+						to="/timeline"
+						className="nav-link"
+						activeProps={{ className: "nav-link is-active" }}
+					>
+						Timeline
+					</Link>
+					<Link
 						to="/now"
 						className="nav-link"
 						activeProps={{ className: "nav-link is-active" }}

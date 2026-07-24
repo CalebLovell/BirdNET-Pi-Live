@@ -27,6 +27,7 @@ import {
 import { z } from "zod";
 
 import { Button } from "~/components/ui/button.tsx";
+import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import {
 	getSpeciesDetail,
 	type SpeciesDetail,
@@ -74,14 +75,6 @@ function hourLabel(hour: number): string {
 	return `${hour - 12} PM`;
 }
 
-const HEAT_COLORS = [
-	"var(--paper)",
-	"color-mix(in oklab, var(--moss) 15%, var(--paper-raised))",
-	"color-mix(in oklab, var(--moss) 30%, var(--paper-raised))",
-	"color-mix(in oklab, var(--moss) 50%, var(--paper-raised))",
-	"color-mix(in oklab, var(--moss) 70%, var(--paper-raised))",
-] as const;
-
 const WAVEFORM_HEIGHTS = [
 	36, 62, 48, 82, 58, 94, 44, 72, 52, 86, 64, 38,
 ] as const;
@@ -98,11 +91,6 @@ function dateForBucket(bucket: string): Date {
 function bucketForDate(date: Date): string {
 	const pad = (value: number) => value.toString().padStart(2, "0");
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function heatLevel(count: number, maximum: number): number {
-	if (count === 0 || maximum === 0) return 0;
-	return Math.min(4, Math.max(1, Math.ceil((count / maximum) * 4)));
 }
 
 function buildHeatMap(history: TrendPoint[]): {
