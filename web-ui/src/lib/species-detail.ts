@@ -20,7 +20,7 @@ export type Visit = {
 };
 /**
  * A visit the log renders as "4:13 AM / 27 minutes ago". The age is measured
- * on the server, the same way the Now page measures its rows, so both sides of
+ * on the server, the same way the Today page measures its rows, so both sides of
  * hydration render an identical label from identical data.
  */
 export type RecentVisit = Visit & { ageMs: number };

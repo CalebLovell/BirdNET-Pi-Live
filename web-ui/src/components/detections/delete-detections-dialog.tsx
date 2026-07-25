@@ -22,10 +22,10 @@ export function DeleteDetectionsDialog({
 		>
 			<div className="feature-card w-full max-w-md rounded-md p-4 shadow-xl">
 				<div className="space-y-2">
-					<h2 id="delete-detections-title" className="text-lg font-semibold">
+					<h2 id="delete-detections-title" className="font-semibold text-lg">
 						Delete {count} detection{count === 1 ? "" : "s"}?
 					</h2>
-					<p className="text-sm text-muted-foreground">
+					<p className="text-muted-foreground text-sm">
 						This permanently removes {count} detection record
 						{count === 1 ? "" : "s"} and their unreferenced extracted audio
 						files. This cannot be undone.

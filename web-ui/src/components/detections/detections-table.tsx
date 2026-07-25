@@ -1,11 +1,12 @@
+import { Link } from "@tanstack/react-router";
 import {
+	type ColumnDef,
 	flexRender,
 	getCoreRowModel,
-	type ColumnDef,
 	type OnChangeFn,
 	type RowSelectionState,
-	type VisibilityState,
 	useReactTable,
+	type VisibilityState,
 } from "@tanstack/react-table";
 import {
 	ArrowDown,
@@ -17,9 +18,9 @@ import {
 	SlidersHorizontal,
 	Volume2,
 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
 import { Button, buttonVariants } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
+import { SearchInput } from "~/components/ui/search-input.tsx";
 import {
 	Table,
 	TableBody,
@@ -30,14 +31,11 @@ import {
 } from "~/components/ui/table.tsx";
 import { audioUrlFor } from "~/lib/audio.ts";
 import {
-	type DetectionPage,
-	type DetectionTableRow,
-} from "~/lib/detections.ts";
-import {
-	detectionRowKey,
 	type DetectionWorkspaceSearch,
 	type DetectionWorkspaceSort,
+	detectionRowKey,
 } from "~/lib/detection-workspace.ts";
+import type { DetectionPage, DetectionTableRow } from "~/lib/detections.ts";
 import { sciNameToSlug } from "~/lib/species-slug.ts";
 import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
@@ -179,9 +177,8 @@ export function DetectionsFilters({
 
 	return (
 		<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-			<Input
+			<SearchInput
 				aria-label="Filter by species"
-				className="!w-80"
 				placeholder="Search detections..."
 				value={search.species ?? ""}
 				onChange={(event) =>
@@ -190,6 +187,7 @@ export function DetectionsFilters({
 						species: event.target.value || undefined,
 					})
 				}
+				onClear={() => updateSearch({ page: 1, species: undefined })}
 			/>
 		</div>
 	);

@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import {
 	Bird,
 	ChartNoAxesColumnIncreasing,
@@ -17,18 +17,12 @@ import {
 	YAxis,
 } from "recharts";
 
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "~/components/ui/tooltip.tsx";
+import { SpeciesRankRow } from "~/components/species-rank-row.tsx";
 import { sciNameToSlug } from "~/lib/species-slug.ts";
 import { getStats } from "~/lib/stats.ts";
 import {
 	type HourActivity,
 	hourLabel,
-	rankingBarPercent,
 	type SpeciesCount,
 } from "~/lib/stats-data.ts";
 
@@ -52,56 +46,54 @@ function Stats() {
 	const stats = Route.useLoaderData();
 
 	return (
-		<TooltipProvider>
-			<div className="page-wrap py-4">
-				<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-					<SummaryCard
-						label="Total detections"
-						value={stats.totalDetections}
-						icon={ChartNoAxesColumnIncreasing}
-					/>
-					<SummaryCard
-						label="Species detected"
-						value={stats.uniqueSpecies}
-						icon={Feather}
-					/>
-					<SummaryCard
-						label="Top species"
-						value={stats.topSpecies?.comName ?? "—"}
-						detail={
-							stats.topSpecies
-								? `${stats.topSpecies.count} detections`
-								: undefined
-						}
-						icon={Bird}
-						artwork={
-							stats.topSpecies?.imageUrl ? (
-								<img
-									src={stats.topSpecies.imageUrl}
-									alt={stats.topSpecies.comName}
-									className="size-8 object-contain"
-								/>
-							) : undefined
-						}
-					/>
-					<SummaryCard
-						label="Busiest hour"
-						value={stats.busiestHour ? hourLabel(stats.busiestHour.hour) : "—"}
-						detail={
-							stats.busiestHour
-								? `${stats.busiestHour.count} detections`
-								: undefined
-						}
-						icon={Clock3}
-					/>
-				</div>
-
-				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-					<TopSpeciesCard species={stats.topSpeciesList} />
-					<HourlyActivityCard activity={stats.hourActivity} />
-				</div>
+		<div className="page-wrap py-4">
+			<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+				<SummaryCard
+					label="Total detections"
+					value={stats.totalDetections}
+					icon={ChartNoAxesColumnIncreasing}
+				/>
+				<SummaryCard
+					label="Species detected"
+					value={stats.uniqueSpecies}
+					icon={Feather}
+				/>
+				<SummaryCard
+					label="Top species"
+					value={stats.topSpecies?.comName ?? "—"}
+					detail={
+						stats.topSpecies
+							? `${stats.topSpecies.count} detections`
+							: undefined
+					}
+					icon={Bird}
+					artwork={
+						stats.topSpecies?.imageUrl ? (
+							<img
+								src={stats.topSpecies.imageUrl}
+								alt={stats.topSpecies.comName}
+								className="size-8 object-contain"
+							/>
+						) : undefined
+					}
+				/>
+				<SummaryCard
+					label="Busiest hour"
+					value={stats.busiestHour ? hourLabel(stats.busiestHour.hour) : "—"}
+					detail={
+						stats.busiestHour
+							? `${stats.busiestHour.count} detections`
+							: undefined
+					}
+					icon={Clock3}
+				/>
 			</div>
-		</TooltipProvider>
+
+			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+				<TopSpeciesCard species={stats.topSpeciesList} />
+				<HourlyActivityCard activity={stats.hourActivity} />
+			</div>
+		</div>
 	);
 }
 
@@ -163,82 +155,21 @@ function TopSpeciesCard({ species }: { species: SpeciesCount[] }) {
 					No detections recorded yet.
 				</div>
 			) : (
-				<div className="mt-4">
+				<ol className="mt-4 space-y-1">
 					{species.map((item) => (
-						<TopSpeciesRow
+						<SpeciesRankRow
 							key={item.sciName}
-							species={item}
+							comName={item.comName}
+							sciName={item.sciName}
+							speciesSlug={sciNameToSlug(item.sciName)}
+							imageUrl={item.imageUrl}
+							count={item.count}
 							maximum={maximum}
 						/>
 					))}
-				</div>
+				</ol>
 			)}
 		</section>
-	);
-}
-
-function TopSpeciesRow({
-	species,
-	maximum,
-}: {
-	species: SpeciesCount;
-	maximum: number;
-}) {
-	return (
-		<div className="grid h-10 grid-cols-[minmax(0,12rem)_minmax(4rem,1fr)_3rem] items-center gap-4 border-[var(--line)] border-t first:border-t-0">
-			<Link
-				to="/species/$sciName"
-				params={{ sciName: sciNameToSlug(species.sciName) }}
-				className="flex min-w-0 items-center gap-4 rounded-sm no-underline focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2"
-			>
-				<div className="flex size-8 shrink-0 items-center justify-center">
-					{species.imageUrl ? (
-						<img
-							src={species.imageUrl}
-							alt={species.comName}
-							className="max-h-full max-w-full object-contain"
-							loading="lazy"
-						/>
-					) : (
-						<Bird className="size-4 text-muted-foreground" />
-					)}
-				</div>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<span className="truncate font-semibold text-sm">
-							{species.comName}
-						</span>
-					</TooltipTrigger>
-					<TooltipContent>{species.comName}</TooltipContent>
-				</Tooltip>
-			</Link>
-
-			<Tooltip>
-				<TooltipTrigger asChild>
-					<div
-						className="h-3 overflow-hidden rounded-r-full"
-						style={{
-							backgroundColor:
-								"color-mix(in oklab, var(--bark) 18%, var(--paper-raised))",
-						}}
-					>
-						<div
-							className="h-full rounded-r-full bg-[var(--moss)]"
-							style={{
-								width: `${rankingBarPercent(species.count, maximum)}%`,
-							}}
-						/>
-					</div>
-				</TooltipTrigger>
-				<TooltipContent>
-					{species.comName} — {species.count} detections
-				</TooltipContent>
-			</Tooltip>
-
-			<span className="tabular-data text-right text-muted-foreground text-xs">
-				{species.count}
-			</span>
-		</div>
 	);
 }
 

@@ -2,11 +2,9 @@ import { Link } from "@tanstack/react-router";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
+import { LIST_ROW, SpeciesThumbnail } from "~/components/species-rank-row.tsx";
 import type { RecentDetection } from "~/lib/now.ts";
 import { formatClockTime, formatTimeAgo } from "~/lib/time-ago.ts";
-
-const ROW_BASE =
-	"flex items-center gap-3 rounded-md px-3 py-2.5 odd:bg-[var(--meadow)]";
 
 export function RecentLogCard({
 	recent,
@@ -34,9 +32,14 @@ export function RecentLogCard({
 						<li
 							key={detection.key}
 							className={
-								freshKeys.has(detection.key) ? `${ROW_BASE} flash-in` : ROW_BASE
+								freshKeys.has(detection.key) ? `${LIST_ROW} flash-in` : LIST_ROW
 							}
 						>
+							<SpeciesThumbnail
+								imageUrl={detection.imageUrl}
+								comName={detection.comName}
+							/>
+
 							<div className="min-w-0 flex-1">
 								<Link
 									to="/species/$sciName"
@@ -45,7 +48,7 @@ export function RecentLogCard({
 								>
 									{detection.comName}
 								</Link>
-								<div className="truncate text-muted-foreground text-xs italic">
+								<div className="truncate text-[var(--bark)] text-xs italic">
 									{detection.sciName}
 								</div>
 							</div>

@@ -1,7 +1,7 @@
 export function Footer() {
 	return (
 		<footer className="site-footer">
-			<div className="page-wrap flex h-14 items-center justify-between text-sm text-muted-foreground">
+			<div className="page-wrap flex h-14 items-center justify-between text-muted-foreground text-sm">
 				<span>BirdNET-Pi Live</span>
 				<a
 					href="https://github.com/kahst/BirdNET-Analyzer"

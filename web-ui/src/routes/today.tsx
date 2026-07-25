@@ -12,8 +12,8 @@ import { usePolledData } from "~/lib/use-polled-data.ts";
 const POLL_INTERVAL_MS = 10_000;
 const FLASH_DURATION_MS = 2_400;
 
-export const Route = createFileRoute("/now")({
-	component: Now,
+export const Route = createFileRoute("/today")({
+	component: Today,
 	loader: () => getNowSnapshot(),
 });
 
@@ -44,7 +44,7 @@ function useFreshKeys(keys: string[]): Set<string> {
 	return freshKeys;
 }
 
-function Now() {
+function Today() {
 	const initial = Route.useLoaderData();
 	const { data: snapshot } = usePolledData(
 		() => getNowSnapshot(),

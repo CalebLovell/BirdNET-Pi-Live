@@ -8,7 +8,7 @@ from the prompt template at `avian/scripts/prompt.template.md` in that repo.
 Licensed CC-BY-NC-SA-4.0, inherited from BirdNET-Pi. Non-commercial use only.
 
 `nest.webp` comes from the same repo (`avian/frontend/nest.webp`) and is used
-as the Now page's resting state when nothing has been heard for over an hour.
+as the Today page's resting state when nothing has been heard for over an hour.
 
 Filenames are `<slugified-scientific-name>.png` (perched) and
 `<slugified-scientific-name>-2.png` (in flight). Only the species detected

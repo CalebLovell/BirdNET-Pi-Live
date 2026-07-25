@@ -4,16 +4,16 @@ export function Header() {
 	return (
 		<header style={{ background: "var(--header-bg)" }}>
 			<div className="page-wrap flex h-16 items-center justify-between border-b">
-				<Link to="/" className="display-title text-xl font-semibold">
+				<Link to="/" className="display-title font-semibold text-xl">
 					BirdNET-Pi Live
 				</Link>
 				<nav className="flex items-center gap-4">
 					<Link
-						to="/now"
+						to="/today"
 						className="nav-link"
 						activeProps={{ className: "nav-link is-active" }}
 					>
-						Now
+						Today
 					</Link>
 					<Link
 						to="/timeline"
@@ -38,6 +38,10 @@ export function Header() {
 							direction: "desc",
 						}}
 						className="nav-link"
+						// Without this the link only reads as active while the URL's
+						// search params still match the defaults above, so paging or
+						// sorting drops the underline.
+						activeOptions={{ includeSearch: false }}
 						activeProps={{ className: "nav-link is-active" }}
 					>
 						Detections

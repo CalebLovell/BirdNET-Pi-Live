@@ -1,4 +1,4 @@
-// Elapsed-time labels and the freshness thresholds that drive the Now page's
+// Elapsed-time labels and the freshness thresholds that drive the Today page's
 // hero card. Pure and isomorphic: the caller supplies `now`, so nothing here
 // reads the clock on its own (see use-age-offset.ts for why that matters to SSR).
 

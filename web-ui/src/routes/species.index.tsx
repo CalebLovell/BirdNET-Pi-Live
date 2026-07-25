@@ -16,7 +16,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
 import { SpeciesActions } from "~/components/species-actions.tsx";
-import { Input } from "~/components/ui/input.tsx";
 import {
 	Pagination,
 	PaginationContent,
@@ -25,6 +24,7 @@ import {
 	PaginationNext,
 	PaginationPrevious,
 } from "~/components/ui/pagination.tsx";
+import { SearchInput } from "~/components/ui/search-input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { sciNameToSlug } from "~/lib/species-slug.ts";
@@ -122,7 +122,8 @@ function Species() {
 	return (
 		<div className="page-wrap py-4">
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<Input
+				<SearchInput
+					aria-label="Filter by species"
 					placeholder="Search species..."
 					value={queryInput}
 					onChange={(e) => {
@@ -130,7 +131,14 @@ function Species() {
 						setQueryInput(value);
 						debouncedSetQuery(value);
 					}}
-					className="sm:max-w-sm"
+					onClear={() => {
+						setQueryInput("");
+						debouncedSetQuery.cancel();
+						navigate({
+							search: (prev) => ({ ...prev, q: "", page: 1 }),
+							replace: true,
+						});
+					}}
 				/>
 				<div className="flex items-center gap-2">
 					<ToggleGroup

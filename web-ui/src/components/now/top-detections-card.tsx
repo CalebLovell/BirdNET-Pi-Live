@@ -1,6 +1,4 @@
-import { Link } from "@tanstack/react-router";
-import { Bird } from "lucide-react";
-
+import { SpeciesRankRow } from "~/components/species-rank-row.tsx";
 import type { TopSpecies } from "~/lib/now.ts";
 
 export function TopDetectionsCard({
@@ -8,8 +6,6 @@ export function TopDetectionsCard({
 }: {
 	topSpecies: TopSpecies[];
 }) {
-	// Bars are scaled against the leader rather than the total, so the shape of
-	// the morning reads at a glance even when one species dominates.
 	const leader = topSpecies[0]?.count ?? 0;
 
 	return (
@@ -24,56 +20,17 @@ export function TopDetectionsCard({
 					Nothing detected in the last 24 hours.
 				</p>
 			) : (
-				<ol className="mt-4 space-y-3">
+				<ol className="mt-4 space-y-1">
 					{topSpecies.map((species) => (
-						<li key={species.comName} className="flex items-center gap-3">
-							<div className="flex size-10 shrink-0 items-center justify-center overflow-hidden">
-								{species.imageUrl ? (
-									<img
-										src={species.imageUrl}
-										alt=""
-										className="max-h-full max-w-full object-contain"
-									/>
-								) : (
-									<Bird className="size-5 text-muted-foreground" />
-								)}
-							</div>
-
-							<div className="min-w-0 flex-1">
-								<div className="flex items-baseline justify-between gap-2">
-									<Link
-										to="/species/$sciName"
-										params={{ sciName: species.speciesSlug }}
-										className="truncate font-medium no-underline hover:underline"
-									>
-										{species.comName}
-									</Link>
-									<span className="tabular-data shrink-0 font-semibold text-sm">
-										{species.count.toLocaleString()}
-									</span>
-								</div>
-								<div className="truncate text-muted-foreground text-xs italic">
-									{species.sciName}
-								</div>
-								<div
-									className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--track)]"
-									role="img"
-									aria-label={`${species.count} detections`}
-								>
-									<div
-										className="h-full rounded-full"
-										style={{
-											width:
-												leader > 0
-													? `${(species.count / leader) * 100}%`
-													: "0%",
-											backgroundColor: "var(--moss)",
-											opacity: 0.75,
-										}}
-									/>
-								</div>
-							</div>
-						</li>
+						<SpeciesRankRow
+							key={species.comName}
+							comName={species.comName}
+							sciName={species.sciName}
+							speciesSlug={species.speciesSlug}
+							imageUrl={species.imageUrl}
+							count={species.count}
+							maximum={leader}
+						/>
 					))}
 				</ol>
 			)}

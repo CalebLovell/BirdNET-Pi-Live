@@ -14,7 +14,7 @@ import {
 } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
-// Every figure on the Now page reads from one rolling 24-hour window rather
+// Every figure on the Today page reads from one rolling 24-hour window rather
 // than the calendar day, so no two cards can disagree -- and so the page still
 // shows a full night of activity when someone checks it at 1am.
 const detectedAt = sql<string>`datetime(${detections.Date} || ' ' || ${detections.Time})`;
@@ -57,6 +57,7 @@ export type RecentDetection = {
 	comName: string;
 	sciName: string;
 	speciesSlug: string;
+	imageUrl: string | null;
 	detectedAt: string;
 	ageMs: number;
 	confidence: number | null;
@@ -214,7 +215,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 				.limit(5),
 		]);
 
-		const [current, topSpecies] = await Promise.all([
+		const [current, topSpecies, recent] = await Promise.all([
 			latest ? buildCurrentBird(latest, generatedAtMs) : null,
 			Promise.all(
 				topRows.map(async (row) => ({
@@ -223,6 +224,19 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 					speciesSlug: sciNameToSlug(row.sciName),
 					imageUrl: await imageUrlFor(row.sciName, row.comName),
 					count: row.count,
+				})),
+			),
+			Promise.all(
+				recentRows.map(async (row) => ({
+					key: `${row.detectedAt}-${row.fileName}`,
+					comName: row.comName,
+					sciName: row.sciName,
+					speciesSlug: sciNameToSlug(row.sciName),
+					imageUrl: await imageUrlFor(row.sciName, row.comName),
+					detectedAt: row.detectedAt,
+					ageMs: generatedAtMs - timestampToMillis(row.detectedAt),
+					confidence: row.confidence,
+					audioUrl: audioUrlFor(row.date, row.comName, row.fileName),
 				})),
 			),
 		]);
@@ -239,16 +253,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 					: null,
 			},
 			topSpecies,
-			recent: recentRows.map((row) => ({
-				key: `${row.detectedAt}-${row.fileName}`,
-				comName: row.comName,
-				sciName: row.sciName,
-				speciesSlug: sciNameToSlug(row.sciName),
-				detectedAt: row.detectedAt,
-				ageMs: generatedAtMs - timestampToMillis(row.detectedAt),
-				confidence: row.confidence,
-				audioUrl: audioUrlFor(row.date, row.comName, row.fileName),
-			})),
+			recent,
 		};
 	},
 );

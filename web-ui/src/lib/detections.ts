@@ -1,5 +1,5 @@
-import { createServerFn } from "@tanstack/react-start";
 import { rm } from "node:fs/promises";
+import { createServerFn } from "@tanstack/react-start";
 import {
 	and,
 	asc,
@@ -13,15 +13,15 @@ import {
 } from "drizzle-orm";
 import { db, openWritableDetectionsDb } from "~/db/index.ts";
 import { type Detection, detections } from "~/db/schema.ts";
-import { audioUrlFor } from "~/lib/audio.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
+import { audioUrlFor } from "~/lib/audio.ts";
 import {
-	resolveDetectionClipPath,
 	type DetectionClipIdentity,
+	resolveDetectionClipPath,
 } from "~/lib/detection-file-path.server.ts";
 import {
-	normalizeDetectionWorkspaceSearch,
 	type DetectionWorkspaceSearch,
+	normalizeDetectionWorkspaceSearch,
 } from "~/lib/detection-workspace.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";

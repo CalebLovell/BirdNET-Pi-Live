@@ -33,7 +33,7 @@ test("labels seconds, minutes, hours and days", () => {
 });
 
 // The visit log reaches back over a species' whole history, so the scale has to
-// keep reading well past the Now page's 24-hour window.
+// keep reading well past the Today page's 24-hour window.
 test("labels months and years for older visits", () => {
 	assert.equal(formatTimeAgo(45 * DAY), "1 month ago");
 	assert.equal(formatTimeAgo(3 * MONTH), "3 months ago");
