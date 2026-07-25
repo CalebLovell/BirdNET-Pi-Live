@@ -58,22 +58,20 @@ function Stats() {
 					<SummaryCard
 						label="Total detections"
 						value={stats.totalDetections}
-						sub="All recorded visits"
 						icon={ChartNoAxesColumnIncreasing}
 					/>
 					<SummaryCard
 						label="Species detected"
 						value={stats.uniqueSpecies}
-						sub="Unique species"
 						icon={Feather}
 					/>
 					<SummaryCard
 						label="Top species"
 						value={stats.topSpecies?.comName ?? "—"}
-						sub={
+						detail={
 							stats.topSpecies
 								? `${stats.topSpecies.count} detections`
-								: "No detections yet"
+								: undefined
 						}
 						icon={Bird}
 						artwork={
@@ -81,7 +79,7 @@ function Stats() {
 								<img
 									src={stats.topSpecies.imageUrl}
 									alt={stats.topSpecies.comName}
-									className="size-10 object-contain"
+									className="size-8 object-contain"
 								/>
 							) : undefined
 						}
@@ -89,10 +87,10 @@ function Stats() {
 					<SummaryCard
 						label="Busiest hour"
 						value={stats.busiestHour ? hourLabel(stats.busiestHour.hour) : "—"}
-						sub={
+						detail={
 							stats.busiestHour
 								? `${stats.busiestHour.count} detections`
-								: "No detections yet"
+								: undefined
 						}
 						icon={Clock3}
 					/>
@@ -110,37 +108,41 @@ function Stats() {
 function SummaryCard({
 	label,
 	value,
-	sub,
+	detail,
 	icon: Icon,
 	artwork,
 }: {
 	label: string;
 	value: string | number;
-	sub: string;
+	detail?: string;
 	icon: ComponentType<{ className?: string }>;
 	artwork?: ReactNode;
 }) {
 	return (
-		<div className="feature-card flex flex-col gap-4 overflow-hidden rounded-md p-4">
-			<div className="flex items-start justify-between gap-4">
-				<div className="island-kicker">{label}</div>
-				{artwork ?? (
-					<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
-						<Icon className="size-5 text-[var(--moss)]" />
-					</div>
-				)}
-			</div>
-			<div className="flex flex-col gap-4">
-				<div
-					className={
-						typeof value === "number"
-							? "tabular-data truncate font-semibold text-3xl leading-none"
-							: "display-title line-clamp-2 font-semibold text-xl leading-tight"
-					}
-				>
-					{value}
+		<div className="feature-card flex items-center gap-4 overflow-hidden rounded-md p-4">
+			{artwork ?? (
+				<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
+					<Icon aria-hidden="true" className="size-4 text-[var(--moss)]" />
 				</div>
-				<div className="tabular-data text-muted-foreground text-xs">{sub}</div>
+			)}
+			<div className="min-w-0 flex-1">
+				<div className="island-kicker">{label}</div>
+				<div className="mt-2 flex min-w-0 items-baseline gap-2">
+					<div
+						className={
+							typeof value === "number"
+								? "tabular-data truncate font-semibold text-3xl leading-none"
+								: "display-title truncate font-semibold text-xl leading-tight"
+						}
+					>
+						{value}
+					</div>
+					{detail ? (
+						<div className="tabular-data hidden shrink-0 text-[10px] text-muted-foreground sm:block">
+							{detail}
+						</div>
+					) : null}
+				</div>
 			</div>
 		</div>
 	);
