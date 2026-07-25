@@ -104,12 +104,35 @@ def random_time_of_day(is_nocturnal: bool) -> tuple[int, int, int]:
     return hour, minute, second
 
 
-def build_row(day: datetime, common_name: str, sci_name: str, is_nocturnal: bool, override_time: datetime | None = None):
+def random_datetime_in_day(day: datetime, is_nocturnal: bool, not_after: datetime | None = None) -> datetime:
+    """Picks a time of day for `day`, never later than `not_after`.
+
+    Today's detections can't have happened yet, so the daily activity curve
+    is resampled until it lands in the past; if the clamp cuts off the
+    species' active hours entirely (owls before dawn on a morning run), it
+    falls back to a uniform time in the elapsed part of the day."""
+    for _ in range(20):
+        hour, minute, second = random_time_of_day(is_nocturnal)
+        dt = day.replace(hour=hour, minute=minute, second=second)
+        if not_after is None or dt <= not_after:
+            return dt
+
+    elapsed = int((not_after - day.replace(hour=0, minute=0, second=0)).total_seconds())
+    return day.replace(hour=0, minute=0, second=0) + timedelta(seconds=random.randint(0, max(0, elapsed)))
+
+
+def build_row(
+    day: datetime,
+    common_name: str,
+    sci_name: str,
+    is_nocturnal: bool,
+    override_time: datetime | None = None,
+    not_after: datetime | None = None,
+):
     if override_time is not None:
         dt = override_time
     else:
-        hour, minute, second = random_time_of_day(is_nocturnal)
-        dt = day.replace(hour=hour, minute=minute, second=second)
+        dt = random_datetime_in_day(day, is_nocturnal, not_after)
 
     date_str = dt.strftime('%Y-%m-%d')
     time_str = dt.strftime('%H:%M:%S')
@@ -129,23 +152,25 @@ def generate_rows(days: int):
 
     for day in reversed(day_starts):
         is_today = day.date() == today.date()
+        # Nothing on today can be in the future.
+        not_after = today if is_today else None
         daily_count = random.randint(50, 250)
 
         for _ in range(daily_count):
             if random.random() < 0.04:
                 name, sci = random.choice(NOCTURNAL_SPECIES)[:2]
-                rows.append(build_row(day, name, sci, is_nocturnal=True))
+                rows.append(build_row(day, name, sci, is_nocturnal=True, not_after=not_after))
             else:
                 name, sci, _weight = random.choices(
                     REGULAR_SPECIES,
                     weights=[w for *_, w in REGULAR_SPECIES],
                 )[0]
-                rows.append(build_row(day, name, sci, is_nocturnal=False))
+                rows.append(build_row(day, name, sci, is_nocturnal=False, not_after=not_after))
 
         # Rare migrants only show up in the last 5 days.
         if (today - day).days < 5 and random.random() < 0.6:
             name, sci = random.choice(RECENT_RARITIES)
-            rows.append(build_row(day, name, sci, is_nocturnal=False))
+            rows.append(build_row(day, name, sci, is_nocturnal=False, not_after=not_after))
 
         # Guarantee a few detections in the last hour so "today"/"last hour"
         # stats have something to show right after seeding.

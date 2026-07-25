@@ -25,12 +25,8 @@ export function TopDetectionsCard({
 				</p>
 			) : (
 				<ol className="mt-4 space-y-3">
-					{topSpecies.map((species, index) => (
+					{topSpecies.map((species) => (
 						<li key={species.comName} className="flex items-center gap-3">
-							<span className="tabular-data w-4 shrink-0 text-muted-foreground text-sm">
-								{index + 1}
-							</span>
-
 							<div className="flex size-10 shrink-0 items-center justify-center overflow-hidden">
 								{species.imageUrl ? (
 									<img
@@ -60,7 +56,7 @@ export function TopDetectionsCard({
 									{species.sciName}
 								</div>
 								<div
-									className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--meadow)]"
+									className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--track)]"
 									role="img"
 									aria-label={`${species.count} detections`}
 								>

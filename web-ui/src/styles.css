@@ -21,6 +21,9 @@
   --surface: color-mix(in oklab, var(--paper-raised) 88%, white 12%);
   --surface-strong: var(--paper-raised);
 	--line: color-mix(in oklab, var(--moss) 15%, transparent);
+	/* Unfilled remainder of a bar. Needs more weight than --line: a hairline
+	   border reads fine at 15%, but a 6px track on near-white paper vanishes. */
+	--track: color-mix(in oklab, var(--moss) 28%, transparent);
 	--hover-line: color-mix(in oklab, var(--moss) 45%, var(--line));
   --kicker: var(--moss);
   --header-bg: color-mix(in oklab, var(--paper) 92%, var(--paper-raised) 8%);
