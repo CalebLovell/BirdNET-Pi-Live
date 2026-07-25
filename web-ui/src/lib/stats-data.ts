@@ -1,5 +1,11 @@
 export type HourActivity = { hour: number; count: number };
 export type BusiestHour = HourActivity;
+export type SpeciesCount = {
+	comName: string;
+	sciName: string;
+	count: number;
+	imageUrl: string | null;
+};
 
 export function buildHourActivity(rows: HourActivity[]): HourActivity[] {
 	const countByHour = new Map(rows.map((row) => [row.hour, row.count]));

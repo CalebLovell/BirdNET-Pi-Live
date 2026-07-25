@@ -3,89 +3,86 @@ import { count, countDistinct, sql } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
-import type { StatsPeriod } from "~/lib/stats-periods.ts";
-import { getTrend, periodFilter, type TrendPoint } from "~/lib/trend.ts";
-
-export type SpeciesCount = { comName: string; count: number };
-export type HourActivity = { hour: number; count: number };
+import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import {
+	buildHourActivity,
+	selectBusiestHour,
+	type BusiestHour,
+	type HourActivity,
+	type SpeciesCount,
+} from "~/lib/stats-data.ts";
+import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type StatsData = {
-	period: StatsPeriod;
 	totalDetections: number;
 	uniqueSpecies: number;
 	topSpecies: SpeciesCount | null;
-	busiest: { label: string; count: number } | null;
-	trend: TrendPoint[];
+	busiestHour: BusiestHour | null;
 	topSpeciesList: SpeciesCount[];
 	hourActivity: HourActivity[];
 };
 
-async function getTopSpecies(
-	period: StatsPeriod,
-	limit: number,
-): Promise<SpeciesCount[]> {
-	return db
-		.select({ comName: detections.Com_Name, count: count() })
+async function getTopSpecies(limit: number): Promise<SpeciesCount[]> {
+	const rows = await db
+		.select({
+			comName: detections.Com_Name,
+			sciName: detections.Sci_Name,
+			count: count(),
+		})
 		.from(detections)
-		.where(periodFilter(period))
-		.groupBy(detections.Com_Name)
+		.groupBy(detections.Com_Name, detections.Sci_Name)
 		.orderBy(sql`count(*) desc`)
 		.limit(limit);
+
+	return Promise.all(
+		rows.map(async (row) => {
+			const illustrationUrl = illustrationUrlFor(row.sciName);
+			const imageUrl = illustrationUrl
+				? illustrationUrl
+				: (await getSpeciesInfo(row.comName)).imageUrl;
+
+			return { ...row, imageUrl };
+		}),
+	);
 }
 
-async function getHourActivity(period: StatsPeriod): Promise<HourActivity[]> {
+async function getHourActivity(): Promise<HourActivity[]> {
 	const rows = await db
 		.select({
 			hour: sql<string>`strftime('%H', ${detections.Time})`,
 			count: count(),
 		})
 		.from(detections)
-		.where(periodFilter(period))
 		.groupBy(sql`strftime('%H', ${detections.Time})`);
-	const countByHour = new Map(rows.map((r) => [Number(r.hour), r.count]));
 
-	return Array.from({ length: 24 }, (_, hour) => ({
-		hour,
-		count: countByHour.get(hour) ?? 0,
-	}));
+	return buildHourActivity(
+		rows.map((row) => ({ hour: Number(row.hour), count: row.count })),
+	);
 }
 
-export const getStatsForPeriod = createServerFn({ method: "GET" })
-	.validator((period: StatsPeriod) => period)
-	.handler(async ({ data: period }): Promise<StatsData> => {
+export const getStats = createServerFn({ method: "GET" }).handler(
+	async (): Promise<StatsData> => {
 		const [
 			[{ totalDetections }],
 			[{ uniqueSpecies }],
-			trend,
 			topSpeciesList,
 			hourActivity,
 		] = await Promise.all([
-			db
-				.select({ totalDetections: count() })
-				.from(detections)
-				.where(periodFilter(period)),
+			db.select({ totalDetections: count() }).from(detections),
 			db
 				.select({ uniqueSpecies: countDistinct(detections.Com_Name) })
-				.from(detections)
-				.where(periodFilter(period)),
-			getTrend(period),
-			getTopSpecies(period, 10),
-			getHourActivity(period),
+				.from(detections),
+			getTopSpecies(10),
+			getHourActivity(),
 		]);
 
-		const busiest = trend.reduce<TrendPoint | null>(
-			(max, point) => (!max || point.count > max.count ? point : max),
-			null,
-		);
-
 		return {
-			period,
 			totalDetections,
 			uniqueSpecies,
 			topSpecies: topSpeciesList[0] ?? null,
-			busiest: busiest ? { label: busiest.label, count: busiest.count } : null,
-			trend,
+			busiestHour: selectBusiestHour(hourActivity),
 			topSpeciesList,
 			hourActivity,
 		};
-	});
+	},
+);

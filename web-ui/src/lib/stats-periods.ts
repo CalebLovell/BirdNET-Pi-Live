@@ -1,5 +1,5 @@
-// Pure metadata, no server-only imports -- safe for client components (e.g.
-// period switchers) to import directly, unlike trend.ts which touches the db.
+// Pure metadata, no server-only imports -- safe for client components that
+// need to describe the rolling periods consumed by trend.ts.
 export const STATS_PERIODS = ["year", "all"] as const;
 export type StatsPeriod = (typeof STATS_PERIODS)[number];
 

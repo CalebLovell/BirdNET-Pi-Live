@@ -7,6 +7,14 @@ import {
 	rankingBarPercent,
 	selectBusiestHour,
 } from "./stats-data.ts";
+import type { SpeciesCount } from "./stats-data.ts";
+
+const speciesFixture: SpeciesCount = {
+	comName: "Northern Cardinal",
+	sciName: "Cardinalis cardinalis",
+	count: 12,
+	imageUrl: "/illustrations/cardinalis-cardinalis.png",
+};
 
 test("builds all 24 ordered hours and fills missing hours with zero", () => {
 	const result = buildHourActivity([
@@ -39,4 +47,9 @@ test("formats friendly hours and visible proportional ranking widths", () => {
 	assert.equal(hourLabel(17), "5 PM");
 	assert.equal(rankingBarPercent(1, 100), 2);
 	assert.equal(rankingBarPercent(50, 100), 50);
+});
+
+test("species rankings carry navigation and artwork data", () => {
+	assert.equal(speciesFixture.sciName, "Cardinalis cardinalis");
+	assert.match(speciesFixture.imageUrl ?? "", /cardinalis-cardinalis/);
 });
