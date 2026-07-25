@@ -1,133 +1,86 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
-import type { Detection } from "~/db/schema.ts";
-import { getRecentDetections } from "~/lib/detections.ts";
+import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
+import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
+import { SummaryStrip } from "~/components/now/summary-strip.tsx";
+import { TopDetectionsCard } from "~/components/now/top-detections-card.tsx";
+import { getNowSnapshot } from "~/lib/now.ts";
+import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
 
 const POLL_INTERVAL_MS = 10_000;
+const FLASH_DURATION_MS = 2_400;
 
 export const Route = createFileRoute("/now")({
 	component: Now,
-	loader: () => getRecentDetections(),
+	loader: () => getNowSnapshot(),
 });
 
-function keyFor(d: Detection): string {
-	return `${d.Date}-${d.Time}-${d.File_Name}`;
+/**
+ * Keys that arrived since the previous poll, held just long enough for the
+ * flash-in highlight to play. Keys travel as a joined signature so the effect
+ * compares by value -- a fresh array of identical keys arrives on every poll.
+ */
+function useFreshKeys(keys: string[]): Set<string> {
+	const signature = keys.join("|");
+	const seenRef = useRef(new Set(keys));
+	const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set());
+
+	useEffect(() => {
+		const currentKeys = signature.length > 0 ? signature.split("|") : [];
+		const arrived = currentKeys.filter((key) => !seenRef.current.has(key));
+		seenRef.current = new Set(currentKeys);
+		if (arrived.length === 0) return;
+
+		setFreshKeys(new Set(arrived));
+		const timeout = setTimeout(
+			() => setFreshKeys(new Set()),
+			FLASH_DURATION_MS,
+		);
+		return () => clearTimeout(timeout);
+	}, [signature]);
+
+	return freshKeys;
 }
 
 function Now() {
 	const initial = Route.useLoaderData();
-	const { data: detections, lastUpdated } = usePolledData(
-		() => getRecentDetections(),
+	const { data: snapshot } = usePolledData(
+		() => getNowSnapshot(),
 		initial,
 		POLL_INTERVAL_MS,
 	);
+	const offsetMs = useAgeOffset(snapshot.generatedAt);
+	const freshKeys = useFreshKeys(snapshot.recent.map((row) => row.key));
 
-	const seenKeysRef = useRef(new Set(initial.map(keyFor)));
-	const [freshKeys, setFreshKeys] = useState<Set<string>>(new Set());
-
-	useEffect(() => {
-		const currentKeys = detections.map(keyFor);
-		const newlyArrived = currentKeys.filter((k) => !seenKeysRef.current.has(k));
-		seenKeysRef.current = new Set(currentKeys);
-		if (newlyArrived.length === 0) return;
-
-		setFreshKeys(new Set(newlyArrived));
-		const timeout = setTimeout(() => setFreshKeys(new Set()), 2400);
-		return () => clearTimeout(timeout);
-	}, [detections]);
-
-	const latest = detections[0] as Detection | undefined;
-	const rest = detections.slice(1);
+	// Whenever anything has been heard inside the window, the hero bird is also
+	// the newest row in the log, so its arrival is already tracked and needs no
+	// second freshness mechanism. Outside the window the log is empty and the
+	// hero sits in its quiet state, where there is nothing to flash.
+	const newestKey = snapshot.recent[0]?.key;
+	const heroIsNew = newestKey !== undefined && freshKeys.has(newestKey);
 
 	return (
 		<div className="page-wrap py-4">
-				<div className="flex items-center justify-between">
-				<div>
-					<h1 className="display-title text-3xl font-semibold">Now</h1>
-					<p className="mt-2 text-muted-foreground">
-						What's singing at your station, as it happens.
-					</p>
-				</div>
-				<div className="flex items-center gap-2">
-					<span className="live-dot" aria-hidden="true" />
-					<span>
-						Live &middot; updated{" "}
-						{lastUpdated.toLocaleTimeString([], { timeStyle: "medium" })}
-					</span>
-				</div>
+			<CurrentBirdCard
+				current={snapshot.current}
+				summary={snapshot.summary}
+				generatedAt={snapshot.generatedAt}
+				offsetMs={offsetMs}
+				flash={heroIsNew}
+			/>
+
+			<SummaryStrip summary={snapshot.summary} />
+
+			<div className="mt-4 grid gap-4 lg:grid-cols-2">
+				<TopDetectionsCard topSpecies={snapshot.topSpecies} />
+				<RecentLogCard
+					recent={snapshot.recent}
+					offsetMs={offsetMs}
+					freshKeys={freshKeys}
+				/>
 			</div>
-
-			{latest ? (
-				<div
-					key={keyFor(latest)}
-					className={
-						freshKeys.has(keyFor(latest))
-							? "feature-card mt-4 rounded-md p-6 flash-in"
-							: "feature-card mt-4 rounded-md p-6"
-					}
-				>
-					<div className="island-kicker">Latest detection</div>
-					<div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-						<h2 className="display-title text-2xl font-bold">
-							{latest.Com_Name}
-						</h2>
-						<span className="italic text-muted-foreground">
-							{latest.Sci_Name}
-						</span>
-					</div>
-					<div className="tabular-data mt-2 text-sm text-muted-foreground">
-						{latest.Date} {latest.Time}
-						{latest.Confidence != null &&
-							` · ${Math.round(latest.Confidence * 100)}% confidence`}
-					</div>
-				</div>
-			) : (
-				<p className="mt-10 text-muted-foreground">
-					No detections yet. Once BirdNET-Pi's analysis pipeline writes to
-					birds.db, they'll show up here within {POLL_INTERVAL_MS / 1000}{" "}
-					seconds.
-				</p>
-			)}
-
-			{rest.length > 0 && (
-				<>
-					<h2 className="display-title mt-10 text-xl font-semibold">
-						Recent activity
-					</h2>
-					<div className="feature-card mt-4 rounded-md p-2">
-						<ul className="divide-y divide-[var(--line)]">
-							{rest.map((d) => {
-								const key = keyFor(d);
-								return (
-									<li
-										key={key}
-										className={
-											freshKeys.has(key)
-												? "flex items-center justify-between gap-4 rounded-md px-3 py-2 flash-in"
-												: "flex items-center justify-between gap-4 rounded-md px-3 py-2"
-										}
-									>
-										<div className="min-w-0">
-											<div className="truncate font-medium">{d.Com_Name}</div>
-											<div className="truncate text-sm italic text-muted-foreground">
-												{d.Sci_Name}
-											</div>
-										</div>
-										<div className="tabular-data shrink-0 text-right text-sm text-muted-foreground">
-											<div>{d.Time}</div>
-											{d.Confidence != null && (
-												<div>{Math.round(d.Confidence * 100)}%</div>
-											)}
-										</div>
-									</li>
-								);
-							})}
-						</ul>
-					</div>
-				</>
-			)}
 		</div>
 	);
 }

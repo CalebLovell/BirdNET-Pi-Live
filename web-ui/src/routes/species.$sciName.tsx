@@ -1,13 +1,12 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
 	Bird,
-	Clock3,
 	ChevronLeft,
 	ChevronRight,
+	Clock3,
 	Loader2,
 	Pause,
 	Play,
-	Volume2,
 } from "lucide-react";
 import {
 	Area,
@@ -21,14 +20,18 @@ import {
 } from "recharts";
 import { z } from "zod";
 
+import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { RecordingButton } from "~/components/recording-button.tsx";
+import { SpeciesActions } from "~/components/species-actions.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import { formatConfidence } from "~/lib/confidence.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import {
 	getSpeciesDetail,
 	type SpeciesDetail,
 	type Visit,
 } from "~/lib/species-detail.ts";
-import { SpeciesActions } from "~/components/species-actions.tsx";
+import { hourLabel } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
@@ -58,17 +61,6 @@ export const Route = createFileRoute("/species/$sciName")({
 		}),
 	component: BirdPage,
 });
-
-function formatConfidence(confidence: number | null): string {
-	return confidence != null ? `${Math.round(confidence * 100)}%` : "—";
-}
-
-function hourLabel(hour: number): string {
-	if (hour === 0) return "12 AM";
-	if (hour < 12) return `${hour} AM`;
-	if (hour === 12) return "12 PM";
-	return `${hour - 12} PM`;
-}
 
 const WAVEFORM_HEIGHTS = [
 	36, 62, 48, 82, 58, 94, 44, 72, 52, 86, 64, 38,
@@ -172,7 +164,7 @@ function BirdPage() {
 			<SummaryCard detail={detail} />
 
 			<div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-				<h2 className="display-title text-xl font-semibold">
+				<h2 className="display-title font-semibold text-xl">
 					Detection History
 				</h2>
 				{showYearSelector ? (
@@ -191,7 +183,7 @@ function BirdPage() {
 						>
 							<ChevronLeft className="size-3" />
 						</Button>
-						<div className="tabular-data min-w-12 text-center text-sm font-semibold">
+						<div className="tabular-data min-w-12 text-center font-semibold text-sm">
 							{year}
 						</div>
 						<Button
@@ -225,7 +217,7 @@ function BirdPage() {
 							))}
 						</div>
 						<div className="flex gap-2">
-							<div className="flex w-7 flex-col gap-1 text-[9px] leading-3 text-muted-foreground">
+							<div className="flex w-7 flex-col gap-1 text-[9px] text-muted-foreground leading-3">
 								<span>Sun</span>
 								<span>Mon</span>
 								<span>Tue</span>
@@ -253,7 +245,7 @@ function BirdPage() {
 													role="img"
 													aria-label={`${dateLabel}: ${count} detections`}
 													title={`${dateLabel}: ${count} detections`}
-													className="size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-offset-1 hover:outline-[var(--hover-line)]"
+													className="size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1"
 													style={{
 														backgroundColor:
 															HEAT_COLORS[heatLevel(count, maximum)],
@@ -282,7 +274,7 @@ function BirdPage() {
 
 			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<div className="order-2 flex flex-col lg:col-start-2 lg:row-start-1">
-					<h2 className="display-title text-xl font-semibold">
+					<h2 className="display-title font-semibold text-xl">
 						Daily Activity
 					</h2>
 					<div className="feature-card mt-4 min-h-[420px] flex-1 rounded-md p-3">
@@ -352,7 +344,7 @@ function BirdPage() {
 				</div>
 
 				<div className="order-1 flex flex-col lg:col-start-1 lg:row-start-1">
-					<h2 className="display-title text-xl font-semibold">Visit Log</h2>
+					<h2 className="display-title font-semibold text-xl">Visit Log</h2>
 					<RecentVisitsCard visits={detail.recentVisits} />
 				</div>
 			</div>
@@ -378,17 +370,17 @@ function SummaryCard({ detail }: { detail: SpeciesDetail }) {
 			<div className="flex flex-1 flex-col gap-3 sm:min-h-48 sm:justify-around sm:gap-0">
 				<div className="flex flex-wrap items-start justify-between gap-3">
 					<div>
-						<h1 className="display-title text-2xl font-bold">
+						<h1 className="display-title font-bold text-2xl">
 							{detail.comName}
 						</h1>
-						<p className="text-xs text-[var(--bark)] italic">
+						<p className="text-[var(--bark)] text-xs italic">
 							{detail.sciName}
 						</p>
 					</div>
 					<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
 				</div>
 
-				<div className="grid gap-3 sm:items-start sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+				<div className="grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:items-start">
 					<div className="grid grid-cols-2 gap-x-4 gap-y-3">
 						<Stat label="Total detections" value={detail.totalDetections} />
 						<Stat
@@ -434,7 +426,7 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 			>
 				{value}
 			</div>
-			<div className="text-xs text-muted-foreground">{label}</div>
+			<div className="text-muted-foreground text-xs">{label}</div>
 		</div>
 	);
 }
@@ -477,8 +469,8 @@ function BestRecordingPlayer({
 				)}
 			</Button>
 			<div className="order-1 w-full">
-				<div className="text-sm font-semibold">Best recording</div>
-				<div className="tabular-data mt-0.5 text-xs text-muted-foreground">
+				<div className="font-semibold text-sm">Best recording</div>
+				<div className="tabular-data mt-0.5 text-muted-foreground text-xs">
 					{formatHeardDate(recording.date)} · {formatVisitTime(recording.time)}{" "}
 					· {formatConfidence(recording.confidence)} confidence
 				</div>
@@ -517,34 +509,10 @@ function formatVisitTime(time: string): string {
 	});
 }
 
-function confidenceStyle(confidence: number) {
-	if (confidence >= 0.9) {
-		return {
-			backgroundColor:
-				"color-mix(in oklab, var(--moss) 12%, var(--paper-raised))",
-			color: "var(--moss)",
-		};
-	}
-
-	if (confidence >= 0.75) {
-		return {
-			backgroundColor:
-				"color-mix(in oklab, var(--sand) 20%, var(--paper-raised))",
-			color: "var(--bark)",
-		};
-	}
-
-	return {
-		backgroundColor:
-			"color-mix(in oklab, var(--sage) 32%, var(--paper-raised))",
-		color: "var(--ink)",
-	};
-}
-
 function RecentVisitsCard({ visits }: { visits: Visit[] }) {
 	if (visits.length === 0) {
 		return (
-			<div className="feature-card mt-4 min-h-[420px] flex-1 rounded-md p-4 text-sm text-muted-foreground">
+			<div className="feature-card mt-4 min-h-[420px] flex-1 rounded-md p-4 text-muted-foreground text-sm">
 				No visits recorded yet.
 			</div>
 		);
@@ -578,65 +546,13 @@ function RecentVisitsCard({ visits }: { visits: Visit[] }) {
 								</time>
 							</div>
 							<div className="flex shrink-0 items-center gap-2">
-								<VisitRecordingButton audioUrl={visit.audioUrl ?? null} />
-								{visit.confidence != null && (
-									<span
-										className="tabular-data rounded-full px-2 py-1 text-xs font-semibold"
-										style={confidenceStyle(visit.confidence)}
-									>
-										{formatConfidence(visit.confidence)}
-									</span>
-								)}
+								<RecordingButton audioUrl={visit.audioUrl ?? null} />
+								<ConfidencePill confidence={visit.confidence} />
 							</div>
 						</li>
 					);
 				})}
 			</ul>
 		</div>
-	);
-}
-
-function VisitRecordingButton({ audioUrl }: { audioUrl: string | null }) {
-	const {
-		audioRef,
-		isPlaying,
-		isLoading,
-		togglePlay,
-		onPlay,
-		onPause,
-		onEnded,
-	} = usePlayableAudio(audioUrl);
-
-	return (
-		<>
-			<Button
-				variant="outline"
-				size="xs"
-				className="shrink-0 gap-1.5 px-2 text-[11px] has-[>svg]:px-2"
-				disabled={!audioUrl || isLoading}
-				onClick={togglePlay}
-				aria-label={isPlaying ? "Pause recording" : "Play recording"}
-			>
-				{isLoading ? (
-					<Loader2 className="size-3 animate-spin" />
-				) : isPlaying ? (
-					<Pause className="size-3" />
-				) : (
-					<Volume2 className="size-3" />
-				)}
-				{isPlaying ? "Pause" : "Recording"}
-			</Button>
-			{audioUrl && (
-				<audio
-					ref={audioRef}
-					preload="none"
-					onPlay={onPlay}
-					onPause={onPause}
-					onEnded={onEnded}
-				>
-					<track kind="captions" />
-				</audio>
-			)}
-		</>
 	);
 }
