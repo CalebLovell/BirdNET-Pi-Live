@@ -66,7 +66,7 @@ export function RecentLogCard({
 								confidence={detection.confidence}
 								className="shrink-0"
 							/>
-							<RecordingButton audioUrl={detection.audioUrl} iconOnly />
+							<RecordingButton audioUrl={detection.audioUrl} />
 						</li>
 					))}
 				</ul>

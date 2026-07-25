@@ -9,6 +9,7 @@ import { sciNameToSlug } from "~/lib/species-slug.ts";
 import {
 	countVisits,
 	countVisitsBySpecies,
+	localTimestamp,
 	timestampToMillis,
 } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
@@ -70,18 +71,6 @@ export type NowSnapshot = {
 	topSpecies: TopSpecies[];
 	recent: RecentDetection[];
 };
-
-/**
- * Local wall-clock in the same shape SQLite's datetime() returns, so server- and
- * client-rendered timestamps go through one formatter.
- */
-function localTimestamp(date: Date): string {
-	const pad = (value: number) => String(value).padStart(2, "0");
-	return (
-		`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-		` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-	);
-}
 
 // The bundled kachō-e illustration when there is one, else Wikipedia's
 // thumbnail. getSpeciesInfo memoizes per species, so polling this every ten

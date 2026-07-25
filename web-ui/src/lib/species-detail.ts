@@ -8,6 +8,7 @@ import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { slugToSciNameQuery } from "~/lib/species-slug.ts";
 import { getYearTrend, type TrendPoint, yearFilter } from "~/lib/trend.ts";
+import { localTimestamp, timestampToMillis } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type HourActivity = { hour: number; count: number };
@@ -17,6 +18,12 @@ export type Visit = {
 	confidence: number | null;
 	audioUrl?: string | null;
 };
+/**
+ * A visit the log renders as "4:13 AM / 27 minutes ago". The age is measured
+ * on the server, the same way the Now page measures its rows, so both sides of
+ * hydration render an identical label from identical data.
+ */
+export type RecentVisit = Visit & { ageMs: number };
 export type BestRecording = {
 	date: string;
 	time: string;
@@ -37,7 +44,9 @@ export type SpeciesDetail = {
 	history: TrendPoint[];
 	hourActivity: HourActivity[];
 	bestRecording: BestRecording | null;
-	recentVisits: Visit[];
+	recentVisits: RecentVisit[];
+	/** When the visit ages were measured, for `useAgeOffset` to advance them. */
+	generatedAt: string;
 };
 
 function bySciNameSlug(slug: string) {
@@ -71,6 +80,8 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 	.handler(
 		async ({ data: { sciNameSlug, year } }): Promise<SpeciesDetail | null> => {
 			const filter = bySciNameSlug(sciNameSlug);
+			const generatedAtDate = new Date();
+			const generatedAtMs = generatedAtDate.getTime();
 
 			const [totals] = await db
 				.select({
@@ -180,7 +191,10 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 					time: visit.time,
 					confidence: visit.confidence,
 					audioUrl: audioUrlFor(visit.date, comName, visit.fileName),
+					ageMs:
+						generatedAtMs - timestampToMillis(`${visit.date} ${visit.time}`),
 				})),
+				generatedAt: localTimestamp(generatedAtDate),
 			};
 		},
 	);

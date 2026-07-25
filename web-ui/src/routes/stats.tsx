@@ -98,18 +98,9 @@ function Stats() {
 					/>
 				</div>
 
-				<div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-					<section>
-						<h2 className="display-title font-semibold text-xl">Top species</h2>
-						<TopSpeciesCard species={stats.topSpeciesList} />
-					</section>
-
-					<section>
-						<h2 className="display-title font-semibold text-xl">
-							Activity by hour of day
-						</h2>
-						<HourlyActivityCard activity={stats.hourActivity} />
-					</section>
+				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<TopSpeciesCard species={stats.topSpeciesList} />
+					<HourlyActivityCard activity={stats.hourActivity} />
 				</div>
 			</div>
 		</TooltipProvider>
@@ -132,9 +123,7 @@ function SummaryCard({
 	return (
 		<div className="feature-card flex min-h-36 flex-col justify-between gap-4 overflow-hidden rounded-md p-4">
 			<div className="flex items-start justify-between gap-4">
-				<div className="font-semibold text-muted-foreground text-xs uppercase tracking-[0.12em]">
-					{label}
-				</div>
+				<div className="island-kicker">{label}</div>
 				{artwork ?? (
 					<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
 						<Icon className="size-5 text-[var(--moss)]" />
@@ -161,13 +150,18 @@ function TopSpeciesCard({ species }: { species: SpeciesCount[] }) {
 	const maximum = Math.max(...species.map((item) => item.count), 0);
 
 	return (
-		<div className="feature-card mt-4 h-112 rounded-md p-4">
+		<section
+			aria-label="Top species"
+			className="feature-card flex min-h-112 flex-col rounded-md p-4"
+		>
+			<div className="island-kicker">Top species</div>
+
 			{species.length === 0 ? (
-				<div className="flex size-full items-center justify-center text-muted-foreground text-sm">
+				<div className="mt-4 flex flex-1 items-center justify-center text-muted-foreground text-sm">
 					No detections recorded yet.
 				</div>
 			) : (
-				<div>
+				<div className="mt-4">
 					{species.map((item) => (
 						<TopSpeciesRow
 							key={item.sciName}
@@ -177,7 +171,7 @@ function TopSpeciesCard({ species }: { species: SpeciesCount[] }) {
 					))}
 				</div>
 			)}
-		</div>
+		</section>
 	);
 }
 
@@ -248,59 +242,66 @@ function TopSpeciesRow({
 
 function HourlyActivityCard({ activity }: { activity: HourActivity[] }) {
 	return (
-		<div className="feature-card mt-4 h-112 rounded-md p-4">
-			<ResponsiveContainer width="100%" height="100%">
-				<AreaChart data={activity}>
-					<defs>
-						<linearGradient
-							id="statsHourDensityFill"
-							x1="0"
-							y1="0"
-							x2="0"
-							y2="1"
-						>
-							<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
-							<stop offset="100%" stopColor="var(--moss)" stopOpacity={0} />
-						</linearGradient>
-					</defs>
-					<CartesianGrid stroke="var(--line)" vertical={false} />
-					<XAxis
-						dataKey="hour"
-						tickFormatter={hourLabel}
-						stroke="var(--muted-foreground)"
-						fontSize={12}
-						tickLine={false}
-						interval={3}
-					/>
-					<YAxis
-						stroke="var(--muted-foreground)"
-						fontSize={12}
-						tickLine={false}
-						allowDecimals={false}
-						width={32}
-					/>
-					<ChartTooltip
-						{...chartTooltipStyle}
-						labelFormatter={(hour: ReactNode) => hourLabel(Number(hour))}
-						cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
-					/>
-					<Area
-						dataKey="count"
-						name="Detections"
-						stroke="none"
-						fill="url(#statsHourDensityFill)"
-					/>
-					<Line
-						type="monotone"
-						dataKey="count"
-						name="Detections"
-						stroke="var(--moss)"
-						strokeWidth={2}
-						dot={false}
-						activeDot={{ r: 3, fill: "var(--moss)" }}
-					/>
-				</AreaChart>
-			</ResponsiveContainer>
-		</div>
+		<section
+			aria-label="Activity by hour of day"
+			className="feature-card flex min-h-112 flex-col rounded-md p-4"
+		>
+			<div className="island-kicker">Activity by hour of day</div>
+
+			<div className="mt-4 min-h-0 flex-1">
+				<ResponsiveContainer width="100%" height="100%">
+					<AreaChart data={activity}>
+						<defs>
+							<linearGradient
+								id="statsHourDensityFill"
+								x1="0"
+								y1="0"
+								x2="0"
+								y2="1"
+							>
+								<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
+								<stop offset="100%" stopColor="var(--moss)" stopOpacity={0} />
+							</linearGradient>
+						</defs>
+						<CartesianGrid stroke="var(--line)" vertical={false} />
+						<XAxis
+							dataKey="hour"
+							tickFormatter={hourLabel}
+							stroke="var(--muted-foreground)"
+							fontSize={12}
+							tickLine={false}
+							interval={3}
+						/>
+						<YAxis
+							stroke="var(--muted-foreground)"
+							fontSize={12}
+							tickLine={false}
+							allowDecimals={false}
+							width={32}
+						/>
+						<ChartTooltip
+							{...chartTooltipStyle}
+							labelFormatter={(hour: ReactNode) => hourLabel(Number(hour))}
+							cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
+						/>
+						<Area
+							dataKey="count"
+							name="Detections"
+							stroke="none"
+							fill="url(#statsHourDensityFill)"
+						/>
+						<Line
+							type="monotone"
+							dataKey="count"
+							name="Detections"
+							stroke="var(--moss)"
+							strokeWidth={2}
+							dot={false}
+							activeDot={{ r: 3, fill: "var(--moss)" }}
+						/>
+					</AreaChart>
+				</ResponsiveContainer>
+			</div>
+		</section>
 	);
 }

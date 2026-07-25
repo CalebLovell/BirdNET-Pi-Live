@@ -15,7 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
-
+import { SpeciesActions } from "~/components/species-actions.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import {
 	Pagination,
@@ -26,7 +26,6 @@ import {
 	PaginationPrevious,
 } from "~/components/ui/pagination.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
-import { SpeciesActions } from "~/components/species-actions.tsx";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { sciNameToSlug } from "~/lib/species-slug.ts";
 
@@ -303,10 +302,10 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 			/>
 			<div className="flex flex-col gap-1">
 				<div className="flex items-baseline gap-1">
-					<div className="tabular-data text-lg font-semibold leading-none text-foreground">
+					<div className="tabular-data font-semibold text-foreground text-lg leading-none">
 						{card.allTimeCount}
 					</div>
-					<div className="text-[10px] leading-none text-muted-foreground/70">
+					<div className="text-[10px] text-muted-foreground/70 leading-none">
 						total recordings
 					</div>
 				</div>
@@ -329,15 +328,15 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 
 			<div className="flex flex-1 flex-col gap-3">
 				<div>
-					<h2 className="display-title text-base font-bold">{card.comName}</h2>
-					<p className="text-xs text-[var(--bark)] italic">{card.sciName}</p>
+					<h2 className="display-title font-bold text-base">{card.comName}</h2>
+					<p className="text-[var(--bark)] text-xs italic">{card.sciName}</p>
 				</div>
 				<SpeciesActions
 					audioUrl={card.audioUrl}
 					ebirdUrl={card.ebirdUrl}
 					comName={card.comName}
 				/>
-				<div className="w-full self-end text-right text-[10px] leading-none text-muted-foreground/70">
+				<div className="w-full self-end text-right text-[10px] text-muted-foreground/70 leading-none">
 					Last heard · {lastHeard}
 				</div>
 			</div>

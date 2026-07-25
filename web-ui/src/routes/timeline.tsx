@@ -22,12 +22,12 @@ import {
 } from "~/components/ui/tooltip.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { getTimelineData, type TimelineRow } from "~/lib/timeline.ts";
 import {
 	TIMELINE_PERIOD_LABELS,
 	TIMELINE_PERIODS,
 	type TimelinePeriod,
 } from "~/lib/timeline-periods.ts";
-import { getTimelineData, type TimelineRow } from "~/lib/timeline.ts";
 
 const DEFAULT_PERIOD: TimelinePeriod = "week";
 
@@ -122,7 +122,11 @@ function Timeline() {
 			) : (
 				<TooltipProvider>
 					<div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start">
-						<div className="feature-card min-w-0 rounded-md p-4">
+						<section
+							aria-label="Detections by hour"
+							className="feature-card min-w-0 rounded-md p-4"
+						>
+							<div className="island-kicker mb-4">Detections by hour</div>
 							<div className="overflow-x-auto">
 								<div className="w-max min-w-full">
 									<div
@@ -137,7 +141,7 @@ function Timeline() {
 													key={`tick-${hour}`}
 													className="sticky top-0 z-10 flex items-baseline justify-center gap-px bg-[var(--paper-raised)] leading-none"
 												>
-													<span className="text-[10px] font-semibold text-foreground">
+													<span className="font-semibold text-[10px] text-foreground">
 														{number}
 													</span>
 													<span className="text-[7px] text-muted-foreground">
@@ -153,18 +157,18 @@ function Timeline() {
 									))}
 								</div>
 							</div>
-						</div>
+						</section>
 
-						<div className="feature-card min-w-0 flex-1 rounded-md p-4">
-							<div
-								className={`${HEADER_HEIGHT} text-[10px] text-muted-foreground`}
-							>
-								Total detections
-							</div>
+						<section
+							aria-label="Total detections"
+							className="feature-card min-w-0 flex-1 rounded-md p-4"
+						>
+							<div className="island-kicker mb-4">Total detections</div>
+							<div className={HEADER_HEIGHT} />
 							{rows.map((row) => (
 								<BarRow key={row.comName} row={row} maxTotal={maxTotal} />
 							))}
-						</div>
+						</section>
 					</div>
 				</TooltipProvider>
 			)}
@@ -177,7 +181,7 @@ function HourRow({ row }: { row: TimelineRow }) {
 
 	return (
 		<div
-			className={`grid items-center border-t border-[var(--line)] ${ROW_HEIGHT}`}
+			className={`grid items-center border-[var(--line)] border-t ${ROW_HEIGHT}`}
 			style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
 		>
 			<Link
@@ -199,7 +203,7 @@ function HourRow({ row }: { row: TimelineRow }) {
 				</div>
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<div className="min-w-0 truncate text-sm font-semibold">
+						<div className="min-w-0 truncate font-semibold text-sm">
 							{row.comName}
 						</div>
 					</TooltipTrigger>
@@ -213,7 +217,7 @@ function HourRow({ row }: { row: TimelineRow }) {
 						<div
 							role="img"
 							aria-label={`${row.comName} — ${hourLabel(hour)}: ${count} detections`}
-							className="m-1 size-4.5 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-offset-1 hover:outline-[var(--hover-line)]"
+							className="m-1 size-4.5 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1"
 							style={{ backgroundColor: HEAT_COLORS[heatLevel(count, rowMax)] }}
 						/>
 					</TooltipTrigger>
@@ -234,22 +238,22 @@ function BarRow({ row, maxTotal }: { row: TimelineRow; maxTotal: number }) {
 
 	return (
 		<div
-			className={`flex items-center gap-2 border-t border-[var(--line)] ${ROW_HEIGHT}`}
+			className={`flex items-center gap-2 border-[var(--line)] border-t ${ROW_HEIGHT}`}
 		>
-			<div className="w-28 shrink-0 truncate text-xs font-medium lg:hidden">
+			<div className="w-28 shrink-0 truncate font-medium text-xs lg:hidden">
 				{row.comName}
 			</div>
 			<Tooltip>
 				<TooltipTrigger asChild>
 					<div
-						className="h-2.5 flex-1 overflow-hidden rounded-l-none rounded-r-full"
+						className="h-2.5 flex-1 overflow-hidden rounded-r-full rounded-l-none"
 						style={{
 							backgroundColor:
 								"color-mix(in oklab, var(--bark) 18%, var(--paper-raised))",
 						}}
 					>
 						<div
-							className="h-full rounded-l-none rounded-r-full bg-[var(--bark)]"
+							className="h-full rounded-r-full rounded-l-none bg-[var(--bark)]"
 							style={{ width: `${barPercent}%` }}
 						/>
 					</div>

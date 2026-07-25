@@ -1,8 +1,8 @@
-import { useState } from "react";
-import type { RowSelectionState, VisibilityState } from "@tanstack/react-table";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
+import type { RowSelectionState, VisibilityState } from "@tanstack/react-table";
 import { CircleAlert, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
@@ -10,8 +10,8 @@ import {
 	INITIAL_DETECTION_COLUMN_VISIBILITY,
 } from "~/components/detections/detections-table.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
 import { normalizeDetectionWorkspaceSearch } from "~/lib/detection-workspace.ts";
+import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
 
 type Feedback = {
 	message: string;
@@ -60,7 +60,10 @@ function Detections() {
 			});
 
 			if (search.page > 1 && selectedCount === page.rows.length) {
-				navigate({ search: { ...search, page: search.page - 1 }, replace: true });
+				navigate({
+					search: { ...search, page: search.page - 1 },
+					replace: true,
+				});
 			}
 
 			await router.invalidate();
@@ -100,8 +103,8 @@ function Detections() {
 					<p
 						className={
 							feedback.tone === "error"
-								? "flex items-center gap-2 text-sm text-destructive"
-								: "text-sm text-muted-foreground"
+								? "flex items-center gap-2 text-destructive text-sm"
+								: "text-muted-foreground text-sm"
 						}
 					>
 						{feedback.tone === "error" ? (
@@ -111,7 +114,11 @@ function Detections() {
 					</p>
 				) : null}
 
-				<div className="feature-card rounded-md p-3">
+				<section
+					aria-label="Detections"
+					className="feature-card rounded-md p-3"
+				>
+					<div className="island-kicker mb-3">All detections</div>
 					<DetectionsTable
 						page={page}
 						search={search}
@@ -123,7 +130,7 @@ function Detections() {
 						rowSelection={rowSelection}
 						onRowSelectionChange={setRowSelection}
 					/>
-				</div>
+				</section>
 
 				{deleteOpen ? (
 					<DeleteDetectionsDialog

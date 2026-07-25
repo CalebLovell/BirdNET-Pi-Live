@@ -6,6 +6,9 @@ const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
+// Nominal lengths: these labels are a sense of scale, not a calendar.
+const MONTH = 30 * DAY;
+const YEAR = 365 * DAY;
 
 /** Under this, a detection is treated as happening right now. */
 export const SINGING_NOW_MS = 5 * MINUTE;
@@ -35,7 +38,9 @@ export function formatTimeAgo(elapsedMs: number): string {
 		return plural(Math.floor(elapsedMs / SECOND), "second");
 	if (elapsedMs < HOUR) return plural(Math.floor(elapsedMs / MINUTE), "minute");
 	if (elapsedMs < DAY) return plural(Math.floor(elapsedMs / HOUR), "hour");
-	return plural(Math.floor(elapsedMs / DAY), "day");
+	if (elapsedMs < MONTH) return plural(Math.floor(elapsedMs / DAY), "day");
+	if (elapsedMs < YEAR) return plural(Math.floor(elapsedMs / MONTH), "month");
+	return plural(Math.floor(elapsedMs / YEAR), "year");
 }
 
 /** Clock time for a "YYYY-MM-DD HH:MM:SS" detection timestamp, e.g. "3:47 PM". */

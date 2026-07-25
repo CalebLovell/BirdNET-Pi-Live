@@ -28,11 +28,12 @@ import { formatConfidence } from "~/lib/confidence.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import {
 	getSpeciesDetail,
+	type RecentVisit,
 	type SpeciesDetail,
-	type Visit,
 } from "~/lib/species-detail.ts";
-import { hourLabel } from "~/lib/time-ago.ts";
+import { formatTimeAgo, hourLabel } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
+import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -138,6 +139,8 @@ function BirdPage() {
 	const detail = Route.useLoaderData();
 	const { year } = Route.useSearch();
 	const navigate = Route.useNavigate();
+	// Before the early return: hooks cannot sit behind a conditional.
+	const offsetMs = useAgeOffset(detail?.generatedAt ?? "");
 
 	if (!detail) {
 		return (
@@ -163,48 +166,50 @@ function BirdPage() {
 		<div className="page-wrap">
 			<SummaryCard detail={detail} />
 
-			<div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-				<h2 className="display-title font-semibold text-xl">
-					Detection History
-				</h2>
-				{showYearSelector ? (
-					<div className="flex items-center gap-2">
-						<Button
-							variant="outline"
-							size="icon-xs"
-							disabled={previousYear === null}
-							aria-label="Previous year"
-							onClick={() =>
-								navigate({
-									search: (prev) => ({ ...prev, year: previousYear ?? year }),
-									replace: true,
-								})
-							}
-						>
-							<ChevronLeft className="size-3" />
-						</Button>
-						<div className="tabular-data min-w-12 text-center font-semibold text-sm">
-							{year}
+			<section
+				aria-label="Detection history"
+				className="feature-card mt-4 w-full overflow-hidden rounded-md p-3"
+			>
+				<div className="flex flex-wrap items-center justify-between gap-4">
+					<div className="island-kicker">Detection history</div>
+					{showYearSelector ? (
+						<div className="flex items-center gap-2">
+							<Button
+								variant="outline"
+								size="icon-xs"
+								disabled={previousYear === null}
+								aria-label="Previous year"
+								onClick={() =>
+									navigate({
+										search: (prev) => ({ ...prev, year: previousYear ?? year }),
+										replace: true,
+									})
+								}
+							>
+								<ChevronLeft className="size-3" />
+							</Button>
+							<div className="tabular-data min-w-12 text-center font-semibold text-sm">
+								{year}
+							</div>
+							<Button
+								variant="outline"
+								size="icon-xs"
+								disabled={nextYear === null}
+								aria-label="Next year"
+								onClick={() =>
+									navigate({
+										search: (prev) => ({ ...prev, year: nextYear ?? year }),
+										replace: true,
+									})
+								}
+							>
+								<ChevronRight className="size-3" />
+							</Button>
 						</div>
-						<Button
-							variant="outline"
-							size="icon-xs"
-							disabled={nextYear === null}
-							aria-label="Next year"
-							onClick={() =>
-								navigate({
-									search: (prev) => ({ ...prev, year: nextYear ?? year }),
-									replace: true,
-								})
-							}
-						>
-							<ChevronRight className="size-3" />
-						</Button>
-					</div>
-				) : null}
-			</div>
-			<div className="feature-card mt-4 w-full overflow-hidden rounded-md p-3">
-				<div className="overflow-x-auto pb-1">
+					) : null}
+				</div>
+
+				<div className="mt-4 overflow-x-auto pb-1">
 					<div className="w-full min-w-max">
 						<div className="mb-1 ml-9 flex w-max gap-1">
 							{weeks.map((week, index) => (
@@ -270,14 +275,15 @@ function BirdPage() {
 					))}
 					<span>More</span>
 				</div>
-			</div>
+			</section>
 
 			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<div className="order-2 flex flex-col lg:col-start-2 lg:row-start-1">
-					<h2 className="display-title font-semibold text-xl">
-						Daily Activity
-					</h2>
-					<div className="feature-card mt-4 min-h-[420px] flex-1 rounded-md p-3">
+				<section
+					aria-label="Daily activity"
+					className="feature-card order-2 flex min-h-[420px] flex-col rounded-md p-3 lg:col-start-2 lg:row-start-1"
+				>
+					<div className="island-kicker">Daily activity</div>
+					<div className="mt-4 min-h-0 flex-1">
 						<ResponsiveContainer width="100%" height="100%">
 							<AreaChart data={detail.hourActivity}>
 								<defs>
@@ -341,12 +347,9 @@ function BirdPage() {
 							</AreaChart>
 						</ResponsiveContainer>
 					</div>
-				</div>
+				</section>
 
-				<div className="order-1 flex flex-col lg:col-start-1 lg:row-start-1">
-					<h2 className="display-title font-semibold text-xl">Visit Log</h2>
-					<RecentVisitsCard visits={detail.recentVisits} />
-				</div>
+				<RecentVisitsCard visits={detail.recentVisits} offsetMs={offsetMs} />
 			</div>
 		</div>
 	);
@@ -354,53 +357,61 @@ function BirdPage() {
 
 function SummaryCard({ detail }: { detail: SpeciesDetail }) {
 	return (
-		<div className="feature-card mt-4 grid gap-3 rounded-md p-3 sm:grid-cols-[14rem_minmax(0,1fr)]">
-			<div className="flex h-48 w-full shrink-0 items-center justify-center overflow-hidden sm:w-56">
-				{detail.imageUrl ? (
-					<img
-						src={detail.imageUrl}
-						alt={detail.comName}
-						className="max-h-full max-w-50 object-contain"
-					/>
-				) : (
-					<Bird className="size-16 text-muted-foreground" />
-				)}
-			</div>
-
-			<div className="flex flex-1 flex-col gap-3 sm:min-h-48 sm:justify-around sm:gap-0">
-				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div>
-						<h1 className="display-title font-bold text-2xl">
-							{detail.comName}
-						</h1>
-						<p className="text-[var(--bark)] text-xs italic">
-							{detail.sciName}
-						</p>
-					</div>
-					<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
+		<section
+			aria-label="Species profile"
+			className="feature-card mt-4 rounded-md p-3"
+		>
+			<div className="grid gap-3 sm:grid-cols-[14rem_minmax(0,1fr)]">
+				<div className="flex h-48 w-full shrink-0 items-center justify-center overflow-hidden sm:w-56">
+					{detail.imageUrl ? (
+						<img
+							src={detail.imageUrl}
+							alt={detail.comName}
+							className="max-h-full max-w-50 object-contain"
+						/>
+					) : (
+						<Bird className="size-16 text-muted-foreground" />
+					)}
 				</div>
 
-				<div className="grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:items-start">
-					<div className="grid grid-cols-2 gap-x-4 gap-y-3">
-						<Stat label="Total detections" value={detail.totalDetections} />
-						<Stat
-							label="Avg. confidence"
-							value={formatConfidence(detail.averageConfidence)}
-						/>
-						<Stat
-							label="First heard"
-							value={formatHeardDate(detail.firstDetected.date)}
-						/>
-						<Stat
-							label="Last heard"
-							value={formatHeardDate(detail.lastDetected.date)}
+				<div className="flex flex-1 flex-col gap-3 sm:min-h-48 sm:justify-around sm:gap-0">
+					<div className="flex flex-wrap items-start justify-between gap-3">
+						<div>
+							<h1 className="display-title font-bold text-2xl">
+								{detail.comName}
+							</h1>
+							<p className="text-[var(--bark)] text-xs italic">
+								{detail.sciName}
+							</p>
+						</div>
+						<SpeciesActions
+							ebirdUrl={detail.ebirdUrl}
+							comName={detail.comName}
 						/>
 					</div>
 
-					<BestRecordingPlayer recording={detail.bestRecording} />
+					<div className="grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:items-start">
+						<div className="grid grid-cols-2 gap-x-4 gap-y-3">
+							<Stat label="Total detections" value={detail.totalDetections} />
+							<Stat
+								label="Avg. confidence"
+								value={formatConfidence(detail.averageConfidence)}
+							/>
+							<Stat
+								label="First heard"
+								value={formatHeardDate(detail.firstDetected.date)}
+							/>
+							<Stat
+								label="Last heard"
+								value={formatHeardDate(detail.lastDetected.date)}
+							/>
+						</div>
+
+						<BestRecordingPlayer recording={detail.bestRecording} />
+					</div>
 				</div>
 			</div>
-		</div>
+		</section>
 	);
 }
 
@@ -509,50 +520,65 @@ function formatVisitTime(time: string): string {
 	});
 }
 
-function RecentVisitsCard({ visits }: { visits: Visit[] }) {
-	if (visits.length === 0) {
-		return (
-			<div className="feature-card mt-4 min-h-[420px] flex-1 rounded-md p-4 text-muted-foreground text-sm">
-				No visits recorded yet.
-			</div>
-		);
-	}
-
+function RecentVisitsCard({
+	visits,
+	offsetMs,
+}: {
+	visits: RecentVisit[];
+	offsetMs: number;
+}) {
 	return (
-		<div className="feature-card mt-4 min-h-[420px] flex-1 rounded-md p-4">
-			<ul className="space-y-1">
-				{visits.map((visit) => {
-					const date = new Date(`${visit.date}T00:00:00`);
-					const dateLabel = date.toLocaleDateString([], {
-						month: "long",
-						day: "numeric",
-						year: "numeric",
-					});
-					const time = formatVisitTime(visit.time);
+		<section
+			aria-label="Visit log"
+			className="feature-card order-1 flex min-h-[420px] flex-col rounded-md p-4 lg:col-start-1 lg:row-start-1"
+		>
+			<div className="island-kicker">Visit log</div>
 
-					return (
-						<li
-							key={`${visit.date}-${visit.time}`}
-							aria-label={`${dateLabel} at ${time}${visit.confidence != null ? `, ${formatConfidence(visit.confidence)} confidence` : ""}`}
-							className="flex items-center justify-between gap-4 rounded-md px-3 py-2 odd:bg-[var(--meadow)] even:bg-transparent"
-						>
-							<div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-								<div className="flex items-center gap-1.5 font-medium">
+			{visits.length === 0 ? (
+				<p className="mt-4 text-muted-foreground text-sm">
+					No visits recorded yet.
+				</p>
+			) : (
+				<ul className="mt-4 space-y-1">
+					{visits.map((visit) => {
+						const date = new Date(`${visit.date}T00:00:00`);
+						const dateLabel = date.toLocaleDateString([], {
+							month: "long",
+							day: "numeric",
+							year: "numeric",
+						});
+						const time = formatVisitTime(visit.time);
+
+						return (
+							<li
+								key={`${visit.date}-${visit.time}`}
+								aria-label={`${dateLabel} at ${time}${visit.confidence != null ? `, ${formatConfidence(visit.confidence)} confidence` : ""}`}
+								className="flex items-center gap-3 rounded-md px-3 py-2.5 odd:bg-[var(--meadow)] even:bg-transparent"
+							>
+								<div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm">
 									<Clock3 className="size-3.5 shrink-0 text-[var(--bark)]" />
-									<span className="tabular-data">{time}</span>
+									<time dateTime={visit.date} className="truncate font-medium">
+										{dateLabel}
+									</time>
 								</div>
-								<time dateTime={visit.date} className="text-muted-foreground">
-									{dateLabel}
-								</time>
-							</div>
-							<div className="flex shrink-0 items-center gap-2">
+
+								<div className="shrink-0 text-right">
+									<div className="tabular-data text-sm">{time}</div>
+									<div className="text-muted-foreground text-xs">
+										{formatTimeAgo(visit.ageMs + offsetMs)}
+									</div>
+								</div>
+
+								<ConfidencePill
+									confidence={visit.confidence}
+									className="shrink-0"
+								/>
 								<RecordingButton audioUrl={visit.audioUrl ?? null} />
-								<ConfidencePill confidence={visit.confidence} />
-							</div>
-						</li>
-					);
-				})}
-			</ul>
-		</div>
+							</li>
+						);
+					})}
+				</ul>
+			)}
+		</section>
 	);
 }

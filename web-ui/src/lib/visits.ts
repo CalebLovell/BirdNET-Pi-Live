@@ -19,6 +19,15 @@ export function timestampToMillis(timestamp: string): number {
 	return new Date(timestamp.replace(" ", "T")).getTime();
 }
 
+/** The inverse: a Date as SQLite's local-time "YYYY-MM-DD HH:MM:SS". */
+export function localTimestamp(date: Date): string {
+	const pad = (value: number) => String(value).padStart(2, "0");
+	return (
+		`${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+		` ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+	);
+}
+
 /** Counts visits within a single species' detection timestamps. */
 export function countVisits(
 	timestamps: string[],
