@@ -9,12 +9,25 @@ export function Header() {
 				</Link>
 				<nav className="flex items-center gap-4">
 					<Link
-						to="/"
+						to="/now"
 						className="nav-link"
-						activeOptions={{ exact: true }}
 						activeProps={{ className: "nav-link is-active" }}
 					>
-						Overview
+						Now
+					</Link>
+					<Link
+						to="/timeline"
+						className="nav-link"
+						activeProps={{ className: "nav-link is-active" }}
+					>
+						Timeline
+					</Link>
+					<Link
+						to="/species"
+						className="nav-link"
+						activeProps={{ className: "nav-link is-active" }}
+					>
+						Species
 					</Link>
 					<Link
 						to="/detections"
@@ -30,32 +43,11 @@ export function Header() {
 						Detections
 					</Link>
 					<Link
-						to="/species"
-						className="nav-link"
-						activeProps={{ className: "nav-link is-active" }}
-					>
-						Species
-					</Link>
-					<Link
 						to="/stats"
 						className="nav-link"
 						activeProps={{ className: "nav-link is-active" }}
 					>
 						Stats
-					</Link>
-					<Link
-						to="/timeline"
-						className="nav-link"
-						activeProps={{ className: "nav-link is-active" }}
-					>
-						Timeline
-					</Link>
-					<Link
-						to="/now"
-						className="nav-link"
-						activeProps={{ className: "nav-link is-active" }}
-					>
-						Now
 					</Link>
 				</nav>
 			</div>

@@ -166,7 +166,7 @@ code {
 }
 
 /* Only cards that are actually links get the hover lift -- plain
-   informational cards (Stats, Now, Overview) stay static. */
+   informational cards (Stats, Now) stay static. */
 .feature-card-link:hover {
 	transform: translateY(-2px);
 	border-color: var(--hover-line);
