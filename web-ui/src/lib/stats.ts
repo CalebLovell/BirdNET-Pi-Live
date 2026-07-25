@@ -5,11 +5,11 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
-	buildHourActivity,
-	selectBusiestHour,
 	type BusiestHour,
+	buildHourActivity,
 	type HourActivity,
 	type SpeciesCount,
+	selectBusiestHour,
 } from "~/lib/stats-data.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 

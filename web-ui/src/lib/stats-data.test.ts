@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-
+import type { SpeciesCount } from "./stats-data.ts";
 import {
 	buildHourActivity,
 	hourLabel,
 	rankingBarPercent,
 	selectBusiestHour,
 } from "./stats-data.ts";
-import type { SpeciesCount } from "./stats-data.ts";
 
 const speciesFixture: SpeciesCount = {
 	comName: "Northern Cardinal",

@@ -1,287 +1,306 @@
-import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import { CalendarRange, Infinity as InfinityIcon } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+	Bird,
+	ChartNoAxesColumnIncreasing,
+	Clock3,
+	Feather,
+} from "lucide-react";
+import type { ComponentType, ReactNode } from "react";
 import {
 	Area,
 	AreaChart,
-	Bar,
-	BarChart,
 	CartesianGrid,
+	Tooltip as ChartTooltip,
+	Line,
 	ResponsiveContainer,
-	Tooltip,
 	XAxis,
 	YAxis,
 } from "recharts";
-import { z } from "zod";
 
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
-import { getStatsForPeriod } from "~/lib/stats.ts";
 import {
-	STATS_PERIOD_LABELS,
-	STATS_PERIODS,
-	type StatsPeriod,
-} from "~/lib/stats-periods.ts";
-
-const DEFAULT_PERIOD: StatsPeriod = "year";
-
-// .default() makes `period` optional on input (so <Link to="/stats"> doesn't
-// need to pass search) while guaranteeing a concrete value on output (so
-// Route.useSearch().period is never undefined). Zod v4: use .catch(), not
-// the @tanstack/zod-adapter fallback() helper (that's a Zod v3 workaround).
-const statsSearchSchema = z.object({
-	period: z.enum(STATS_PERIODS).default(DEFAULT_PERIOD).catch(DEFAULT_PERIOD),
-});
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "~/components/ui/tooltip.tsx";
+import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { getStats } from "~/lib/stats.ts";
+import {
+	type HourActivity,
+	hourLabel,
+	rankingBarPercent,
+	type SpeciesCount,
+} from "~/lib/stats-data.ts";
 
 export const Route = createFileRoute("/stats")({
-	validateSearch: statsSearchSchema,
-	search: {
-		middlewares: [stripSearchParams({ period: DEFAULT_PERIOD })],
-	},
-	loaderDeps: ({ search }) => ({ period: search.period }),
-	loader: ({ deps }) => getStatsForPeriod({ data: deps.period }),
+	loader: () => getStats(),
 	component: Stats,
 });
 
-const PERIOD_ICONS: Record<
-	StatsPeriod,
-	React.ComponentType<{ className?: string }>
-> = {
-	year: CalendarRange,
-	all: InfinityIcon,
+const chartTooltipStyle = {
+	contentStyle: {
+		background: "var(--paper-raised)",
+		border: "1px solid var(--line)",
+		borderRadius: "var(--radius-sm)",
+		color: "var(--ink)",
+		fontSize: 13,
+	},
+	labelStyle: { color: "var(--ink)", fontWeight: 600 },
 };
 
 function Stats() {
-	const { period } = Route.useSearch();
-	const navigate = Route.useNavigate();
 	const stats = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap py-6">
-			<ToggleGroup
-				type="single"
-				variant="outline"
-				value={period}
-				onValueChange={(value) => {
-					if (!value) return;
-					navigate({
-						search: (prev) => ({ ...prev, period: value as StatsPeriod }),
-						replace: true,
-					});
-				}}
-				className=""
-			>
-				{STATS_PERIODS.map((p) => {
-					const Icon = PERIOD_ICONS[p];
-					return (
-						<ToggleGroupItem key={p} value={p}>
-							<Icon className="size-4" />
-							{STATS_PERIOD_LABELS[p]}
-						</ToggleGroupItem>
-					);
-				})}
-			</ToggleGroup>
+		<TooltipProvider>
+			<div className="page-wrap py-4">
+				<div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+					<SummaryCard
+						label="Total detections"
+						value={stats.totalDetections}
+						sub="All recorded visits"
+						icon={ChartNoAxesColumnIncreasing}
+					/>
+					<SummaryCard
+						label="Species detected"
+						value={stats.uniqueSpecies}
+						sub="Unique species"
+						icon={Feather}
+					/>
+					<SummaryCard
+						label="Top species"
+						value={stats.topSpecies?.comName ?? "—"}
+						sub={
+							stats.topSpecies
+								? `${stats.topSpecies.count} detections`
+								: "No detections yet"
+						}
+						icon={Bird}
+						artwork={
+							stats.topSpecies?.imageUrl ? (
+								<img
+									src={stats.topSpecies.imageUrl}
+									alt={stats.topSpecies.comName}
+									className="size-16 object-contain"
+								/>
+							) : undefined
+						}
+					/>
+					<SummaryCard
+						label="Busiest hour"
+						value={stats.busiestHour ? hourLabel(stats.busiestHour.hour) : "—"}
+						sub={
+							stats.busiestHour
+								? `${stats.busiestHour.count} detections`
+								: "No detections yet"
+						}
+						icon={Clock3}
+					/>
+				</div>
 
-			<div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-				<StatCard label="Total detections" value={stats.totalDetections} />
-				<StatCard label="Species detected" value={stats.uniqueSpecies} />
-				<StatCard
-					label="Top species"
-					value={stats.topSpecies?.comName ?? "—"}
-					sub={
-						stats.topSpecies
-							? `${stats.topSpecies.count} detections`
-							: undefined
+				<div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<section>
+						<h2 className="display-title font-semibold text-xl">Top species</h2>
+						<TopSpeciesCard species={stats.topSpeciesList} />
+					</section>
+
+					<section>
+						<h2 className="display-title font-semibold text-xl">
+							Activity by hour of day
+						</h2>
+						<HourlyActivityCard activity={stats.hourActivity} />
+					</section>
+				</div>
+			</div>
+		</TooltipProvider>
+	);
+}
+
+function SummaryCard({
+	label,
+	value,
+	sub,
+	icon: Icon,
+	artwork,
+}: {
+	label: string;
+	value: string | number;
+	sub: string;
+	icon: ComponentType<{ className?: string }>;
+	artwork?: ReactNode;
+}) {
+	return (
+		<div className="feature-card flex min-h-36 flex-col justify-between gap-4 overflow-hidden rounded-md p-4">
+			<div className="flex items-start justify-between gap-4">
+				<div className="font-semibold text-muted-foreground text-xs uppercase tracking-[0.12em]">
+					{label}
+				</div>
+				{artwork ?? (
+					<div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
+						<Icon className="size-5 text-[var(--moss)]" />
+					</div>
+				)}
+			</div>
+			<div className="flex flex-col gap-4">
+				<div
+					className={
+						typeof value === "number"
+							? "tabular-data truncate font-semibold text-3xl leading-none"
+							: "display-title line-clamp-2 font-semibold text-xl leading-tight"
 					}
-				/>
-				<StatCard
-					label="Busiest"
-					value={stats.busiest?.label ?? "—"}
-					sub={stats.busiest ? `${stats.busiest.count} detections` : undefined}
-				/>
-			</div>
-
-			<h2 className="display-title mt-10 text-xl font-semibold">
-				Detections over time
-			</h2>
-			<div className="feature-card mt-4 rounded-md p-4">
-				<ResponsiveContainer width="100%" height={280}>
-					<AreaChart data={stats.trend}>
-						<defs>
-							<linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.35} />
-								<stop offset="100%" stopColor="var(--moss)" stopOpacity={0} />
-							</linearGradient>
-						</defs>
-						<CartesianGrid stroke="var(--line)" vertical={false} />
-						<XAxis
-							dataKey="label"
-							stroke="var(--muted-foreground)"
-							fontSize={12}
-							tickLine={false}
-						/>
-						<YAxis
-							stroke="var(--muted-foreground)"
-							fontSize={12}
-							tickLine={false}
-							allowDecimals={false}
-							width={32}
-						/>
-						<Tooltip
-							contentStyle={{
-								background: "var(--paper-raised)",
-								border: "1px solid var(--line)",
-								borderRadius: "var(--radius-sm)",
-								color: "var(--ink)",
-								fontSize: 13,
-							}}
-							labelStyle={{ color: "var(--ink)", fontWeight: 600 }}
-						/>
-						<Area
-							type="monotone"
-							dataKey="count"
-							name="Detections"
-							stroke="var(--moss)"
-							strokeWidth={2}
-							fill="url(#trendFill)"
-						/>
-					</AreaChart>
-				</ResponsiveContainer>
-			</div>
-
-			<div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2">
-				<div>
-					<h2 className="display-title text-xl font-semibold">Top species</h2>
-					<div className="feature-card mt-4 rounded-md p-4">
-						<ResponsiveContainer
-							width="100%"
-							height={Math.max(240, stats.topSpeciesList.length * 32)}
-						>
-							<BarChart
-								data={stats.topSpeciesList}
-								layout="vertical"
-								margin={{ left: 8 }}
-							>
-								<CartesianGrid stroke="var(--line)" horizontal={false} />
-								<XAxis
-									type="number"
-									stroke="var(--muted-foreground)"
-									fontSize={12}
-									tickLine={false}
-									allowDecimals={false}
-								/>
-								<YAxis
-									type="category"
-									dataKey="comName"
-									stroke="var(--muted-foreground)"
-									fontSize={12}
-									tickLine={false}
-									width={140}
-								/>
-								<Tooltip
-									contentStyle={{
-										background: "var(--paper-raised)",
-										border: "1px solid var(--line)",
-										borderRadius: "var(--radius-sm)",
-										color: "var(--ink)",
-										fontSize: 13,
-									}}
-									labelStyle={{ color: "var(--ink)", fontWeight: 600 }}
-									cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
-								/>
-								<Bar
-									dataKey="count"
-									name="Detections"
-									fill="var(--sand)"
-									radius={[0, 4, 4, 0]}
-								/>
-							</BarChart>
-						</ResponsiveContainer>
-					</div>
+				>
+					{value}
 				</div>
-
-				<div>
-					<h2 className="display-title text-xl font-semibold">
-						Activity by hour of day
-					</h2>
-					<div className="feature-card mt-4 rounded-md p-4">
-						<ResponsiveContainer width="100%" height={280}>
-							<BarChart data={stats.hourActivity}>
-								<CartesianGrid stroke="var(--line)" vertical={false} />
-								<XAxis
-									dataKey="hour"
-									tickFormatter={(hour: number) =>
-										hour === 0
-											? "12a"
-											: hour < 12
-												? `${hour}a`
-												: hour === 12
-													? "12p"
-													: `${hour - 12}p`
-									}
-									stroke="var(--muted-foreground)"
-									fontSize={12}
-									tickLine={false}
-									interval={3}
-								/>
-								<YAxis
-									stroke="var(--muted-foreground)"
-									fontSize={12}
-									tickLine={false}
-									allowDecimals={false}
-									width={32}
-								/>
-								<Tooltip
-									contentStyle={{
-										background: "var(--paper-raised)",
-										border: "1px solid var(--line)",
-										borderRadius: "var(--radius-sm)",
-										color: "var(--ink)",
-										fontSize: 13,
-									}}
-									labelStyle={{ color: "var(--ink)", fontWeight: 600 }}
-									labelFormatter={(hour: React.ReactNode) => `${hour}:00`}
-									cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
-								/>
-								<Bar
-									dataKey="count"
-									name="Detections"
-									fill="var(--clay)"
-									radius={[3, 3, 0, 0]}
-								/>
-							</BarChart>
-						</ResponsiveContainer>
-					</div>
-				</div>
+				<div className="tabular-data text-muted-foreground text-xs">{sub}</div>
 			</div>
 		</div>
 	);
 }
 
-function StatCard({
-	label,
-	value,
-	sub,
-}: {
-	label: string;
-	value: string | number;
-	sub?: string;
-}) {
+function TopSpeciesCard({ species }: { species: SpeciesCount[] }) {
+	const maximum = Math.max(...species.map((item) => item.count), 0);
+
 	return (
-		<div className="feature-card rounded-md p-4">
-			<div
-				className={
-					typeof value === "number"
-						? "tabular-data truncate text-2xl font-semibold"
-						: "truncate text-xl font-semibold"
-				}
-			>
-				{value}
-			</div>
-			<div className="mt-1 text-sm text-muted-foreground">{label}</div>
-			{sub && (
-				<div className="tabular-data mt-0.5 text-xs text-muted-foreground">
-					{sub}
+		<div className="feature-card mt-4 h-112 rounded-md p-4">
+			{species.length === 0 ? (
+				<div className="flex size-full items-center justify-center text-muted-foreground text-sm">
+					No detections recorded yet.
+				</div>
+			) : (
+				<div>
+					{species.map((item) => (
+						<TopSpeciesRow
+							key={item.sciName}
+							species={item}
+							maximum={maximum}
+						/>
+					))}
 				</div>
 			)}
+		</div>
+	);
+}
+
+function TopSpeciesRow({
+	species,
+	maximum,
+}: {
+	species: SpeciesCount;
+	maximum: number;
+}) {
+	return (
+		<div className="grid h-10 grid-cols-[minmax(0,12rem)_minmax(4rem,1fr)_3rem] items-center gap-4 border-[var(--line)] border-t first:border-t-0">
+			<Link
+				to="/species/$sciName"
+				params={{ sciName: sciNameToSlug(species.sciName) }}
+				className="flex min-w-0 items-center gap-4 rounded-sm no-underline focus-visible:outline-2 focus-visible:outline-[var(--ring)] focus-visible:outline-offset-2"
+			>
+				<div className="flex size-8 shrink-0 items-center justify-center">
+					{species.imageUrl ? (
+						<img
+							src={species.imageUrl}
+							alt={species.comName}
+							className="max-h-full max-w-full object-contain"
+							loading="lazy"
+						/>
+					) : (
+						<Bird className="size-4 text-muted-foreground" />
+					)}
+				</div>
+				<Tooltip>
+					<TooltipTrigger asChild>
+						<span className="truncate font-semibold text-sm">
+							{species.comName}
+						</span>
+					</TooltipTrigger>
+					<TooltipContent>{species.comName}</TooltipContent>
+				</Tooltip>
+			</Link>
+
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<div
+						className="h-3 overflow-hidden rounded-r-full"
+						style={{
+							backgroundColor:
+								"color-mix(in oklab, var(--bark) 18%, var(--paper-raised))",
+						}}
+					>
+						<div
+							className="h-full rounded-r-full bg-[var(--moss)]"
+							style={{
+								width: `${rankingBarPercent(species.count, maximum)}%`,
+							}}
+						/>
+					</div>
+				</TooltipTrigger>
+				<TooltipContent>
+					{species.comName} — {species.count} detections
+				</TooltipContent>
+			</Tooltip>
+
+			<span className="tabular-data text-right text-muted-foreground text-xs">
+				{species.count}
+			</span>
+		</div>
+	);
+}
+
+function HourlyActivityCard({ activity }: { activity: HourActivity[] }) {
+	return (
+		<div className="feature-card mt-4 h-112 rounded-md p-4">
+			<ResponsiveContainer width="100%" height="100%">
+				<AreaChart data={activity}>
+					<defs>
+						<linearGradient
+							id="statsHourDensityFill"
+							x1="0"
+							y1="0"
+							x2="0"
+							y2="1"
+						>
+							<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
+							<stop offset="100%" stopColor="var(--moss)" stopOpacity={0} />
+						</linearGradient>
+					</defs>
+					<CartesianGrid stroke="var(--line)" vertical={false} />
+					<XAxis
+						dataKey="hour"
+						tickFormatter={hourLabel}
+						stroke="var(--muted-foreground)"
+						fontSize={12}
+						tickLine={false}
+						interval={3}
+					/>
+					<YAxis
+						stroke="var(--muted-foreground)"
+						fontSize={12}
+						tickLine={false}
+						allowDecimals={false}
+						width={32}
+					/>
+					<ChartTooltip
+						{...chartTooltipStyle}
+						labelFormatter={(hour: ReactNode) => hourLabel(Number(hour))}
+						cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
+					/>
+					<Area
+						dataKey="count"
+						name="Detections"
+						stroke="none"
+						fill="url(#statsHourDensityFill)"
+					/>
+					<Line
+						type="monotone"
+						dataKey="count"
+						name="Detections"
+						stroke="var(--moss)"
+						strokeWidth={2}
+						dot={false}
+						activeDot={{ r: 3, fill: "var(--moss)" }}
+					/>
+				</AreaChart>
+			</ResponsiveContainer>
 		</div>
 	);
 }
