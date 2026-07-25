@@ -60,7 +60,7 @@ function Detections() {
 			});
 
 			if (search.page > 1 && selectedCount === page.rows.length) {
-				navigate({ search: { ...search, page: search.page - 1 } });
+				navigate({ search: { ...search, page: search.page - 1 }, replace: true });
 			}
 
 			await router.invalidate();
@@ -75,20 +75,14 @@ function Detections() {
 	}
 
 	return (
-		<div className="page-wrap space-y-4 pt-4">
-			<div className="flex flex-col gap-1">
-				<h1 className="display-title text-3xl font-semibold">Detections</h1>
-				<p className="text-muted-foreground">
-					{page.total.toLocaleString()} matching detection
-					{page.total === 1 ? "" : "s"}
-				</p>
-			</div>
-
+		<div className="page-wrap space-y-4 py-4">
 			<div className="space-y-4">
 				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 					<DetectionsFilters
 						search={search}
-						onSearchChange={(nextSearch) => navigate({ search: nextSearch })}
+						onSearchChange={(nextSearch) =>
+							navigate({ search: nextSearch, replace: true })
+						}
 					/>
 					{selectedCount > 0 ? (
 						<Button
@@ -121,7 +115,9 @@ function Detections() {
 					<DetectionsTable
 						page={page}
 						search={search}
-						onSearchChange={(nextSearch) => navigate({ search: nextSearch })}
+						onSearchChange={(nextSearch) =>
+							navigate({ search: nextSearch, replace: true })
+						}
 						columnVisibility={columnVisibility}
 						onColumnVisibilityChange={setColumnVisibility}
 						rowSelection={rowSelection}

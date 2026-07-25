@@ -89,13 +89,8 @@ function Timeline() {
 	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 1);
 
 	return (
-		<div className="page-wrap pt-4">
-			<h1 className="display-title text-3xl font-semibold">Timeline</h1>
-			<p className="mt-2 text-muted-foreground">
-				Daily activity patterns across your species, hour by hour.
-			</p>
-
-			<div className="mt-6 flex justify-end">
+		<div className="page-wrap py-4">
+			<div className="flex justify-end">
 				<ToggleGroup
 					type="single"
 					variant="outline"
@@ -104,6 +99,7 @@ function Timeline() {
 						if (!value) return;
 						navigate({
 							search: (prev) => ({ ...prev, period: value as TimelinePeriod }),
+							replace: true,
 						});
 					}}
 				>

@@ -55,12 +55,7 @@ function Stats() {
 	const stats = Route.useLoaderData();
 
 	return (
-		<div className="page-wrap pt-4">
-			<h1 className="display-title text-3xl font-semibold">Stats</h1>
-			<p className="mt-2 text-muted-foreground">
-				Trends and activity for your BirdNET-Pi station.
-			</p>
-
+		<div className="page-wrap py-6">
 			<ToggleGroup
 				type="single"
 				variant="outline"
@@ -69,9 +64,10 @@ function Stats() {
 					if (!value) return;
 					navigate({
 						search: (prev) => ({ ...prev, period: value as StatsPeriod }),
+						replace: true,
 					});
 				}}
-				className="mt-6"
+				className=""
 			>
 				{STATS_PERIODS.map((p) => {
 					const Icon = PERIOD_ICONS[p];

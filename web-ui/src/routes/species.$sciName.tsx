@@ -1,10 +1,5 @@
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
-	createFileRoute,
-	Link,
-	stripSearchParams,
-} from "@tanstack/react-router";
-import {
-	ArrowLeft,
 	Bird,
 	Clock3,
 	ChevronLeft,
@@ -155,13 +150,6 @@ function BirdPage() {
 	if (!detail) {
 		return (
 			<div className="page-wrap pt-4">
-				<Link
-					to="/species"
-					className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-				>
-					<ArrowLeft className="size-4" />
-					Back to Species
-				</Link>
 				<p className="mt-4 text-muted-foreground">
 					No detections found for this species.
 				</p>
@@ -180,15 +168,7 @@ function BirdPage() {
 	const showYearSelector = availableYears.length > 1;
 
 	return (
-		<div className="page-wrap pt-4">
-			<Link
-				to="/species"
-				className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-			>
-				<ArrowLeft className="size-4" />
-				Back to Species
-			</Link>
-
+		<div className="page-wrap">
 			<SummaryCard detail={detail} />
 
 			<div className="mt-4 flex flex-wrap items-center justify-between gap-4">
@@ -205,6 +185,7 @@ function BirdPage() {
 							onClick={() =>
 								navigate({
 									search: (prev) => ({ ...prev, year: previousYear ?? year }),
+									replace: true,
 								})
 							}
 						>
@@ -221,6 +202,7 @@ function BirdPage() {
 							onClick={() =>
 								navigate({
 									search: (prev) => ({ ...prev, year: nextYear ?? year }),
+									replace: true,
 								})
 							}
 						>

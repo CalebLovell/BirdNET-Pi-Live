@@ -42,15 +42,15 @@ function Now() {
 	const rest = detections.slice(1);
 
 	return (
-		<div className="page-wrap pt-4">
-			<div className="flex items-center justify-between">
+		<div className="page-wrap py-4">
+				<div className="flex items-center justify-between">
 				<div>
 					<h1 className="display-title text-3xl font-semibold">Now</h1>
 					<p className="mt-2 text-muted-foreground">
 						What's singing at your station, as it happens.
 					</p>
 				</div>
-				<div className="flex items-center gap-2 text-sm text-muted-foreground">
+				<div className="flex items-center gap-2">
 					<span className="live-dot" aria-hidden="true" />
 					<span>
 						Live &middot; updated{" "}
@@ -64,8 +64,8 @@ function Now() {
 					key={keyFor(latest)}
 					className={
 						freshKeys.has(keyFor(latest))
-							? "feature-card mt-6 rounded-md p-6 flash-in"
-							: "feature-card mt-6 rounded-md p-6"
+							? "feature-card mt-4 rounded-md p-6 flash-in"
+							: "feature-card mt-4 rounded-md p-6"
 					}
 				>
 					<div className="island-kicker">Latest detection</div>

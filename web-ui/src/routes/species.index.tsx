@@ -83,7 +83,10 @@ function Species() {
 	useEffect(() => setQueryInput(search), [search]);
 
 	const debouncedSetQuery = useDebouncedCallback((value: string) => {
-		navigate({ search: (prev) => ({ ...prev, q: value, page: 1 }) });
+		navigate({
+			search: (prev) => ({ ...prev, q: value, page: 1 }),
+			replace: true,
+		});
 	}, 200);
 
 	const fuse = useMemo(
@@ -118,13 +121,8 @@ function Species() {
 	);
 
 	return (
-		<div className="page-wrap pt-4">
-			<h1 className="display-title text-3xl font-semibold">Species</h1>
-			<p className="mt-4 text-muted-foreground">
-				{cards.length} species detected so far.
-			</p>
-
-			<div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+		<div className="page-wrap py-4">
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<Input
 					placeholder="Search species..."
 					value={queryInput}
@@ -148,6 +146,7 @@ function Species() {
 										reverse: !prev.reverse,
 										page: 1,
 									}),
+									replace: true,
 								});
 								return;
 							}
@@ -158,6 +157,7 @@ function Species() {
 									reverse: false,
 									page: 1,
 								}),
+								replace: true,
 							});
 						}}
 					>
@@ -226,6 +226,7 @@ function Species() {
 											...prev,
 											page: Math.max(1, currentPage - 1),
 										}),
+										replace: true,
 									});
 								}}
 								className={
@@ -240,7 +241,10 @@ function Species() {
 									isActive={p === currentPage}
 									onClick={(e) => {
 										e.preventDefault();
-										navigate({ search: (prev) => ({ ...prev, page: p }) });
+										navigate({
+											search: (prev) => ({ ...prev, page: p }),
+											replace: true,
+										});
 									}}
 								>
 									{p}
@@ -257,6 +261,7 @@ function Species() {
 											...prev,
 											page: Math.min(pageCount, currentPage + 1),
 										}),
+										replace: true,
 									});
 								}}
 								className={
