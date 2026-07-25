@@ -24,6 +24,7 @@ import {
 	type HourActivity,
 	hourLabel,
 	type SpeciesCount,
+	type TrendPoint,
 } from "~/lib/stats-data.ts";
 
 export const Route = createFileRoute("/stats")({
@@ -90,8 +91,11 @@ function Stats() {
 			</div>
 
 			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+				<div className="grid gap-4 lg:grid-rows-2">
+					<HourlyActivityCard activity={stats.hourActivity} />
+					<DetectionsOverTimeCard trend={stats.detectionTrend} />
+				</div>
 				<TopSpeciesCard species={stats.topSpeciesList} />
-				<HourlyActivityCard activity={stats.hourActivity} />
 			</div>
 		</div>
 	);
@@ -177,7 +181,7 @@ function HourlyActivityCard({ activity }: { activity: HourActivity[] }) {
 	return (
 		<section
 			aria-label="Activity by hour of day"
-			className="feature-card flex min-h-112 flex-col rounded-md p-4"
+			className="feature-card flex min-h-56 flex-col rounded-md p-4 lg:min-h-0"
 		>
 			<div className="island-kicker">Activity by hour of day</div>
 
@@ -235,6 +239,73 @@ function HourlyActivityCard({ activity }: { activity: HourActivity[] }) {
 					</AreaChart>
 				</ResponsiveContainer>
 			</div>
+		</section>
+	);
+}
+
+function DetectionsOverTimeCard({ trend }: { trend: TrendPoint[] }) {
+	return (
+		<section
+			aria-label="Detections over time"
+			className="feature-card flex min-h-56 flex-col rounded-md p-4 lg:min-h-0"
+		>
+			<div className="island-kicker">Detections over time</div>
+
+			{trend.length === 0 ? (
+				<div className="mt-4 flex flex-1 items-center justify-center text-muted-foreground text-sm">
+					No detections recorded yet.
+				</div>
+			) : (
+				<div className="mt-4 min-h-0 flex-1">
+					<ResponsiveContainer width="100%" height="100%">
+						<AreaChart data={trend}>
+							<defs>
+								<linearGradient
+									id="statsDetectionTrendFill"
+									x1="0"
+									y1="0"
+									x2="0"
+									y2="1"
+								>
+									<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
+									<stop offset="100%" stopColor="var(--moss)" stopOpacity={0} />
+								</linearGradient>
+							</defs>
+							<CartesianGrid stroke="var(--line)" vertical={false} />
+							<XAxis
+								dataKey="label"
+								stroke="var(--muted-foreground)"
+								fontSize={12}
+								tickLine={false}
+								minTickGap={32}
+							/>
+							<YAxis
+								stroke="var(--muted-foreground)"
+								fontSize={12}
+								tickLine={false}
+								allowDecimals={false}
+								width={32}
+							/>
+							<ChartTooltip {...chartTooltipStyle} />
+							<Area
+								dataKey="count"
+								name="Detections"
+								stroke="none"
+								fill="url(#statsDetectionTrendFill)"
+							/>
+							<Line
+								type="monotone"
+								dataKey="count"
+								name="Detections"
+								stroke="var(--moss)"
+								strokeWidth={2}
+								dot={false}
+								activeDot={{ r: 3, fill: "var(--moss)" }}
+							/>
+						</AreaChart>
+					</ResponsiveContainer>
+				</div>
+			)}
 		</section>
 	);
 }

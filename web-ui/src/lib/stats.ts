@@ -9,9 +9,9 @@ import {
 	buildDetectionTrend,
 	buildHourActivity,
 	type HourActivity,
-	selectTrendGranularity,
 	type SpeciesCount,
 	selectBusiestHour,
+	selectTrendGranularity,
 	type TrendBucketCount,
 	type TrendPoint,
 } from "~/lib/stats-data.ts";
@@ -75,10 +75,7 @@ async function getDetectionTrend(): Promise<TrendPoint[]> {
 
 	if (!bounds?.firstDate || !bounds.lastDate) return [];
 
-	const granularity = selectTrendGranularity(
-		bounds.firstDate,
-		bounds.lastDate,
-	);
+	const granularity = selectTrendGranularity(bounds.firstDate, bounds.lastDate);
 	const bucketExpr =
 		granularity === "day"
 			? sql<string>`${detections.Date}`

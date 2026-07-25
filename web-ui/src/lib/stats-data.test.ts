@@ -6,8 +6,8 @@ import {
 	buildHourActivity,
 	hourLabel,
 	rankingBarPercent,
-	selectTrendGranularity,
 	selectBusiestHour,
+	selectTrendGranularity,
 } from "./stats-data.ts";
 
 const speciesFixture: SpeciesCount = {
