@@ -81,7 +81,7 @@ function Stats() {
 								<img
 									src={stats.topSpecies.imageUrl}
 									alt={stats.topSpecies.comName}
-									className="size-16 object-contain"
+									className="size-10 object-contain"
 								/>
 							) : undefined
 						}
@@ -121,7 +121,7 @@ function SummaryCard({
 	artwork?: ReactNode;
 }) {
 	return (
-		<div className="feature-card flex min-h-36 flex-col justify-between gap-4 overflow-hidden rounded-md p-4">
+		<div className="feature-card flex flex-col gap-4 overflow-hidden rounded-md p-4">
 			<div className="flex items-start justify-between gap-4">
 				<div className="island-kicker">{label}</div>
 				{artwork ?? (
