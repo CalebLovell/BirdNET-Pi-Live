@@ -6,10 +6,14 @@ import { detections } from "~/db/schema.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	type BusiestHour,
+	buildDetectionTrend,
 	buildHourActivity,
 	type HourActivity,
+	selectTrendGranularity,
 	type SpeciesCount,
 	selectBusiestHour,
+	type TrendBucketCount,
+	type TrendPoint,
 } from "~/lib/stats-data.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
@@ -20,6 +24,7 @@ export type StatsData = {
 	busiestHour: BusiestHour | null;
 	topSpeciesList: SpeciesCount[];
 	hourActivity: HourActivity[];
+	detectionTrend: TrendPoint[];
 };
 
 async function getTopSpecies(limit: number): Promise<SpeciesCount[]> {
@@ -60,6 +65,41 @@ async function getHourActivity(): Promise<HourActivity[]> {
 	);
 }
 
+async function getDetectionTrend(): Promise<TrendPoint[]> {
+	const [bounds] = await db
+		.select({
+			firstDate: sql<string | null>`min(${detections.Date})`,
+			lastDate: sql<string | null>`max(${detections.Date})`,
+		})
+		.from(detections);
+
+	if (!bounds?.firstDate || !bounds.lastDate) return [];
+
+	const granularity = selectTrendGranularity(
+		bounds.firstDate,
+		bounds.lastDate,
+	);
+	const bucketExpr =
+		granularity === "day"
+			? sql<string>`${detections.Date}`
+			: granularity === "week"
+				? sql<string>`date(${detections.Date}, '-' || ((cast(strftime('%w', ${detections.Date}) as integer) + 6) % 7) || ' days')`
+				: sql<string>`substr(${detections.Date}, 1, 7)`;
+
+	const rows = await db
+		.select({ bucket: bucketExpr, count: count() })
+		.from(detections)
+		.groupBy(bucketExpr)
+		.orderBy(bucketExpr);
+
+	return buildDetectionTrend(
+		rows satisfies TrendBucketCount[],
+		bounds.firstDate,
+		bounds.lastDate,
+		granularity,
+	);
+}
+
 export const getStats = createServerFn({ method: "GET" }).handler(
 	async (): Promise<StatsData> => {
 		const [
@@ -67,6 +107,7 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			[{ uniqueSpecies }],
 			topSpeciesList,
 			hourActivity,
+			detectionTrend,
 		] = await Promise.all([
 			db.select({ totalDetections: count() }).from(detections),
 			db
@@ -74,6 +115,7 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 				.from(detections),
 			getTopSpecies(10),
 			getHourActivity(),
+			getDetectionTrend(),
 		]);
 
 		return {
@@ -83,6 +125,7 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			busiestHour: selectBusiestHour(hourActivity),
 			topSpeciesList,
 			hourActivity,
+			detectionTrend,
 		};
 	},
 );
