@@ -10,18 +10,18 @@ The analytics section becomes a two-column grid at the large breakpoint:
 
 ```text
 +---------------------------+---------------------------+
-| Activity by hour of day   |                           |
-|                           | Top species               |
-+---------------------------+                           |
-| Detections over time      |                           |
+|                           | Activity by hour of day   |
+| Top species               |                           |
+|                           +---------------------------+
+|                           | Detections over time      |
 |                           |                           |
 +---------------------------+---------------------------+
 ```
 
-- The left column contains two equal-height chart cards separated by a spacing-4 gap.
-- The right column contains Top Species and spans the full combined height.
-- The existing Top Species minimum height remains the desktop floor. The left column stretches to the card's actual rendered height, and each chart receives half of the remaining height after the gap.
-- On narrower screens, the order is Activity by hour of day, Detections over time, then Top Species.
+- The left column contains Top Species and spans the full combined height.
+- The right column contains two equal-height chart cards separated by a spacing-4 gap.
+- The existing Top Species minimum height remains the desktop floor. The right column stretches to the card's actual rendered height, and each chart receives half of the remaining height after the gap.
+- On narrower screens, the order is Top Species, Activity by hour of day, then Detections over time.
 - Card padding, inter-card gaps, and internal section spacing continue to use the existing spacing-4 rhythm.
 
 ## Chart Design

@@ -91,11 +91,11 @@ function Stats() {
 			</div>
 
 			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+				<TopSpeciesCard species={stats.topSpeciesList} />
 				<div className="grid gap-4 lg:grid-rows-2">
 					<HourlyActivityCard activity={stats.hourActivity} />
 					<DetectionsOverTimeCard trend={stats.detectionTrend} />
 				</div>
-				<TopSpeciesCard species={stats.topSpeciesList} />
 			</div>
 		</div>
 	);
