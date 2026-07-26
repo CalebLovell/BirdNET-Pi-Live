@@ -1,20 +1,12 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import {
-	Bird,
-	ChevronLeft,
-	ChevronRight,
-	Clock3,
-	Loader2,
-	Pause,
-	Play,
-} from "lucide-react";
+import { Bird, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import {
 	Area,
 	AreaChart,
 	CartesianGrid,
 	Line,
+	Tooltip as RechartsTooltip,
 	ResponsiveContainer,
-	Tooltip,
 	XAxis,
 	YAxis,
 } from "recharts";
@@ -24,6 +16,12 @@ import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { Button } from "~/components/ui/button.tsx";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "~/components/ui/tooltip.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import {
@@ -34,7 +32,6 @@ import {
 import { formatTimeAgo, hourLabel } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
-import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const MIN_YEAR = 2000;
@@ -62,10 +59,6 @@ export const Route = createFileRoute("/species/$sciName")({
 		}),
 	component: BirdPage,
 });
-
-const WAVEFORM_HEIGHTS = [
-	36, 62, 48, 82, 58, 94, 44, 72, 52, 86, 64, 38,
-] as const;
 
 type HeatMapWeek = {
 	days: { date: Date; point: TrendPoint | null }[];
@@ -163,253 +156,289 @@ function BirdPage() {
 	const showYearSelector = availableYears.length > 1;
 
 	return (
-		<div className="page-wrap">
-			<SummaryCard detail={detail} />
+		<TooltipProvider>
+			<div className="page-wrap">
+				<SummaryCard detail={detail} offsetMs={offsetMs} />
 
-			<section
-				aria-label="Detection history"
-				className="feature-card mt-4 w-full overflow-hidden rounded-md p-3"
-			>
-				<div className="flex flex-wrap items-center justify-between gap-4">
-					<div className="island-kicker">Detection history</div>
-					{showYearSelector ? (
-						<div className="flex items-center gap-2">
-							<Button
-								variant="outline"
-								size="icon-xs"
-								disabled={previousYear === null}
-								aria-label="Previous year"
-								onClick={() =>
-									navigate({
-										search: (prev) => ({ ...prev, year: previousYear ?? year }),
-										replace: true,
-									})
-								}
-							>
-								<ChevronLeft className="size-3" />
-							</Button>
-							<div className="tabular-data min-w-12 text-center font-semibold text-sm">
-								{year}
-							</div>
-							<Button
-								variant="outline"
-								size="icon-xs"
-								disabled={nextYear === null}
-								aria-label="Next year"
-								onClick={() =>
-									navigate({
-										search: (prev) => ({ ...prev, year: nextYear ?? year }),
-										replace: true,
-									})
-								}
-							>
-								<ChevronRight className="size-3" />
-							</Button>
-						</div>
-					) : null}
-				</div>
-
-				<div className="mt-4 overflow-x-auto pb-1">
-					<div className="w-full min-w-max">
-						<div className="mb-1 ml-9 flex w-max gap-1">
-							{weeks.map((week, index) => (
-								<div
-									key={`month-${index}`}
-									className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
+				<section
+					aria-label="Detection history"
+					className="feature-card mt-4 w-full overflow-hidden rounded-md p-3"
+				>
+					<div className="flex flex-wrap items-center justify-between gap-4">
+						<div className="island-kicker">Detection history</div>
+						{showYearSelector ? (
+							<div className="flex items-center gap-2">
+								<Button
+									variant="outline"
+									size="icon-xs"
+									disabled={previousYear === null}
+									aria-label="Previous year"
+									onClick={() =>
+										navigate({
+											search: (prev) => ({
+												...prev,
+												year: previousYear ?? year,
+											}),
+											replace: true,
+										})
+									}
 								>
-									{week.monthLabel}
+									<ChevronLeft className="size-3" />
+								</Button>
+								<div className="tabular-data min-w-12 text-center font-semibold text-sm">
+									{year}
 								</div>
-							))}
-						</div>
-						<div className="flex gap-2">
-							<div className="flex w-7 flex-col gap-1 text-[9px] text-muted-foreground leading-3">
-								<span>Sun</span>
-								<span>Mon</span>
-								<span>Tue</span>
-								<span>Wed</span>
-								<span>Thu</span>
-								<span>Fri</span>
-								<span>Sat</span>
+								<Button
+									variant="outline"
+									size="icon-xs"
+									disabled={nextYear === null}
+									aria-label="Next year"
+									onClick={() =>
+										navigate({
+											search: (prev) => ({ ...prev, year: nextYear ?? year }),
+											replace: true,
+										})
+									}
+								>
+									<ChevronRight className="size-3" />
+								</Button>
 							</div>
-							<div className="flex w-max gap-1">
-								{weeks.map((week, weekIndex) => (
+						) : null}
+					</div>
+
+					<div className="mt-4 overflow-x-auto pb-1">
+						<div className="w-full min-w-max">
+							<div className="mb-1 ml-9 flex w-max gap-1">
+								{weeks.map((week, index) => (
 									<div
-										key={`week-${weekIndex}`}
-										className="flex shrink-0 flex-col gap-1"
+										key={`month-${index}`}
+										className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
 									>
-										{week.days.map(({ date, point }) => {
-											const count = point?.count ?? 0;
-											const dateLabel = date.toLocaleDateString([], {
-												month: "short",
-												day: "numeric",
-												year: "numeric",
-											});
-											return (
-												<div
-													key={date.toISOString()}
-													role="img"
-													aria-label={`${dateLabel}: ${count} detections`}
-													title={`${dateLabel}: ${count} detections`}
-													className="size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1"
-													style={{
-														backgroundColor:
-															HEAT_COLORS[heatLevel(count, maximum)],
-													}}
-												/>
-											);
-										})}
+										{week.monthLabel}
 									</div>
 								))}
 							</div>
+							<div className="flex gap-2">
+								<div className="flex w-7 flex-col gap-1 text-[9px] text-muted-foreground leading-3">
+									<span>Sun</span>
+									<span>Mon</span>
+									<span>Tue</span>
+									<span>Wed</span>
+									<span>Thu</span>
+									<span>Fri</span>
+									<span>Sat</span>
+								</div>
+								<div className="flex w-max gap-1">
+									{weeks.map((week, weekIndex) => (
+										<div
+											key={`week-${weekIndex}`}
+											className="flex shrink-0 flex-col gap-1"
+										>
+											{week.days.map(({ date, point }) => {
+												const count = point?.count ?? 0;
+												const dateLabel = date.toLocaleDateString([], {
+													month: "short",
+													day: "numeric",
+													year: "numeric",
+												});
+												return (
+													<Tooltip key={date.toISOString()}>
+														<TooltipTrigger asChild>
+															<div
+																role="img"
+																aria-label={`${dateLabel}: ${count} detections`}
+																className="size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1"
+																style={{
+																	backgroundColor:
+																		HEAT_COLORS[heatLevel(count, maximum)],
+																}}
+															/>
+														</TooltipTrigger>
+														<TooltipContent>
+															{dateLabel} — {count}
+														</TooltipContent>
+													</Tooltip>
+												);
+											})}
+										</div>
+									))}
+								</div>
+							</div>
 						</div>
 					</div>
-				</div>
-				<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
-					<span>Less</span>
-					{HEAT_COLORS.map((color, index) => (
-						<span
-							key={`legend-${index}`}
-							className="size-3 rounded-[3px] border border-[var(--line)]"
-							style={{ backgroundColor: color }}
-						/>
-					))}
-					<span>More</span>
-				</div>
-			</section>
-
-			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<section
-					aria-label="Daily activity"
-					className="feature-card order-2 flex min-h-[420px] flex-col rounded-md p-3 lg:col-start-2 lg:row-start-1"
-				>
-					<div className="island-kicker">Daily activity</div>
-					<div className="mt-4 min-h-0 flex-1">
-						<ResponsiveContainer width="100%" height="100%">
-							<AreaChart data={detail.hourActivity}>
-								<defs>
-									<linearGradient
-										id="hourDensityFill"
-										x1="0"
-										y1="0"
-										x2="0"
-										y2="1"
-									>
-										<stop
-											offset="0%"
-											stopColor="var(--moss)"
-											stopOpacity={0.2}
-										/>
-										<stop
-											offset="100%"
-											stopColor="var(--moss)"
-											stopOpacity={0}
-										/>
-									</linearGradient>
-								</defs>
-								<CartesianGrid stroke="var(--line)" vertical={false} />
-								<XAxis
-									dataKey="hour"
-									tickFormatter={(hour: number) => hourLabel(hour)}
-									stroke="var(--muted-foreground)"
-									fontSize={12}
-									tickLine={false}
-									interval={3}
-								/>
-								<YAxis
-									stroke="var(--muted-foreground)"
-									fontSize={12}
-									tickLine={false}
-									allowDecimals={false}
-									width={32}
-								/>
-								<Tooltip
-									{...chartTooltipStyle}
-									labelFormatter={(hour: React.ReactNode) =>
-										hourLabel(Number(hour))
-									}
-									cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
-								/>
-								<Area
-									dataKey="count"
-									name="Detections"
-									stroke="none"
-									fill="url(#hourDensityFill)"
-								/>
-								<Line
-									type="monotone"
-									dataKey="count"
-									name="Detections"
-									stroke="var(--moss)"
-									strokeWidth={2}
-									dot={false}
-									activeDot={{ r: 3, fill: "var(--moss)" }}
-								/>
-							</AreaChart>
-						</ResponsiveContainer>
+					<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+						<span>Less</span>
+						{HEAT_COLORS.map((color, index) => (
+							<span
+								key={`legend-${index}`}
+								className="size-3 rounded-[3px] border border-[var(--line)]"
+								style={{ backgroundColor: color }}
+							/>
+						))}
+						<span>More</span>
 					</div>
 				</section>
 
-				<RecentVisitsCard visits={detail.recentVisits} offsetMs={offsetMs} />
+				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<section
+						aria-label="Daily activity"
+						className="feature-card order-2 flex min-h-[420px] flex-col rounded-md p-3 lg:col-start-2 lg:row-start-1"
+					>
+						<div className="island-kicker">Daily activity</div>
+						<div className="mt-4 min-h-0 flex-1">
+							<ResponsiveContainer width="100%" height="100%">
+								<AreaChart data={detail.hourActivity}>
+									<defs>
+										<linearGradient
+											id="hourDensityFill"
+											x1="0"
+											y1="0"
+											x2="0"
+											y2="1"
+										>
+											<stop
+												offset="0%"
+												stopColor="var(--moss)"
+												stopOpacity={0.2}
+											/>
+											<stop
+												offset="100%"
+												stopColor="var(--moss)"
+												stopOpacity={0}
+											/>
+										</linearGradient>
+									</defs>
+									<CartesianGrid stroke="var(--line)" vertical={false} />
+									<XAxis
+										dataKey="hour"
+										tickFormatter={(hour: number) => hourLabel(hour)}
+										stroke="var(--muted-foreground)"
+										fontSize={12}
+										tickLine={false}
+										interval={3}
+									/>
+									<YAxis
+										stroke="var(--muted-foreground)"
+										fontSize={12}
+										tickLine={false}
+										allowDecimals={false}
+										width={32}
+									/>
+									<RechartsTooltip
+										{...chartTooltipStyle}
+										labelFormatter={(hour: React.ReactNode) =>
+											hourLabel(Number(hour))
+										}
+										cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
+									/>
+									<Area
+										dataKey="count"
+										name="Detections"
+										stroke="none"
+										fill="url(#hourDensityFill)"
+									/>
+									<Line
+										type="monotone"
+										dataKey="count"
+										name="Detections"
+										stroke="var(--moss)"
+										strokeWidth={2}
+										dot={false}
+										activeDot={{ r: 3, fill: "var(--moss)" }}
+									/>
+								</AreaChart>
+							</ResponsiveContainer>
+						</div>
+					</section>
+
+					<RecentVisitsCard visits={detail.recentVisits} offsetMs={offsetMs} />
+				</div>
 			</div>
-		</div>
+		</TooltipProvider>
 	);
 }
 
-function SummaryCard({ detail }: { detail: SpeciesDetail }) {
+/**
+ * Deliberately built on the Today page's hero card: same portrait column, the
+ * same top-right actions slot, the same moss "how long ago" line over a metadata
+ * row, and the same four-up stat grid. Only the data points differ -- this
+ * card's clock runs from the species' last visit rather than from a live poll.
+ */
+function SummaryCard({
+	detail,
+	offsetMs,
+}: {
+	detail: SpeciesDetail;
+	offsetMs: number;
+}) {
+	// The most recent visit is the same detection as `lastDetected`, and it is the
+	// only one carrying a server-measured age, so the relative label agrees with
+	// the visit log instead of drifting against it.
+	const lastVisit = detail.recentVisits[0];
+
 	return (
 		<section
 			aria-label="Species profile"
-			className="feature-card mt-4 rounded-md p-3"
+			className="feature-card mt-4 grid items-center gap-4 rounded-md p-4 sm:grid-cols-[12rem_minmax(0,1fr)]"
 		>
-			<div className="grid gap-3 sm:grid-cols-[14rem_minmax(0,1fr)]">
-				<div className="flex h-48 w-full shrink-0 items-center justify-center overflow-hidden sm:w-56">
-					{detail.imageUrl ? (
-						<img
-							src={detail.imageUrl}
-							alt={detail.comName}
-							className="max-h-full max-w-50 object-contain"
-						/>
-					) : (
-						<Bird className="size-16 text-muted-foreground" />
-					)}
+			<div className="flex h-32 w-full shrink-0 items-center justify-center overflow-hidden sm:h-44">
+				{detail.imageUrl ? (
+					<img
+						src={detail.imageUrl}
+						alt={detail.comName}
+						className="max-h-full max-w-44 object-contain"
+					/>
+				) : (
+					<Bird className="size-16 text-muted-foreground" />
+				)}
+			</div>
+
+			<div className="flex min-w-0 flex-col gap-2.5">
+				{/* Title and actions share a line now that the kicker is gone, so the
+				    column starts level with the top of the portrait. */}
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div className="min-w-0">
+						<h1 className="display-title font-bold text-2xl">
+							{detail.comName}
+						</h1>
+						<p className="text-[var(--bark)] text-xs italic">
+							{detail.sciName}
+						</p>
+					</div>
+					<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
 				</div>
 
-				<div className="flex flex-1 flex-col gap-3 sm:min-h-48 sm:justify-around sm:gap-0">
-					<div className="flex flex-wrap items-start justify-between gap-3">
-						<div>
-							<h1 className="display-title font-bold text-2xl">
-								{detail.comName}
-							</h1>
-							<p className="text-[var(--bark)] text-xs italic">
-								{detail.sciName}
-							</p>
-						</div>
-						<SpeciesActions
-							ebirdUrl={detail.ebirdUrl}
-							comName={detail.comName}
-						/>
-					</div>
-
-					<div className="grid gap-3 sm:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] sm:items-start">
-						<div className="grid grid-cols-2 gap-x-4 gap-y-3">
-							<Stat label="Total detections" value={detail.totalDetections} />
-							<Stat
-								label="Avg. confidence"
-								value={formatConfidence(detail.averageConfidence)}
-							/>
-							<Stat
-								label="First heard"
-								value={formatHeardDate(detail.firstDetected.date)}
-							/>
-							<Stat
-								label="Last heard"
-								value={formatHeardDate(detail.lastDetected.date)}
-							/>
-						</div>
-
-						<BestRecordingPlayer recording={detail.bestRecording} />
+				<div>
+					<p className="font-semibold text-[var(--moss)] text-base">
+						{lastVisit
+							? formatTimeAgo(lastVisit.ageMs + offsetMs)
+							: formatHeardDate(detail.lastDetected.date)}
+					</p>
+					<div className="tabular-data mt-0.5 flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+						<span>
+							last heard at {formatVisitTime(detail.lastDetected.time)}
+						</span>
+						<ConfidencePill confidence={detail.lastDetected.confidence} />
 					</div>
 				</div>
+
+				<dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+					<Stat label="Total detections" value={detail.totalDetections} />
+					<Stat
+						label="Avg. confidence"
+						value={formatConfidence(detail.averageConfidence)}
+					/>
+					<Stat
+						label="First heard"
+						value={formatHeardDate(detail.firstDetected.date)}
+					/>
+					<Stat
+						label="Last heard"
+						value={formatHeardDate(detail.lastDetected.date)}
+					/>
+				</dl>
+
+				<BestRecordingFooter recording={detail.bestRecording} />
 			</div>
 		</section>
 	);
@@ -428,87 +457,36 @@ function formatHeardDate(date: string): string {
 function Stat({ label, value }: { label: string; value: string | number }) {
 	return (
 		<div>
-			<div
-				className={
-					typeof value === "number"
-						? "tabular-data font-semibold"
-						: "tabular-data truncate font-semibold"
-				}
-			>
-				{value}
-			</div>
-			<div className="text-muted-foreground text-xs">{label}</div>
+			<dd className="tabular-data truncate font-semibold">{value}</dd>
+			<dt className="text-muted-foreground text-xs">{label}</dt>
 		</div>
 	);
 }
 
-function BestRecordingPlayer({
+/**
+ * Sits where the Today hero card keeps its "Updated" line -- a hairline footer
+ * closing the card -- and plays through the shared RecordingButton so the
+ * control reads the same here as it does in every detection row.
+ */
+function BestRecordingFooter({
 	recording,
 }: {
 	recording: SpeciesDetail["bestRecording"];
 }) {
-	const {
-		audioRef,
-		isPlaying,
-		isLoading,
-		togglePlay,
-		onPlay,
-		onPause,
-		onEnded,
-	} = usePlayableAudio(recording?.audioUrl ?? null);
-
 	if (!recording) {
 		return null;
 	}
 
 	return (
-		<div className="flex flex-row flex-wrap items-center">
-			<Button
-				variant="outline"
-				size="icon-xs"
-				className="order-2 mt-3 shrink-0"
-				disabled={!recording.audioUrl || isLoading}
-				onClick={togglePlay}
-				aria-label={isPlaying ? "Pause best recording" : "Play best recording"}
-			>
-				{isLoading ? (
-					<Loader2 className="size-3 animate-spin" />
-				) : isPlaying ? (
-					<Pause className="size-3" />
-				) : (
-					<Play className="size-3" />
-				)}
-			</Button>
-			<div className="order-1 w-full">
-				<div className="font-semibold text-sm">Best recording</div>
-				<div className="tabular-data mt-0.5 text-muted-foreground text-xs">
+		<div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-[var(--line)] border-t pt-2">
+			<div className="min-w-0">
+				<span className="mr-2 font-semibold text-xs">Best recording</span>
+				<span className="tabular-data text-[11px] text-muted-foreground">
 					{formatHeardDate(recording.date)} · {formatVisitTime(recording.time)}{" "}
 					· {formatConfidence(recording.confidence)} confidence
-				</div>
+				</span>
 			</div>
-			<div
-				aria-hidden="true"
-				className="order-2 mt-3 ml-2 flex h-7 min-w-0 flex-1 items-center gap-1 overflow-hidden"
-			>
-				{WAVEFORM_HEIGHTS.map((height, index) => (
-					<span
-						key={`${height}-${index}`}
-						className={`w-1 shrink-0 rounded-full transition-[height,background-color] ${isPlaying ? "animate-pulse bg-[var(--moss)]" : "bg-[var(--sage)]"}`}
-						style={{ height: `${height}%` }}
-					/>
-				))}
-			</div>
-			{recording.audioUrl && (
-				<audio
-					ref={audioRef}
-					preload="none"
-					onPlay={onPlay}
-					onPause={onPause}
-					onEnded={onEnded}
-				>
-					<track kind="captions" />
-				</audio>
-			)}
+			<RecordingButton audioUrl={recording.audioUrl} />
 		</div>
 	);
 }
