@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DetectionsRouteImport } from './routes/detections'
+import { Route as LearnRouteImport } from './routes/learn'
 import { Route as SpeciesRouteImport } from './routes/species'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as TimelineRouteImport } from './routes/timeline'
@@ -27,6 +28,11 @@ const IndexRoute = IndexRouteImport.update({
 const DetectionsRoute = DetectionsRouteImport.update({
   id: '/detections',
   path: '/detections',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LearnRoute = LearnRouteImport.update({
+  id: '/learn',
+  path: '/learn',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SpeciesRoute = SpeciesRouteImport.update({
@@ -69,6 +75,7 @@ const ApiAudioDateSpeciesAndFileRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
+  '/learn': typeof LearnRoute
   '/species': typeof SpeciesRouteWithChildren
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
@@ -80,6 +87,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
+  '/learn': typeof LearnRoute
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
@@ -91,6 +99,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
+  '/learn': typeof LearnRoute
   '/species': typeof SpeciesRouteWithChildren
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
@@ -104,6 +113,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/detections'
+    | '/learn'
     | '/species'
     | '/stats'
     | '/timeline'
@@ -115,6 +125,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/detections'
+    | '/learn'
     | '/stats'
     | '/timeline'
     | '/today'
@@ -125,6 +136,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/detections'
+    | '/learn'
     | '/species'
     | '/stats'
     | '/timeline'
@@ -137,6 +149,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DetectionsRoute: typeof DetectionsRoute
+  LearnRoute: typeof LearnRoute
   SpeciesRoute: typeof SpeciesRouteWithChildren
   StatsRoute: typeof StatsRoute
   TimelineRoute: typeof TimelineRoute
@@ -158,6 +171,13 @@ declare module '@tanstack/react-router' {
       path: '/detections'
       fullPath: '/detections'
       preLoaderRoute: typeof DetectionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/learn': {
+      id: '/learn'
+      path: '/learn'
+      fullPath: '/learn'
+      preLoaderRoute: typeof LearnRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/species': {
@@ -228,6 +248,7 @@ const SpeciesRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DetectionsRoute: DetectionsRoute,
+  LearnRoute: LearnRoute,
   SpeciesRoute: SpeciesRouteWithChildren,
   StatsRoute: StatsRoute,
   TimelineRoute: TimelineRoute,

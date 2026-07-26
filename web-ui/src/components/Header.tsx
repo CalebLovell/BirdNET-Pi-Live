@@ -47,6 +47,13 @@ export function Header() {
 						Detections
 					</Link>
 					<Link
+						to="/learn"
+						className="nav-link"
+						activeProps={{ className: "nav-link is-active" }}
+					>
+						Learn
+					</Link>
+					<Link
 						to="/stats"
 						className="nav-link"
 						activeProps={{ className: "nav-link is-active" }}
