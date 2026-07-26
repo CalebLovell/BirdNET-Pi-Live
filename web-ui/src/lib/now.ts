@@ -17,8 +17,8 @@ import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 // Every figure on the Today page reads from one rolling 24-hour window rather
 // than the calendar day, so no two cards can disagree -- and so the page still
 // shows a full night of activity when someone checks it at 1am.
-const detectedAt = sql<string>`datetime(${detections.Date} || ' ' || ${detections.Time})`;
-const isLast24h = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-24 hours', 'localtime')`;
+export const detectedAt = sql<string>`datetime(${detections.Date} || ' ' || ${detections.Time})`;
+export const isLast24h = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-24 hours', 'localtime')`;
 
 export type NowSummary = {
 	species: number;

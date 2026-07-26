@@ -1,0 +1,150 @@
+// The Today page as one block of pasteable text: a Wordle-style card where the
+// shape of the sparkline carries the day and the emoji lines fill in the story.
+//
+// Pure by design -- the caller supplies the numbers, the clock and the window.
+// Every formatting rule lives here so it can be read and tested in one place.
+
+import { hourLabel } from "~/lib/time-ago.ts";
+
+/** Species heard this often all-time are too familiar to call rare. */
+const RARITY_THRESHOLD = 10;
+
+const LEVELS = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"] as const;
+
+export type ShareCard = {
+	/** Local calendar date of the snapshot, "YYYY-MM-DD". */
+	date: string;
+	/** Hour of day the oldest bucket covers, 0-23. */
+	startHour: number;
+	/** 24 hourly counts, oldest first, ending with the current hour. */
+	hourlyCounts: number[];
+	species: number;
+	detections: number;
+	visits: number;
+	topSpecies: { comName: string; count: number }[];
+	busiestHour: { hour: number; count: number } | null;
+	/** Species whose all-time first detection landed inside the window. */
+	firstEver: string[];
+	/** The species heard in the window with the fewest all-time detections. */
+	rarest: { comName: string; allTimeCount: number } | null;
+};
+
+/**
+ * Hourly counts as block characters. A silent hour sits on the baseline and
+ * every other hour is scaled across the seven remaining heights, so an hour
+ * with a single detection can never be mistaken for one with none.
+ */
+export function sparkline(counts: number[]): string {
+	const peak = Math.max(0, ...counts);
+
+	return counts
+		.map((count) => {
+			if (count <= 0 || peak <= 0) return LEVELS[0];
+			return LEVELS[Math.max(1, Math.ceil((count / peak) * 7))];
+		})
+		.join("");
+}
+
+function plural(count: number, noun: string): string {
+	return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
+}
+
+/** "Jul 25", read off the date parts so no timezone can shift the day. */
+function dateLabel(date: string): string {
+	const [year, month, day] = date.split("-").map(Number);
+	return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+		month: "short",
+		day: "numeric",
+	});
+}
+
+/** The axis's compact hour: "12am", "9pm". */
+function axisHour(hour: number): string {
+	return hourLabel(hour).replace(" ", "").toLowerCase();
+}
+
+function ordinal(value: number): string {
+	const lastTwo = value % 100;
+	if (lastTwo >= 11 && lastTwo <= 13) return `${value}th`;
+
+	const suffix = ["th", "st", "nd", "rd"][value % 10] ?? "th";
+	return `${value}${suffix}`;
+}
+
+/**
+ * The axis under the sparkline, stretched so "now" lands beneath the final
+ * cell. The window rolls with the clock, so it names its own starting hour
+ * rather than assuming a midnight-aligned day.
+ */
+function axisLine(startHour: number, width: number): string {
+	const start = axisHour(startHour);
+	const dashes = Math.max(1, width - start.length - " now".length - 1);
+	return `${start} ${"─".repeat(dashes)} now`;
+}
+
+const MEDALS = ["🥇", "🥈", "🥉"] as const;
+
+export function formatShareCard(card: ShareCard): string {
+	const header = `🐦 BirdNET · ${dateLabel(card.date)}`;
+
+	if (card.detections === 0) {
+		return `${header}\n🤫 Nothing heard in the last 24 hours.`;
+	}
+
+	const totals = [
+		`${card.species.toLocaleString()} species`,
+		plural(card.detections, "detection"),
+		plural(card.visits, "visit"),
+	].join(" · ");
+
+	const chart = sparkline(card.hourlyCounts);
+	const leaderboard = card.topSpecies
+		.slice(0, MEDALS.length)
+		.map(
+			(species, index) =>
+				`${MEDALS[index]} ${species.comName} ×${species.count.toLocaleString()}`,
+		);
+
+	// Highlights earn their place: a line is printed only when it has something
+	// to say, so a quiet day produces a visibly shorter card than a good one.
+	const highlights: string[] = [];
+
+	if (card.busiestHour) {
+		highlights.push(
+			`🌅 Peak hour: ${hourLabel(card.busiestHour.hour)} · ${plural(
+				card.busiestHour.count,
+				"detection",
+			)}`,
+		);
+	}
+
+	const [newcomer, ...otherNewcomers] = card.firstEver;
+	if (newcomer) {
+		const more =
+			otherNewcomers.length > 0 ? ` +${otherNewcomers.length} more` : "";
+		highlights.push(`🐣 First ever: ${newcomer}${more}`);
+	}
+
+	// A first-ever bird is by definition the rarest one, and saying so twice
+	// wastes the line.
+	const rarest = card.rarest;
+	if (
+		rarest &&
+		rarest.allTimeCount <= RARITY_THRESHOLD &&
+		!card.firstEver.includes(rarest.comName)
+	) {
+		highlights.push(
+			`💎 Rarest: ${rarest.comName} (${ordinal(rarest.allTimeCount)} ever)`,
+		);
+	}
+
+	return [
+		header,
+		totals,
+		"",
+		chart,
+		axisLine(card.startHour, chart.length),
+		...(leaderboard.length > 0 ? ["", ...leaderboard] : []),
+		...(highlights.length > 0 ? ["", ...highlights] : []),
+	].join("\n");
+}
