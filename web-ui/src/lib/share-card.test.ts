@@ -176,6 +176,42 @@ test("collapses a silent window to a single quiet line", () => {
 	);
 });
 
+test("runs a calendar day's axis from midnight to the last hour", () => {
+	const text = formatShareCard(cardWith({ window: "day", startHour: 0 }));
+
+	assert.match(text, /^12am ─+ 11pm$/m);
+	assert.doesNotMatch(text, /now/);
+});
+
+test("keeps the axis the same width as the sparkline it labels", () => {
+	const lines = formatShareCard(
+		cardWith({ window: "day", startHour: 0 }),
+	).split("\n");
+	const chart = lines.find(
+		(line) => line.startsWith("▂") || line.includes("█"),
+	);
+	const axis = lines.find((line) => line.includes("─"));
+
+	assert.ok(chart && axis);
+	assert.equal(axis.length, chart.length);
+});
+
+test("says a whole day was silent rather than the last 24 hours", () => {
+	const text = formatShareCard(
+		cardWith({
+			window: "day",
+			species: 0,
+			detections: 0,
+			visits: 0,
+			hourlyCounts: Array.from({ length: 24 }, () => 0),
+			topSpecies: [],
+			busiestHour: null,
+		}),
+	);
+
+	assert.equal(text, "🐦 BirdNET · Jul 25\n🤫 Nothing heard all day.");
+});
+
 test("leaves no trailing blank line to paste", () => {
 	assert.doesNotMatch(formatShareCard(cardWith()), /\n$/);
 });

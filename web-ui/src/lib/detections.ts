@@ -7,11 +7,12 @@ import {
 	countDistinct,
 	desc,
 	gte,
-	like,
+	inArray,
 	lte,
 	or,
 	sql,
 } from "drizzle-orm";
+import Fuse from "fuse.js";
 import { db, openWritableDetectionsDb } from "~/db/index.ts";
 import { type Detection, detections } from "~/db/schema.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
@@ -91,15 +92,49 @@ export type DetectionPage = {
 	total: number;
 };
 
-function detectionFilters(search: DetectionWorkspaceSearch) {
+// The detections table is paginated on the server, so we can't fuzzy-match rows
+// in the browser the way the species grid does. Instead we run the same Fuse
+// config over the (small) distinct species list and turn the query into an
+// explicit list of names for SQL to filter on.
+async function fuzzySpeciesNames(query: string): Promise<string[]> {
+	const names = await db
+		.selectDistinct({
+			comName: detections.Com_Name,
+			sciName: detections.Sci_Name,
+		})
+		.from(detections);
+	const fuse = new Fuse(names, {
+		keys: ["comName", "sciName"],
+		threshold: 0.2,
+		ignoreLocation: true,
+	});
+	return fuse.search(query).map((result) => result.item.comName);
+}
+
+// A query like "93" or "93%" also matches rows whose confidence rounds to that
+// percent — the same number the table renders. Fuzzy matching makes no sense
+// for a number, so this is an exact match on the displayed value.
+function confidencePercent(query: string): number | null {
+	const match = /^(\d{1,3})\s*%?$/.exec(query.trim());
+	if (!match) return null;
+	const percent = Number(match[1]);
+	return percent >= 0 && percent <= 100 ? percent : null;
+}
+
+async function detectionFilters(search: DetectionWorkspaceSearch) {
 	const filters = [];
 	if (search.species) {
-		filters.push(
-			or(
-				like(detections.Com_Name, `%${search.species}%`),
-				like(detections.Sci_Name, `%${search.species}%`),
-			),
-		);
+		const matches = await fuzzySpeciesNames(search.species);
+		const percent = confidencePercent(search.species);
+		const clauses = [];
+		if (matches.length > 0) clauses.push(inArray(detections.Com_Name, matches));
+		if (percent !== null) {
+			clauses.push(
+				sql`CAST(ROUND(${detections.Confidence} * 100) AS INTEGER) = ${percent}`,
+			);
+		}
+		// No match of either kind must yield zero rows, not "no filter".
+		filters.push(clauses.length > 0 ? or(...clauses) : sql`1 = 0`);
 	}
 	if (search.minConfidence !== undefined) {
 		filters.push(gte(detections.Confidence, search.minConfidence));
@@ -142,7 +177,7 @@ export const getDetectionsPage = createServerFn({ method: "GET" })
 		normalizeDetectionWorkspaceSearch(input),
 	)
 	.handler(async ({ data }): Promise<DetectionPage> => {
-		const filters = detectionFilters(data);
+		const filters = await detectionFilters(data);
 		const [{ total }] = await db
 			.select({ total: count() })
 			.from(detections)

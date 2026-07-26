@@ -64,17 +64,22 @@ function Learn() {
 
 	return (
 		<div className="page-wrap py-4">
-			<div className="flex flex-wrap items-end justify-between gap-3">
-				<div>
-					<h1 className="display-title font-semibold text-2xl">
-						Learn the calls
-					</h1>
-					<p className="mt-1 text-muted-foreground text-sm">
-						{QUESTIONS_PER_ROUND} recordings from your own yard.{" "}
-						{LEARN_POOL_DESCRIPTIONS[pool]}
-					</p>
-				</div>
+			{/* Same summary-card header the day and species pages use: kicker,
+			    title, one moss-coloured line. */}
+			<section aria-label="Learn" className="feature-card rounded-md p-4">
+				<div className="island-kicker">Ear training</div>
+				<h1 className="display-title mt-1 font-bold text-2xl">
+					Learn the calls
+				</h1>
+				<p className="mt-0.5 font-semibold text-[var(--moss)] text-sm">
+					{QUESTIONS_PER_ROUND} recordings from your own yard ·{" "}
+					{LEARN_POOL_DESCRIPTIONS[pool]}
+				</p>
+			</section>
 
+			{/* Filters sit bare between the header card and the round, the way the
+			    species page keeps its search and sort row. */}
+			<div className="mt-4 flex justify-end">
 				<ToggleGroup
 					type="single"
 					variant="outline"
@@ -117,9 +122,9 @@ function Learn() {
 
 function EmptyPool({ speciesInPool }: { speciesInPool: number }) {
 	return (
-		<section className="feature-card rounded-lg p-6 text-center">
+		<section className="feature-card rounded-md p-4 text-center">
 			<div className="island-kicker">Not enough to go on</div>
-			<p className="mt-3 text-muted-foreground text-sm">
+			<p className="mt-4 text-muted-foreground text-sm">
 				A round needs {CHOICES_PER_QUESTION} species with clear recordings still
 				on disk, and this selection has{" "}
 				{speciesInPool === 0 ? "none" : speciesInPool}. Try a wider selection —

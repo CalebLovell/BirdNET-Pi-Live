@@ -15,6 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import {
 	Pagination,
@@ -70,6 +71,21 @@ export const Route = createFileRoute("/species/")({
 
 const PAGE_SIZE = 24;
 
+function parseDetected(value: string): Date | null {
+	if (!value) return null;
+	const parsed = new Date(value.replace(" ", "T"));
+	return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function formatSpeciesDate(value: string): string {
+	const parsed = parseDetected(value);
+	if (!parsed) return value;
+	return new Intl.DateTimeFormat(undefined, {
+		month: "short",
+		day: "numeric",
+	}).format(parsed);
+}
+
 function Species() {
 	const cards = Route.useLoaderData();
 	const { q: search, sort, reverse, page } = Route.useSearch();
@@ -112,6 +128,34 @@ function Species() {
 		});
 	}, [cards, fuse, search, sort, reverse]);
 
+	// Derived from `filtered` rather than the page slice, so the figures
+	// describe the whole search result, not just the 24 cards on screen.
+	const stats = useMemo(() => {
+		const isSearching = search.trim().length > 0;
+		const recordings = filtered.reduce(
+			(sum, card) => sum + card.allTimeCount,
+			0,
+		);
+		const mostRecent = filtered.reduce(
+			(latest, card) =>
+				card.lastDetected > latest ? card.lastDetected : latest,
+			"",
+		);
+
+		return [
+			{
+				label: "Species",
+				value: filtered.length,
+				detail: isSearching ? `of ${cards.length} recorded` : undefined,
+			},
+			{ label: "Total recordings", value: recordings },
+			{
+				label: "Most recently heard",
+				value: mostRecent ? formatSpeciesDate(mostRecent) : "—",
+			},
+		];
+	}, [cards.length, filtered, search]);
+
 	const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 	const currentPage = Math.min(page, pageCount);
 	const pageItems = filtered.slice(
@@ -120,7 +164,13 @@ function Species() {
 	);
 
 	return (
-		<div className="page-wrap py-4">
+		<div className="page-wrap space-y-4 py-4">
+			<PageHeaderCard
+				title="Species"
+				description="Every species ever recorded at this station."
+				stats={stats}
+			/>
+
 			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 				<SearchInput
 					aria-label="Filter by species"
@@ -209,11 +259,11 @@ function Species() {
 			</div>
 
 			{pageItems.length === 0 ? (
-				<p className="mt-4 text-muted-foreground">
+				<p className="text-muted-foreground">
 					No species match &ldquo;{search}&rdquo;
 				</p>
 			) : (
-				<div className="mt-4 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
+				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
 					{pageItems.map((card) => (
 						<SpeciesCard key={card.comName} card={card} />
 					))}
@@ -221,7 +271,7 @@ function Species() {
 			)}
 
 			{pageCount > 1 && (
-				<Pagination className="mt-4">
+				<Pagination>
 					<PaginationContent>
 						<PaginationItem>
 							<PaginationPrevious
@@ -286,19 +336,16 @@ function Species() {
 }
 
 function SpeciesCard({ card }: { card: LifeListCard }) {
-	const parsedLastDetected = card.lastDetected
-		? new Date(card.lastDetected.replace(" ", "T"))
-		: null;
-	const lastHeard =
-		parsedLastDetected && !Number.isNaN(parsedLastDetected.getTime())
-			? new Intl.DateTimeFormat(undefined, {
-					month: "short",
-					day: "numeric",
-					year: "numeric",
-					hour: "numeric",
-					minute: "2-digit",
-				}).format(parsedLastDetected)
-			: card.lastDetected || "—";
+	const parsedLastDetected = parseDetected(card.lastDetected);
+	const lastHeard = parsedLastDetected
+		? new Intl.DateTimeFormat(undefined, {
+				month: "short",
+				day: "numeric",
+				year: "numeric",
+				hour: "numeric",
+				minute: "2-digit",
+			}).format(parsedLastDetected)
+		: card.lastDetected || "—";
 
 	return (
 		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-3">

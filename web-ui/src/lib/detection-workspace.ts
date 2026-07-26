@@ -39,10 +39,15 @@ export function normalizeDetectionWorkspaceSearch(
 		? (input.sort as DetectionWorkspaceSort)
 		: "recorded";
 	const direction = input.direction === "asc" ? "asc" : "desc";
-	const species =
-		typeof input.species === "string" && input.species.trim()
-			? input.species.trim()
-			: undefined;
+	// A numeric query ("93") round-trips through the URL as a number, so coerce
+	// before trimming or it would be dropped as a non-string.
+	const rawSpecies =
+		typeof input.species === "number"
+			? String(input.species)
+			: typeof input.species === "string"
+				? input.species
+				: "";
+	const species = rawSpecies.trim() ? rawSpecies.trim() : undefined;
 	const minConfidence =
 		typeof input.minConfidence === "number" &&
 		input.minConfidence >= 0 &&
@@ -66,6 +71,15 @@ export function normalizeDetectionWorkspaceSearch(
 		...(from ? { from } : {}),
 		...(to ? { to } : {}),
 	};
+}
+
+export function hasActiveFilters(search: DetectionWorkspaceSearch): boolean {
+	return (
+		search.species !== undefined ||
+		search.from !== undefined ||
+		search.to !== undefined ||
+		search.minConfidence !== undefined
+	);
 }
 
 export function detectionRowKey(row: { rowId: number }): string {

@@ -2,12 +2,13 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { CircleAlert, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
 	DetectionsTable,
 } from "~/components/detections/detections-table.tsx";
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { normalizeDetectionWorkspaceSearch } from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
@@ -38,6 +39,22 @@ function Detections() {
 		.filter(([, isSelected]) => isSelected)
 		.map(([rowId]) => Number(rowId));
 	const selectedCount = selectedRowIds.length;
+
+	// `page.total` already honours the active filters; the species figure can
+	// only speak for the loaded page, so its label says so.
+	const stats = useMemo(() => {
+		const species = new Set(page.rows.map((row) => row.Com_Name)).size;
+		const pageCount = Math.max(1, Math.ceil(page.total / search.pageSize));
+
+		return [
+			{ label: "Matching detections", value: page.total },
+			{ label: "Species on this page", value: species },
+			{
+				label: "Page",
+				value: `${Math.min(search.page, pageCount)} of ${pageCount}`,
+			},
+		];
+	}, [page, search.page, search.pageSize]);
 
 	async function confirmDeletion() {
 		setIsDeleting(true);
@@ -76,24 +93,19 @@ function Detections() {
 	return (
 		<div className="page-wrap space-y-4 py-4">
 			<div className="space-y-4">
-				<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-					<DetectionsFilters
-						search={search}
-						onSearchChange={(nextSearch) =>
-							navigate({ search: nextSearch, replace: true })
-						}
-					/>
-					{selectedCount > 0 ? (
-						<Button
-							size="sm"
-							variant="destructive"
-							onClick={() => setDeleteOpen(true)}
-						>
-							<Trash2 />
-							Delete {selectedCount}
-						</Button>
-					) : null}
-				</div>
+				<PageHeaderCard
+					title="Detections"
+					description="Browse, filter, and manage every individual detection."
+					stats={stats}
+				/>
+
+				<DetectionsFilters
+					search={search}
+					onSearchChange={(nextSearch) => {
+						setRowSelection({});
+						navigate({ search: nextSearch, replace: true });
+					}}
+				/>
 
 				{feedback ? (
 					<p
@@ -114,7 +126,18 @@ function Detections() {
 					aria-label="Detections"
 					className="feature-card rounded-md p-3"
 				>
-					<div className="island-kicker mb-3">All detections</div>
+					<div className="mb-3 flex items-center justify-between gap-2">
+						<div className="island-kicker">All detections</div>
+						<Button
+							disabled={selectedCount === 0}
+							size="xs"
+							variant={selectedCount > 0 ? "destructive" : "outline"}
+							onClick={() => setDeleteOpen(true)}
+						>
+							<Trash2 />
+							{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
+						</Button>
+					</div>
 					<DetectionsTable
 						page={page}
 						search={search}

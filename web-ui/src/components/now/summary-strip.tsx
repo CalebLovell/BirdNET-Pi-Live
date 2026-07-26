@@ -1,13 +1,25 @@
+import { useShareCard } from "~/components/use-share-card.tsx";
 import type { NowSummary } from "~/lib/now.ts";
+import { getShareCard } from "~/lib/share-card-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
 export function SummaryStrip({ summary }: { summary: NowSummary }) {
+	// The share control belongs to the card holding the figures it summarises,
+	// not to a button standing on its own beneath it.
+	const share = useShareCard({
+		label: "Share today",
+		load: () => getShareCard(),
+	});
+
 	return (
 		<section
 			aria-label="Last 24 hours"
 			className="feature-card mt-4 rounded-md p-4 sm:p-6"
 		>
-			<div className="island-kicker">Last 24 hours</div>
+			<div className="flex items-center justify-between gap-3">
+				<div className="island-kicker">Last 24 hours</div>
+				{share.trigger}
+			</div>
 			<dl className="mt-4 grid grid-cols-2 gap-y-6 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-[var(--line)]">
 				<Figure value={summary.species} label="Species" />
 				<Figure value={summary.detections} label="Detections" />
@@ -28,6 +40,8 @@ export function SummaryStrip({ summary }: { summary: NowSummary }) {
 					}
 				/>
 			</dl>
+
+			{share.summary}
 		</section>
 	);
 }

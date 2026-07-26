@@ -11,9 +11,18 @@ const RARITY_THRESHOLD = 10;
 
 const LEVELS = ["▁", "▂", "▃", "▄", "▅", "▆", "▇", "█"] as const;
 
+/**
+ * Which stretch of time the card covers. "rolling" is the Today page's
+ * trailing 24 hours, whose axis runs into "now"; "day" is one calendar day,
+ * which is finished and so ends at an hour rather than at the present.
+ */
+export type ShareWindow = "rolling" | "day";
+
 export type ShareCard = {
 	/** Local calendar date of the snapshot, "YYYY-MM-DD". */
 	date: string;
+	/** Defaults to the rolling window the Today page shares. */
+	window?: ShareWindow;
 	/** Hour of day the oldest bucket covers, 0-23. */
 	startHour: number;
 	/** 24 hourly counts, oldest first, ending with the current hour. */
@@ -72,23 +81,33 @@ function ordinal(value: number): string {
 }
 
 /**
- * The axis under the sparkline, stretched so "now" lands beneath the final
- * cell. The window rolls with the clock, so it names its own starting hour
- * rather than assuming a midnight-aligned day.
+ * The axis under the sparkline, stretched so its right-hand label lands beneath
+ * the final cell. A rolling window names its own starting hour and runs into
+ * "now"; a calendar day runs from midnight to the last hour it holds.
  */
-function axisLine(startHour: number, width: number): string {
+function axisLine(
+	startHour: number,
+	width: number,
+	window: ShareWindow,
+): string {
 	const start = axisHour(startHour);
-	const dashes = Math.max(1, width - start.length - " now".length - 1);
-	return `${start} ${"─".repeat(dashes)} now`;
+	const end = window === "day" ? axisHour((startHour + 23) % 24) : "now";
+	const dashes = Math.max(1, width - start.length - end.length - 2);
+	return `${start} ${"─".repeat(dashes)} ${end}`;
 }
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
 export function formatShareCard(card: ShareCard): string {
+	const window = card.window ?? "rolling";
 	const header = `🐦 BirdNET · ${dateLabel(card.date)}`;
 
 	if (card.detections === 0) {
-		return `${header}\n🤫 Nothing heard in the last 24 hours.`;
+		const quiet =
+			window === "day"
+				? "Nothing heard all day."
+				: "Nothing heard in the last 24 hours.";
+		return `${header}\n🤫 ${quiet}`;
 	}
 
 	const totals = [
@@ -143,7 +162,7 @@ export function formatShareCard(card: ShareCard): string {
 		totals,
 		"",
 		chart,
-		axisLine(card.startHour, chart.length),
+		axisLine(card.startHour, chart.length, window),
 		...(leaderboard.length > 0 ? ["", ...leaderboard] : []),
 		...(highlights.length > 0 ? ["", ...highlights] : []),
 	].join("\n");

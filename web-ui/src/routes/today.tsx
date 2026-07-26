@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
-import { ShareCardPanel } from "~/components/now/share-card-panel.tsx";
 import { SummaryStrip } from "~/components/now/summary-strip.tsx";
 import { TopDetectionsCard } from "~/components/now/top-detections-card.tsx";
 import { getNowSnapshot } from "~/lib/now.ts";
@@ -73,8 +72,6 @@ function Today() {
 			/>
 
 			<SummaryStrip summary={snapshot.summary} />
-
-			<ShareCardPanel />
 
 			<div className="mt-4 grid gap-4 lg:grid-cols-2">
 				<TopDetectionsCard topSpecies={snapshot.topSpecies} />

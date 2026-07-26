@@ -110,7 +110,7 @@ export function LearnGame({
 	return (
 		<section
 			aria-label="Bird call quiz"
-			className="feature-card rounded-lg p-4 sm:p-6"
+			className="feature-card rounded-md p-4"
 		>
 			<div className="flex items-center justify-between gap-4">
 				<div className="island-kicker">
@@ -127,7 +127,7 @@ export function LearnGame({
 				current={index}
 			/>
 
-			<div className="mt-6 flex flex-col items-center gap-2">
+			<div className="mt-4 flex flex-col items-center gap-2">
 				<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
 				<div className="tabular-data text-muted-foreground text-xs">
 					Recorded {formatClockTime(question.detectedAt)} ·{" "}
@@ -135,7 +135,7 @@ export function LearnGame({
 				</div>
 			</div>
 
-			<div className="mt-6 grid gap-2 sm:grid-cols-2">
+			<div className="mt-4 grid gap-2 sm:grid-cols-2">
 				{question.choices.map((choice, choiceIndex) => (
 					<ChoiceButton
 						key={choice.sciName}
@@ -157,7 +157,7 @@ export function LearnGame({
 
 			<div className="mt-4 min-h-16 border-[var(--line)] border-t pt-4">
 				{isSolved && answer ? (
-					<div className="flex flex-wrap items-center justify-between gap-3">
+					<div className="flex flex-wrap items-center justify-between gap-4">
 						<div className="flex items-center gap-2 text-sm">
 							<span className="font-semibold">
 								{wrongGuesses.length === 0
@@ -204,7 +204,7 @@ function ProgressTrack({
 	current: number;
 }) {
 	return (
-		<div className="mt-3 flex gap-1">
+		<div className="mt-4 flex gap-1">
 			{Array.from({ length: total }, (_, position) => {
 				const result = results[position];
 				const background = result
@@ -255,7 +255,7 @@ function ChoiceButton({
 			type="button"
 			onClick={onSelect}
 			disabled={state !== "open"}
-			className={`flex items-center gap-3 rounded-md border p-3 text-left ${CHOICE_STYLES[state]}`}
+			className={`flex items-center gap-4 rounded-md border p-4 text-left ${CHOICE_STYLES[state]}`}
 		>
 			<span className="tabular-data w-4 shrink-0 text-center text-muted-foreground text-xs">
 				{shortcut}
@@ -314,11 +314,11 @@ function RoundSummary({
 	return (
 		<section
 			aria-label="Round results"
-			className="feature-card rise-in rounded-lg p-4 sm:p-6"
+			className="feature-card rise-in rounded-md p-4"
 		>
 			<div className="island-kicker">Round complete</div>
 
-			<div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+			<div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
 				<div className="tabular-data font-semibold text-4xl leading-none">
 					{score.score}
 					<span className="text-muted-foreground text-xl">
@@ -351,7 +351,7 @@ function RoundSummary({
 					return (
 						<li
 							key={question.id}
-							className="flex items-center gap-3 rounded-md px-3 py-2 odd:bg-[var(--meadow)]"
+							className="flex items-center gap-4 rounded-md px-4 py-2 odd:bg-[var(--meadow)]"
 						>
 							<ChoiceThumbnail choice={answer} />
 							<div className="min-w-0 flex-1">
@@ -394,7 +394,7 @@ function SummaryStat({
 	value: string | number;
 }) {
 	return (
-		<div className="rounded-md border border-[var(--line)] p-3">
+		<div className="rounded-md border border-[var(--line)] p-4">
 			<dt className="island-kicker">{label}</dt>
 			<dd className="tabular-data mt-1 font-semibold text-2xl leading-none">
 				{value}

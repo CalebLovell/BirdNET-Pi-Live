@@ -21,7 +21,7 @@ export function ClipPlayer({ audioUrl }: { audioUrl: string }) {
 	} = usePlayableAudio(audioUrl);
 
 	return (
-		<div className="flex flex-col items-center gap-3">
+		<div className="flex flex-col items-center gap-4">
 			<button
 				type="button"
 				onClick={togglePlay}

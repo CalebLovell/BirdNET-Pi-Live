@@ -1,4 +1,8 @@
-import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	Link,
+	stripSearchParams,
+} from "@tanstack/react-router";
 import { Bird, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
 import {
 	Area,
@@ -87,8 +91,10 @@ function buildHeatMap(history: TrendPoint[]): {
 	const lastDate = dateForBucket(history[history.length - 1].bucket);
 	const start = new Date(firstDate);
 	start.setDate(start.getDate() - start.getDay());
-	const end = new Date(lastDate);
-	end.setDate(end.getDate() + (6 - end.getDay()));
+	// The grid pads leftwards to a Sunday so the weekday rows line up, but it is
+	// never padded past the trend's last bucket -- which is today for the current
+	// year -- so no square ever stands for a day that hasn't happened.
+	const end = lastDate;
 	const weeks: HeatMapWeek[] = [];
 	const seenMonths = new Set<string>();
 	const maximum = Math.max(...history.map((point) => point.count), 0);
@@ -103,6 +109,7 @@ function buildHeatMap(history: TrendPoint[]): {
 		for (let day = 0; day < 7; day += 1) {
 			const date = new Date(weekStart);
 			date.setDate(date.getDate() + day);
+			if (date > end) break;
 			const key = bucketForDate(date);
 			days.push({ date, point: points.get(key) ?? null });
 			const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
@@ -234,32 +241,14 @@ function BirdPage() {
 											key={`week-${weekIndex}`}
 											className="flex shrink-0 flex-col gap-1"
 										>
-											{week.days.map(({ date, point }) => {
-												const count = point?.count ?? 0;
-												const dateLabel = date.toLocaleDateString([], {
-													month: "short",
-													day: "numeric",
-													year: "numeric",
-												});
-												return (
-													<Tooltip key={date.toISOString()}>
-														<TooltipTrigger asChild>
-															<div
-																role="img"
-																aria-label={`${dateLabel}: ${count} detections`}
-																className="size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1"
-																style={{
-																	backgroundColor:
-																		HEAT_COLORS[heatLevel(count, maximum)],
-																}}
-															/>
-														</TooltipTrigger>
-														<TooltipContent>
-															{dateLabel} — {count}
-														</TooltipContent>
-													</Tooltip>
-												);
-											})}
+											{week.days.map(({ date, point }) => (
+												<HeatMapDay
+													key={date.toISOString()}
+													date={date}
+													point={point}
+													maximum={maximum}
+												/>
+											))}
 										</div>
 									))}
 								</div>
@@ -355,6 +344,59 @@ function BirdPage() {
 				</div>
 			</div>
 		</TooltipProvider>
+	);
+}
+
+const SWATCH =
+	"size-3 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1";
+
+/**
+ * One square of the contribution grid. Days that actually recorded something
+ * are links into that day's review; empty squares stay inert, since there is
+ * nothing on the other side of them to read.
+ */
+function HeatMapDay({
+	date,
+	point,
+	maximum,
+}: {
+	date: Date;
+	point: TrendPoint | null;
+	maximum: number;
+}) {
+	const count = point?.count ?? 0;
+	const dateLabel = date.toLocaleDateString([], {
+		month: "short",
+		day: "numeric",
+		year: "numeric",
+	});
+	const label = `${dateLabel}: ${count} detections`;
+	const fill = { backgroundColor: HEAT_COLORS[heatLevel(count, maximum)] };
+
+	// Inside a link the swatch is decoration: the link already carries the label,
+	// and repeating it would have a screen reader read the day twice.
+	const swatch =
+		count > 0 ? (
+			<Link
+				to="/day/$date"
+				params={{ date: bucketForDate(date) }}
+				aria-label={label}
+				className="block"
+			>
+				<div aria-hidden="true" className={SWATCH} style={fill} />
+			</Link>
+		) : (
+			<div role="img" aria-label={label} className={SWATCH} style={fill} />
+		);
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>{swatch}</TooltipTrigger>
+			<TooltipContent>
+				{dateLabel} — {count}
+				{count > 0 ? " · view this day" : null}
+			</TooltipContent>
+		</Tooltip>
 	);
 }
 

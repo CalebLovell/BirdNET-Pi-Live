@@ -16,6 +16,7 @@ import { Route as SpeciesRouteImport } from './routes/species'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as TodayRouteImport } from './routes/today'
+import { Route as DayDateRouteImport } from './routes/day.$date'
 import { Route as SpeciesIndexRouteImport } from './routes/species.index'
 import { Route as SpeciesSciNameRouteImport } from './routes/species.$sciName'
 import { Route as ApiAudioDateSpeciesAndFileRouteImport } from './routes/api/audio/$date/$speciesAndFile'
@@ -55,6 +56,11 @@ const TodayRoute = TodayRouteImport.update({
   path: '/today',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DayDateRoute = DayDateRouteImport.update({
+  id: '/day/$date',
+  path: '/day/$date',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SpeciesIndexRoute = SpeciesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
+  '/day/$date': typeof DayDateRoute
   '/species/$sciName': typeof SpeciesSciNameRoute
   '/species/': typeof SpeciesIndexRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
+  '/day/$date': typeof DayDateRoute
   '/species/$sciName': typeof SpeciesSciNameRoute
   '/species': typeof SpeciesIndexRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
+  '/day/$date': typeof DayDateRoute
   '/species/$sciName': typeof SpeciesSciNameRoute
   '/species/': typeof SpeciesIndexRoute
   '/api/audio/$date/$speciesAndFile': typeof ApiAudioDateSpeciesAndFileRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/timeline'
     | '/today'
+    | '/day/$date'
     | '/species/$sciName'
     | '/species/'
     | '/api/audio/$date/$speciesAndFile'
@@ -129,6 +139,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/timeline'
     | '/today'
+    | '/day/$date'
     | '/species/$sciName'
     | '/species'
     | '/api/audio/$date/$speciesAndFile'
@@ -141,6 +152,7 @@ export interface FileRouteTypes {
     | '/stats'
     | '/timeline'
     | '/today'
+    | '/day/$date'
     | '/species/$sciName'
     | '/species/'
     | '/api/audio/$date/$speciesAndFile'
@@ -154,6 +166,7 @@ export interface RootRouteChildren {
   StatsRoute: typeof StatsRoute
   TimelineRoute: typeof TimelineRoute
   TodayRoute: typeof TodayRoute
+  DayDateRoute: typeof DayDateRoute
   ApiAudioDateSpeciesAndFileRoute: typeof ApiAudioDateSpeciesAndFileRoute
 }
 
@@ -208,6 +221,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TodayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/day/$date': {
+      id: '/day/$date'
+      path: '/day/$date'
+      fullPath: '/day/$date'
+      preLoaderRoute: typeof DayDateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/species/': {
       id: '/species/'
       path: '/'
@@ -253,6 +273,7 @@ const rootRouteChildren: RootRouteChildren = {
   StatsRoute: StatsRoute,
   TimelineRoute: TimelineRoute,
   TodayRoute: TodayRoute,
+  DayDateRoute: DayDateRoute,
   ApiAudioDateSpeciesAndFileRoute: ApiAudioDateSpeciesAndFileRoute,
 }
 export const routeTree = rootRouteImport

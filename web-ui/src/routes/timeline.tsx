@@ -11,8 +11,10 @@ import {
 	Clock,
 	Infinity as InfinityIcon,
 } from "lucide-react";
+import { useMemo } from "react";
 import { z } from "zod";
 
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
 	Tooltip,
@@ -88,8 +90,54 @@ function Timeline() {
 	const navigate = Route.useNavigate();
 	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 1);
 
+	// Every figure is derived from the already period-scoped rows, so the
+	// header moves with the period toggle without a second round trip.
+	const stats = useMemo(() => {
+		const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
+
+		const hourTotals = HOURS.map((hour) =>
+			rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
+		);
+		const peakHour = hourTotals.reduce(
+			(best, count, hour) => (count > hourTotals[best] ? hour : best),
+			0,
+		);
+		const hasPeak = hourTotals[peakHour] > 0;
+
+		const topRow = rows.reduce<TimelineRow | null>(
+			(best, row) =>
+				best && best.totalDetections >= row.totalDetections ? best : row,
+			null,
+		);
+
+		return [
+			{ label: "Species", value: rows.length },
+			{ label: "Detections", value: detections },
+			{
+				label: "Busiest hour",
+				value: hasPeak ? hourLabel(peakHour) : "—",
+				detail: hasPeak
+					? `${hourTotals[peakHour].toLocaleString()} detections`
+					: undefined,
+			},
+			{
+				label: "Most active",
+				value: topRow ? topRow.comName : "—",
+				detail: topRow
+					? `${topRow.totalDetections.toLocaleString()} detections`
+					: undefined,
+			},
+		];
+	}, [rows]);
+
 	return (
-		<div className="page-wrap py-4">
+		<div className="page-wrap space-y-4 py-4">
+			<PageHeaderCard
+				title="Timeline"
+				description="When each species is active across the day, hour by hour."
+				stats={stats}
+			/>
+
 			<div className="flex justify-end">
 				<ToggleGroup
 					type="single"
@@ -116,12 +164,12 @@ function Timeline() {
 			</div>
 
 			{rows.length === 0 ? (
-				<p className="mt-4 text-muted-foreground">
+				<p className="text-muted-foreground">
 					No detections in this period yet.
 				</p>
 			) : (
 				<TooltipProvider>
-					<div className="mt-4 flex flex-col gap-4 lg:flex-row lg:items-start">
+					<div className="flex flex-col gap-4 lg:flex-row lg:items-start">
 						<section
 							aria-label="Detections by hour"
 							className="feature-card min-w-0 rounded-md p-4"

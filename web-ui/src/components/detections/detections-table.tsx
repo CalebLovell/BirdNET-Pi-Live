@@ -15,7 +15,10 @@ import {
 	Loader2,
 	Pause,
 	Volume2,
+	X,
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
@@ -32,6 +35,7 @@ import {
 	type DetectionWorkspaceSearch,
 	type DetectionWorkspaceSort,
 	detectionRowKey,
+	hasActiveFilters,
 } from "~/lib/detection-workspace.ts";
 import type { DetectionPage, DetectionTableRow } from "~/lib/detections.ts";
 import { sciNameToSlug } from "~/lib/species-slug.ts";
@@ -140,6 +144,45 @@ function SortButton({
 	);
 }
 
+// Label sits inline with the field to keep the filter row one line tall. The
+// clear button is always rendered — disabled and dimmed with no date set — so
+// the row never shifts.
+function DateFilter({
+	id,
+	label,
+	value,
+	onChange,
+}: {
+	id: string;
+	label: string;
+	value: string;
+	onChange: (value: string | undefined) => void;
+}) {
+	return (
+		<div className="flex items-center gap-1.5">
+			<label className="text-muted-foreground text-xs" htmlFor={id}>
+				{label}
+			</label>
+			<Input
+				className="!w-36"
+				id={id}
+				type="date"
+				value={value}
+				onChange={(event) => onChange(event.target.value || undefined)}
+			/>
+			<button
+				type="button"
+				aria-label={`Clear ${label.toLowerCase()} date`}
+				className="flex size-6 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+				disabled={!value}
+				onClick={() => onChange(undefined)}
+			>
+				<X className="size-4" />
+			</button>
+		</div>
+	);
+}
+
 export function DetectionsFilters({
 	search,
 	onSearchChange,
@@ -148,20 +191,46 @@ export function DetectionsFilters({
 		onSearchChange({ ...search, ...change });
 	}
 
+	// Local state keeps typing responsive; the URL (and the Fuse search it
+	// drives on the server) only updates after a short debounce.
+	const [queryInput, setQueryInput] = useState(search.species ?? "");
+	useEffect(() => setQueryInput(search.species ?? ""), [search.species]);
+
+	const debouncedSetQuery = useDebouncedCallback((value: string) => {
+		updateSearch({ page: 1, species: value || undefined });
+	}, 200);
+
 	return (
-		<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+		<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
 			<SearchInput
-				aria-label="Filter by common or scientific name"
-				placeholder="Search common or scientific name..."
-				value={search.species ?? ""}
-				onChange={(event) =>
-					updateSearch({
-						page: 1,
-						species: event.target.value || undefined,
-					})
-				}
-				onClear={() => updateSearch({ page: 1, species: undefined })}
+				aria-label="Search detections"
+				placeholder="Search detections..."
+				value={queryInput}
+				onChange={(event) => {
+					const value = event.target.value;
+					setQueryInput(value);
+					debouncedSetQuery(value);
+				}}
+				onClear={() => {
+					setQueryInput("");
+					debouncedSetQuery.cancel();
+					updateSearch({ page: 1, species: undefined });
+				}}
 			/>
+			<div className="flex items-center gap-2">
+				<DateFilter
+					id="detections-from"
+					label="From"
+					value={search.from ?? ""}
+					onChange={(from) => updateSearch({ page: 1, from })}
+				/>
+				<DateFilter
+					id="detections-to"
+					label="To"
+					value={search.to ?? ""}
+					onChange={(to) => updateSearch({ page: 1, to })}
+				/>
+			</div>
 		</div>
 	);
 }
@@ -225,9 +294,13 @@ export function DetectionsTable({
 				/>
 			),
 			cell: ({ row }) => (
-				<span className="tabular-data text-sm">
+				<Link
+					to="/day/$date"
+					params={{ date: row.original.Date }}
+					className="tabular-data text-sm no-underline"
+				>
 					{recordedLabel(row.original)}
-				</span>
+				</Link>
 			),
 		},
 		{
@@ -263,7 +336,13 @@ export function DetectionsTable({
 				/>
 			),
 			cell: ({ row }) => (
-				<em className="text-[var(--bark)]">{row.original.Sci_Name}</em>
+				<Link
+					to="/species/$sciName"
+					params={{ sciName: sciNameToSlug(row.original.Sci_Name) }}
+					className="no-underline"
+				>
+					<em className="text-[var(--bark)]">{row.original.Sci_Name}</em>
+				</Link>
 			),
 		},
 		{
@@ -318,45 +397,6 @@ export function DetectionsTable({
 	const rangeEnd = Math.min(search.page * search.pageSize, page.total);
 	return (
 		<div className="space-y-3">
-			<div className="flex min-h-9 justify-end">
-				<div className="flex items-end gap-2">
-					<div className="grid gap-1">
-						<label
-							className="text-muted-foreground text-xs"
-							htmlFor="detections-from"
-						>
-							From
-						</label>
-						<Input
-							className="!w-40"
-							id="detections-from"
-							type="date"
-							value={search.from ?? ""}
-							onChange={(event) =>
-								updateSearch({ page: 1, from: event.target.value || undefined })
-							}
-						/>
-					</div>
-					<div className="grid gap-1">
-						<label
-							className="text-muted-foreground text-xs"
-							htmlFor="detections-to"
-						>
-							To
-						</label>
-						<Input
-							className="!w-40"
-							id="detections-to"
-							type="date"
-							value={search.to ?? ""}
-							onChange={(event) =>
-								updateSearch({ page: 1, to: event.target.value || undefined })
-							}
-						/>
-					</div>
-				</div>
-			</div>
-
 			<Table className="min-w-[62rem] table-fixed">
 				<colgroup>
 					{COLUMN_WIDTHS.map((width, index) => (
@@ -391,9 +431,9 @@ export function DetectionsTable({
 								className="py-12 text-center text-muted-foreground"
 								colSpan={table.getVisibleLeafColumns().length}
 							>
-								{page.total === 0
-									? "No detections have been recorded yet."
-									: "No detections match these filters."}
+								{hasActiveFilters(search)
+									? "No detections match these filters."
+									: "No detections have been recorded yet."}
 							</TableCell>
 						</TableRow>
 					) : (
