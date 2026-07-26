@@ -6,7 +6,6 @@ import {
 	type OnChangeFn,
 	type RowSelectionState,
 	useReactTable,
-	type VisibilityState,
 } from "@tanstack/react-table";
 import {
 	ArrowDown,
@@ -15,10 +14,9 @@ import {
 	ChevronRight,
 	Loader2,
 	Pause,
-	SlidersHorizontal,
 	Volume2,
 } from "lucide-react";
-import { Button, buttonVariants } from "~/components/ui/button.tsx";
+import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import {
@@ -43,8 +41,6 @@ type DetectionsTableProps = {
 	page: DetectionPage;
 	search: DetectionWorkspaceSearch;
 	onSearchChange: (search: DetectionWorkspaceSearch) => void;
-	columnVisibility: VisibilityState;
-	onColumnVisibilityChange: OnChangeFn<VisibilityState>;
 	rowSelection: RowSelectionState;
 	onRowSelectionChange: OnChangeFn<RowSelectionState>;
 };
@@ -54,21 +50,7 @@ type DetectionsFiltersProps = Pick<
 	"search" | "onSearchChange"
 >;
 
-const COLUMN_LABELS: Record<string, string> = {
-	recorded: "Recorded",
-	species: "Species",
-	scientificName: "Scientific name",
-	confidence: "Confidence",
-	latitude: "Latitude",
-	longitude: "Longitude",
-	cutoff: "Cutoff",
-	sensitivity: "Sensitivity",
-	overlap: "Overlap",
-	week: "Week",
-};
-
-const TOGGLEABLE_COLUMN_IDS = Object.keys(COLUMN_LABELS);
-const DEFAULT_COLUMN_WIDTHS = [
+const COLUMN_WIDTHS = [
 	"w-[4.2%]",
 	"w-[22%]",
 	"w-[24%]",
@@ -76,7 +58,7 @@ const DEFAULT_COLUMN_WIDTHS = [
 	"w-[14%]",
 	"w-[11.8%]",
 ];
-const DEFAULT_COLUMN_IDS = [
+const COLUMN_IDS = [
 	"select",
 	"recorded",
 	"species",
@@ -84,15 +66,6 @@ const DEFAULT_COLUMN_IDS = [
 	"confidence",
 	"audio",
 ];
-
-export const INITIAL_DETECTION_COLUMN_VISIBILITY: VisibilityState = {
-	latitude: false,
-	longitude: false,
-	cutoff: false,
-	sensitivity: false,
-	overlap: false,
-	week: false,
-};
 
 function recordedLabel(row: DetectionTableRow): string {
 	const date = new Date(`${row.Date}T${row.Time}`);
@@ -178,8 +151,8 @@ export function DetectionsFilters({
 	return (
 		<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
 			<SearchInput
-				aria-label="Filter by species"
-				placeholder="Search detections..."
+				aria-label="Filter by common or scientific name"
+				placeholder="Search common or scientific name..."
 				value={search.species ?? ""}
 				onChange={(event) =>
 					updateSearch({
@@ -197,8 +170,6 @@ export function DetectionsTable({
 	page,
 	search,
 	onSearchChange,
-	columnVisibility,
-	onColumnVisibilityChange,
 	rowSelection,
 	onRowSelectionChange,
 }: DetectionsTableProps) {
@@ -326,54 +297,6 @@ export function DetectionsTable({
 			),
 			enableHiding: false,
 		},
-		{
-			accessorKey: "Lat",
-			id: "latitude",
-			header: "Latitude",
-			cell: ({ row }) => (
-				<span className="tabular-data">{row.original.Lat ?? "—"}</span>
-			),
-		},
-		{
-			accessorKey: "Lon",
-			id: "longitude",
-			header: "Longitude",
-			cell: ({ row }) => (
-				<span className="tabular-data">{row.original.Lon ?? "—"}</span>
-			),
-		},
-		{
-			accessorKey: "Cutoff",
-			id: "cutoff",
-			header: "Cutoff",
-			cell: ({ row }) => (
-				<span className="tabular-data">{row.original.Cutoff ?? "—"}</span>
-			),
-		},
-		{
-			accessorKey: "Sens",
-			id: "sensitivity",
-			header: "Sensitivity",
-			cell: ({ row }) => (
-				<span className="tabular-data">{row.original.Sens ?? "—"}</span>
-			),
-		},
-		{
-			accessorKey: "Overlap",
-			id: "overlap",
-			header: "Overlap",
-			cell: ({ row }) => (
-				<span className="tabular-data">{row.original.Overlap ?? "—"}</span>
-			),
-		},
-		{
-			accessorKey: "Week",
-			id: "week",
-			header: "Week",
-			cell: ({ row }) => (
-				<span className="tabular-data">{row.original.Week ?? "—"}</span>
-			),
-		},
 	];
 
 	const table = useReactTable({
@@ -385,87 +308,61 @@ export function DetectionsTable({
 		manualSorting: true,
 		enableRowSelection: true,
 		pageCount: Math.max(1, Math.ceil(page.total / search.pageSize)),
-		onColumnVisibilityChange,
 		onRowSelectionChange,
-		state: { columnVisibility, rowSelection },
+		state: { rowSelection },
 	});
 
 	const pageCount = Math.max(1, Math.ceil(page.total / search.pageSize));
 	const rangeStart =
 		page.total === 0 ? 0 : (search.page - 1) * search.pageSize + 1;
 	const rangeEnd = Math.min(search.page * search.pageSize, page.total);
-	const usesDefaultColumnLayout = table
-		.getVisibleLeafColumns()
-		.every((column, index) => column.id === DEFAULT_COLUMN_IDS[index]);
 	return (
 		<div className="space-y-3">
 			<div className="flex min-h-9 justify-end">
-				<div className="flex items-center gap-2">
-					<Input
-						aria-label="Detected on or after"
-						className="!w-40"
-						type="date"
-						value={search.from ?? ""}
-						onChange={(event) =>
-							updateSearch({ page: 1, from: event.target.value || undefined })
-						}
-					/>
-					<Input
-						aria-label="Detected on or before"
-						className="!w-40"
-						type="date"
-						value={search.to ?? ""}
-						onChange={(event) =>
-							updateSearch({ page: 1, to: event.target.value || undefined })
-						}
-					/>
-					<details className="relative">
-						<summary
-							className={buttonVariants({
-								variant: "outline",
-								size: "sm",
-							})}
+				<div className="flex items-end gap-2">
+					<div className="grid gap-1">
+						<label
+							className="text-muted-foreground text-xs"
+							htmlFor="detections-from"
 						>
-							<SlidersHorizontal />
-							Columns
-						</summary>
-						<div className="feature-card absolute right-0 z-10 mt-2 grid min-w-48 gap-2 rounded-md p-3 text-sm shadow-lg">
-							{TOGGLEABLE_COLUMN_IDS.map((columnId) => {
-								const isVisible = columnVisibility[columnId] ?? true;
-								return (
-									<label key={columnId} className="flex items-center gap-2">
-										<input
-											checked={isVisible}
-											className="size-3.5 accent-[var(--moss)]"
-											type="checkbox"
-											onChange={() =>
-												onColumnVisibilityChange({
-													...columnVisibility,
-													[columnId]: !isVisible,
-												})
-											}
-										/>
-										{COLUMN_LABELS[columnId]}
-									</label>
-								);
-							})}
-						</div>
-					</details>
+							From
+						</label>
+						<Input
+							className="!w-40"
+							id="detections-from"
+							type="date"
+							value={search.from ?? ""}
+							onChange={(event) =>
+								updateSearch({ page: 1, from: event.target.value || undefined })
+							}
+						/>
+					</div>
+					<div className="grid gap-1">
+						<label
+							className="text-muted-foreground text-xs"
+							htmlFor="detections-to"
+						>
+							To
+						</label>
+						<Input
+							className="!w-40"
+							id="detections-to"
+							type="date"
+							value={search.to ?? ""}
+							onChange={(event) =>
+								updateSearch({ page: 1, to: event.target.value || undefined })
+							}
+						/>
+					</div>
 				</div>
 			</div>
 
-			<Table
-				className={
-					usesDefaultColumnLayout ? "min-w-[62rem] table-fixed" : undefined
-				}
-			>
-				{usesDefaultColumnLayout ? (
-					<colgroup>
-						{DEFAULT_COLUMN_WIDTHS.map((width, index) => (
-							<col key={DEFAULT_COLUMN_IDS[index]} className={width} />
-						))}
-					</colgroup>
-				) : null}
+			<Table className="min-w-[62rem] table-fixed">
+				<colgroup>
+					{COLUMN_WIDTHS.map((width, index) => (
+						<col key={COLUMN_IDS[index]} className={width} />
+					))}
+				</colgroup>
 				<TableHeader>
 					{table.getHeaderGroups().map((headerGroup) => (
 						<TableRow key={headerGroup.id}>

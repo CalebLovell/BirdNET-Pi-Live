@@ -9,6 +9,7 @@ import {
 	gte,
 	like,
 	lte,
+	or,
 	sql,
 } from "drizzle-orm";
 import { db, openWritableDetectionsDb } from "~/db/index.ts";
@@ -93,7 +94,12 @@ export type DetectionPage = {
 function detectionFilters(search: DetectionWorkspaceSearch) {
 	const filters = [];
 	if (search.species) {
-		filters.push(like(detections.Com_Name, `%${search.species}%`));
+		filters.push(
+			or(
+				like(detections.Com_Name, `%${search.species}%`),
+				like(detections.Sci_Name, `%${search.species}%`),
+			),
+		);
 	}
 	if (search.minConfidence !== undefined) {
 		filters.push(gte(detections.Confidence, search.minConfidence));

@@ -1,13 +1,12 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import type { RowSelectionState, VisibilityState } from "@tanstack/react-table";
+import type { RowSelectionState } from "@tanstack/react-table";
 import { CircleAlert, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
 	DetectionsTable,
-	INITIAL_DETECTION_COLUMN_VISIBILITY,
 } from "~/components/detections/detections-table.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { normalizeDetectionWorkspaceSearch } from "~/lib/detection-workspace.ts";
@@ -31,9 +30,6 @@ function Detections() {
 	const navigate = Route.useNavigate();
 	const router = useRouter();
 	const runDeletion = useServerFn(deleteDetections);
-	const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(
-		INITIAL_DETECTION_COLUMN_VISIBILITY,
-	);
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 	const [deleteOpen, setDeleteOpen] = useState(false);
 	const [isDeleting, setIsDeleting] = useState(false);
@@ -125,8 +121,6 @@ function Detections() {
 						onSearchChange={(nextSearch) =>
 							navigate({ search: nextSearch, replace: true })
 						}
-						columnVisibility={columnVisibility}
-						onColumnVisibilityChange={setColumnVisibility}
 						rowSelection={rowSelection}
 						onRowSelectionChange={setRowSelection}
 					/>
