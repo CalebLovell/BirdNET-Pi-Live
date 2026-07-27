@@ -5,29 +5,32 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
+	type BusiestDay,
 	type BusiestHour,
-	buildDetectionTrend,
 	buildHourActivity,
 	type HourActivity,
 	type SpeciesCount,
 	selectBusiestHour,
-	selectTrendGranularity,
-	type TrendBucketCount,
 	type TrendPoint,
 } from "~/lib/stats-data.ts";
+import { getDetectionTrend } from "~/lib/trend.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type StatsData = {
 	totalDetections: number;
 	uniqueSpecies: number;
-	topSpecies: SpeciesCount | null;
+	busiestDay: BusiestDay | null;
 	busiestHour: BusiestHour | null;
 	topSpeciesList: SpeciesCount[];
+	rarestSpeciesList: SpeciesCount[];
 	hourActivity: HourActivity[];
 	detectionTrend: TrendPoint[];
 };
 
-async function getTopSpecies(limit: number): Promise<SpeciesCount[]> {
+async function getSpeciesRanking(
+	limit: number,
+	direction: "most" | "least",
+): Promise<SpeciesCount[]> {
 	const rows = await db
 		.select({
 			comName: detections.Com_Name,
@@ -36,7 +39,10 @@ async function getTopSpecies(limit: number): Promise<SpeciesCount[]> {
 		})
 		.from(detections)
 		.groupBy(detections.Com_Name, detections.Sci_Name)
-		.orderBy(sql`count(*) desc`)
+		.orderBy(
+			direction === "most" ? sql`count(*) desc` : sql`count(*) asc`,
+			detections.Com_Name,
+		)
 		.limit(limit);
 
 	return Promise.all(
@@ -65,36 +71,15 @@ async function getHourActivity(): Promise<HourActivity[]> {
 	);
 }
 
-async function getDetectionTrend(): Promise<TrendPoint[]> {
-	const [bounds] = await db
-		.select({
-			firstDate: sql<string | null>`min(${detections.Date})`,
-			lastDate: sql<string | null>`max(${detections.Date})`,
-		})
-		.from(detections);
-
-	if (!bounds?.firstDate || !bounds.lastDate) return [];
-
-	const granularity = selectTrendGranularity(bounds.firstDate, bounds.lastDate);
-	const bucketExpr =
-		granularity === "day"
-			? sql<string>`${detections.Date}`
-			: granularity === "week"
-				? sql<string>`date(${detections.Date}, '-' || ((cast(strftime('%w', ${detections.Date}) as integer) + 6) % 7) || ' days')`
-				: sql<string>`substr(${detections.Date}, 1, 7)`;
-
-	const rows = await db
-		.select({ bucket: bucketExpr, count: count() })
+async function getBusiestDay(): Promise<BusiestDay | null> {
+	const [row] = await db
+		.select({ date: detections.Date, count: count() })
 		.from(detections)
-		.groupBy(bucketExpr)
-		.orderBy(bucketExpr);
+		.groupBy(detections.Date)
+		.orderBy(sql`count(*) desc`, detections.Date)
+		.limit(1);
 
-	return buildDetectionTrend(
-		rows satisfies TrendBucketCount[],
-		bounds.firstDate,
-		bounds.lastDate,
-		granularity,
-	);
+	return row ?? null;
 }
 
 export const getStats = createServerFn({ method: "GET" }).handler(
@@ -102,7 +87,9 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 		const [
 			[{ totalDetections }],
 			[{ uniqueSpecies }],
+			busiestDay,
 			topSpeciesList,
+			rarestSpeciesList,
 			hourActivity,
 			detectionTrend,
 		] = await Promise.all([
@@ -110,7 +97,9 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			db
 				.select({ uniqueSpecies: countDistinct(detections.Com_Name) })
 				.from(detections),
-			getTopSpecies(10),
+			getBusiestDay(),
+			getSpeciesRanking(10, "most"),
+			getSpeciesRanking(10, "least"),
 			getHourActivity(),
 			getDetectionTrend(),
 		]);
@@ -118,9 +107,10 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 		return {
 			totalDetections,
 			uniqueSpecies,
-			topSpecies: topSpeciesList[0] ?? null,
+			busiestDay,
 			busiestHour: selectBusiestHour(hourActivity),
 			topSpeciesList,
+			rarestSpeciesList,
 			hourActivity,
 			detectionTrend,
 		};

@@ -2,7 +2,15 @@ import { count, type SQL, sql } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
+import {
+	buildDetectionTrend,
+	selectTrendGranularity,
+	type TrendBucketCount,
+	type TrendPoint,
+} from "~/lib/stats-data.ts";
 import type { StatsPeriod } from "~/lib/stats-periods.ts";
+
+export type { TrendPoint };
 
 // Rolling windows (not calendar-day boundaries) keep the year view stable
 // around midnight and across timezone changes.
@@ -10,8 +18,6 @@ const PERIOD_HOURS: Record<StatsPeriod, number | null> = {
 	year: 365 * 24,
 	all: null,
 };
-
-export type TrendPoint = { bucket: string; label: string; count: number };
 
 export function periodFilter(period: StatsPeriod): SQL {
 	const hours = PERIOD_HOURS[period];
@@ -128,6 +134,50 @@ export async function getCalendarYearTrend(
 		label,
 		count: countByBucket.get(key) ?? 0,
 	}));
+}
+
+/**
+ * The detections-over-time series: every day from the first detection to the
+ * last, bucketed by day, week or month depending on how long that span is.
+ * Passing a filter (e.g. a single species) scopes both the counts and the
+ * span, so a species' chart starts the day that species first showed up.
+ */
+export async function getDetectionTrend(
+	extraFilter?: SQL,
+): Promise<TrendPoint[]> {
+	const where = extraFilter ?? sql`1=1`;
+
+	const [bounds] = await db
+		.select({
+			firstDate: sql<string | null>`min(${detections.Date})`,
+			lastDate: sql<string | null>`max(${detections.Date})`,
+		})
+		.from(detections)
+		.where(where);
+
+	if (!bounds?.firstDate || !bounds.lastDate) return [];
+
+	const granularity = selectTrendGranularity(bounds.firstDate, bounds.lastDate);
+	const bucketExpr =
+		granularity === "day"
+			? sql<string>`${detections.Date}`
+			: granularity === "week"
+				? sql<string>`date(${detections.Date}, '-' || ((cast(strftime('%w', ${detections.Date}) as integer) + 6) % 7) || ' days')`
+				: sql<string>`substr(${detections.Date}, 1, 7)`;
+
+	const rows = await db
+		.select({ bucket: bucketExpr, count: count() })
+		.from(detections)
+		.where(where)
+		.groupBy(bucketExpr)
+		.orderBy(bucketExpr);
+
+	return buildDetectionTrend(
+		rows satisfies TrendBucketCount[],
+		bounds.firstDate,
+		bounds.lastDate,
+		granularity,
+	);
 }
 
 export async function getYearTrend(

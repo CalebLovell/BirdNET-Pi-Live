@@ -28,7 +28,7 @@ import {
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
-import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
@@ -350,8 +350,8 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 	return (
 		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-3">
 			<Link
-				to="/species/$sciName"
-				params={{ sciName: sciNameToSlug(card.sciName) }}
+				to="/species/$comName"
+				params={{ comName: comNameToSlug(card.comName) }}
 				className="absolute inset-0 z-0"
 				aria-label={`View ${card.comName}`}
 			/>

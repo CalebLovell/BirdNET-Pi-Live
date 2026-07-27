@@ -6,12 +6,17 @@ import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
-import { slugToSciNameQuery } from "~/lib/species-slug.ts";
-import { getYearTrend, type TrendPoint, yearFilter } from "~/lib/trend.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
+import { buildHourActivity, type HourActivity } from "~/lib/stats-data.ts";
+import {
+	getDetectionTrend,
+	getYearTrend,
+	type TrendPoint,
+} from "~/lib/trend.ts";
 import { localTimestamp, timestampToMillis } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
-export type HourActivity = { hour: number; count: number };
+export type { HourActivity };
 export type Visit = {
 	date: string;
 	time: string;
@@ -41,7 +46,11 @@ export type SpeciesDetail = {
 	firstDetected: Visit;
 	lastDetected: Visit;
 	averageConfidence: number | null;
+	/** Per-day counts for the selected year, which the heat map draws. */
 	history: TrendPoint[];
+	/** First detection to last, bucketed like the stats page's trend. */
+	detectionTrend: TrendPoint[];
+	/** Every detection by hour of day, like the stats page's chart. */
 	hourActivity: HourActivity[];
 	bestRecording: BestRecording | null;
 	recentVisits: RecentVisit[];
@@ -49,37 +58,53 @@ export type SpeciesDetail = {
 	generatedAt: string;
 };
 
-function bySciNameSlug(slug: string) {
-	return sql`lower(${detections.Sci_Name}) = ${slugToSciNameQuery(slug)}`;
+// The slug drops punctuation, so it cannot be turned back into a common name by
+// string surgery. Instead the station's distinct names -- a few hundred at most
+// -- are slugged and matched, which also means a name we haven't anticipated the
+// punctuation of still resolves.
+async function resolveComName(slug: string): Promise<string | null> {
+	const rows = await db
+		.selectDistinct({ comName: detections.Com_Name })
+		.from(detections);
+
+	return (
+		rows.find((row) => comNameToSlug(row.comName) === slug)?.comName ?? null
+	);
 }
 
+function byComName(comName: string) {
+	return sql`${detections.Com_Name} = ${comName}`;
+}
+
+/** Every detection of this species by hour of day, scoped exactly like the
+ * stats page's chart so the two read the same way. */
 async function getHourActivity(
-	filter: ReturnType<typeof bySciNameSlug>,
-	year: number,
-) {
+	filter: ReturnType<typeof byComName>,
+): Promise<HourActivity[]> {
 	const rows = await db
 		.select({
 			hour: sql<string>`strftime('%H', ${detections.Time})`,
 			count: sql<number>`count(*)`,
 		})
 		.from(detections)
-		.where(sql`(${yearFilter(year)}) AND (${filter})`)
+		.where(filter)
 		.groupBy(sql`strftime('%H', ${detections.Time})`);
-	const countByHour = new Map(rows.map((r) => [Number(r.hour), r.count]));
 
-	return Array.from({ length: 24 }, (_, hour) => ({
-		hour,
-		count: countByHour.get(hour) ?? 0,
-	}));
+	return buildHourActivity(
+		rows.map((row) => ({ hour: Number(row.hour), count: row.count })),
+	);
 }
 
-export type SpeciesDetailInput = { sciNameSlug: string; year: number };
+export type SpeciesDetailInput = { comNameSlug: string; year: number };
 
 export const getSpeciesDetail = createServerFn({ method: "GET" })
 	.validator((input: SpeciesDetailInput) => input)
 	.handler(
-		async ({ data: { sciNameSlug, year } }): Promise<SpeciesDetail | null> => {
-			const filter = bySciNameSlug(sciNameSlug);
+		async ({ data: { comNameSlug, year } }): Promise<SpeciesDetail | null> => {
+			const resolved = await resolveComName(comNameSlug);
+			if (!resolved) return null;
+
+			const filter = byComName(resolved);
 			const generatedAtDate = new Date();
 			const generatedAtMs = generatedAtDate.getTime();
 
@@ -104,6 +129,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				recentVisits,
 				availableYearRows,
 				history,
+				detectionTrend,
 				hourActivity,
 				{ imageUrl: wikiImageUrl },
 			] = await Promise.all([
@@ -160,7 +186,8 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 						desc(sql`cast(substr(${detections.Date}, 1, 4) as integer)`),
 					),
 				getYearTrend(year, filter),
-				getHourActivity(filter, year),
+				getDetectionTrend(filter),
+				getHourActivity(filter),
 				getSpeciesInfo(comName),
 			]);
 
@@ -177,6 +204,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 					? Number(totals.averageConfidence)
 					: null,
 				history,
+				detectionTrend,
 				hourActivity,
 				bestRecording: best
 					? {

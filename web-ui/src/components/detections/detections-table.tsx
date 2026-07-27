@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
+import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
@@ -38,7 +39,7 @@ import {
 	hasActiveFilters,
 } from "~/lib/detection-workspace.ts";
 import type { DetectionPage, DetectionTableRow } from "~/lib/detections.ts";
-import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 type DetectionsTableProps = {
@@ -297,7 +298,7 @@ export function DetectionsTable({
 				<Link
 					to="/day/$date"
 					params={{ date: row.original.Date }}
-					className="tabular-data text-sm no-underline"
+					className="tabular-data text-sm no-underline hover:underline"
 				>
 					{recordedLabel(row.original)}
 				</Link>
@@ -314,11 +315,13 @@ export function DetectionsTable({
 					onSort={sortBy}
 				/>
 			),
+			// Styled to match the species name in the stats page's top-species rows,
+			// hover underline included, so a species link reads the same everywhere.
 			cell: ({ row }) => (
 				<Link
-					to="/species/$sciName"
-					params={{ sciName: sciNameToSlug(row.original.Sci_Name) }}
-					className="font-medium no-underline"
+					to="/species/$comName"
+					params={{ comName: comNameToSlug(row.original.Com_Name) }}
+					className="font-medium no-underline hover:underline"
 				>
 					{row.original.Com_Name}
 				</Link>
@@ -335,14 +338,10 @@ export function DetectionsTable({
 					onSort={sortBy}
 				/>
 			),
+			// Not a link: the common name in the row already goes to the species
+			// page, and two links to the same place in one row is just noise.
 			cell: ({ row }) => (
-				<Link
-					to="/species/$sciName"
-					params={{ sciName: sciNameToSlug(row.original.Sci_Name) }}
-					className="no-underline"
-				>
-					<em className="text-[var(--bark)]">{row.original.Sci_Name}</em>
-				</Link>
+				<em className="text-[var(--bark)]">{row.original.Sci_Name}</em>
 			),
 		},
 		{
@@ -359,10 +358,12 @@ export function DetectionsTable({
 				</div>
 			),
 			cell: ({ row }) => (
-				<div className="tabular-data text-right text-[var(--bark)]">
-					{row.original.Confidence === null
-						? "—"
-						: `${Math.round(row.original.Confidence * 100)}%`}
+				<div className="flex justify-end">
+					{row.original.Confidence === null ? (
+						<span className="tabular-data text-[var(--bark)]">—</span>
+					) : (
+						<ConfidencePill confidence={row.original.Confidence} />
+					)}
 				</div>
 			),
 		},

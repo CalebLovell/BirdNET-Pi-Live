@@ -23,7 +23,7 @@ import {
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
-import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 import { getTimelineData, type TimelineRow } from "~/lib/timeline.ts";
 import {
 	TIMELINE_PERIOD_LABELS,
@@ -233,8 +233,8 @@ function HourRow({ row }: { row: TimelineRow }) {
 			style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
 		>
 			<Link
-				to="/species/$sciName"
-				params={{ sciName: sciNameToSlug(row.sciName) }}
+				to="/species/$comName"
+				params={{ comName: comNameToSlug(row.comName) }}
 				className="sticky left-0 z-10 flex items-center gap-2 bg-[var(--paper-raised)] pr-3"
 			>
 				<div className="flex size-6 shrink-0 items-center justify-center">

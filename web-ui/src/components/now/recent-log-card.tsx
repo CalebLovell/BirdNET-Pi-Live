@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
-import { LIST_ROW, SpeciesThumbnail } from "~/components/species-rank-row.tsx";
+import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import type { RecentDetection } from "~/lib/now.ts";
 import { formatClockTime, formatTimeAgo } from "~/lib/time-ago.ts";
 
@@ -42,8 +42,8 @@ export function RecentLogCard({
 
 							<div className="min-w-0 flex-1">
 								<Link
-									to="/species/$sciName"
-									params={{ sciName: detection.speciesSlug }}
+									to="/species/$comName"
+									params={{ comName: detection.speciesSlug }}
 									className="block truncate font-medium no-underline hover:underline"
 								>
 									{detection.comName}

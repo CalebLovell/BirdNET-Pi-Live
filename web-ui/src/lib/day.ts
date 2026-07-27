@@ -5,7 +5,7 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
-import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 import { countVisits, localTimestamp } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
@@ -162,7 +162,7 @@ function buildSpeciesRows(
 			return {
 				comName: first.comName,
 				sciName: first.sciName,
-				speciesSlug: sciNameToSlug(first.sciName),
+				speciesSlug: comNameToSlug(first.comName),
 				count: speciesRows.length,
 				visits: countVisits(speciesRows.map((row) => `${date} ${row.time}`)),
 				firstTime: first.time,
@@ -286,7 +286,7 @@ export const getDayReview = createServerFn({ method: "GET" })
 			row
 				? {
 						comName: row.comName,
-						speciesSlug: sciNameToSlug(row.sciName),
+						speciesSlug: comNameToSlug(row.comName),
 						imageUrl: imageByName.get(row.comName) ?? null,
 						time: row.time,
 						confidence: row.confidence,

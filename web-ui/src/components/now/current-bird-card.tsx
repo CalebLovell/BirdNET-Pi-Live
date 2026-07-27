@@ -71,8 +71,8 @@ export function CurrentBirdCard({
 					<p className="text-muted-foreground">
 						Last heard{" "}
 						<Link
-							to="/species/$sciName"
-							params={{ sciName: current.speciesSlug }}
+							to="/species/$comName"
+							params={{ comName: current.speciesSlug }}
 							className="font-medium"
 						>
 							{current.comName}
@@ -108,8 +108,8 @@ export function CurrentBirdCard({
 			<div className="flex-1">
 				<h2 className="display-title font-bold text-2xl sm:text-3xl">
 					<Link
-						to="/species/$sciName"
-						params={{ sciName: current.speciesSlug }}
+						to="/species/$comName"
+						params={{ comName: current.speciesSlug }}
 						className="no-underline hover:underline"
 					>
 						{current.comName}

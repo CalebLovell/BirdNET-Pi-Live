@@ -5,7 +5,7 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
-import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 import {
 	countVisits,
 	countVisitsBySpecies,
@@ -122,7 +122,7 @@ async function buildCurrentBird(
 	return {
 		comName: latest.comName,
 		sciName: latest.sciName,
-		speciesSlug: sciNameToSlug(latest.sciName),
+		speciesSlug: comNameToSlug(latest.comName),
 		imageUrl,
 		detectedAt: latest.detectedAt,
 		ageMs: generatedAtMs - timestampToMillis(latest.detectedAt),
@@ -221,7 +221,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 				topRows.map(async (row) => ({
 					comName: row.comName,
 					sciName: row.sciName,
-					speciesSlug: sciNameToSlug(row.sciName),
+					speciesSlug: comNameToSlug(row.comName),
 					imageUrl: await imageUrlFor(row.sciName, row.comName),
 					count: row.count,
 				})),
@@ -231,7 +231,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 					key: `${row.detectedAt}-${row.fileName}`,
 					comName: row.comName,
 					sciName: row.sciName,
-					speciesSlug: sciNameToSlug(row.sciName),
+					speciesSlug: comNameToSlug(row.comName),
 					imageUrl: await imageUrlFor(row.sciName, row.comName),
 					detectedAt: row.detectedAt,
 					ageMs: generatedAtMs - timestampToMillis(row.detectedAt),

@@ -20,7 +20,7 @@ import {
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
-import { LIST_ROW, SpeciesThumbnail } from "~/components/species-rank-row.tsx";
+import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
 	Tooltip,
@@ -335,7 +335,7 @@ function Figure({
 
 /**
  * The ranked list of everything heard, scaled against the day's leader the same
- * way SpeciesRankRow scales its bars -- but carrying the per-day detail (first
+ * way SpeciesList scales its bars -- but carrying the per-day detail (first
  * and last heard, visits, a "new species" flag) that only makes sense here.
  */
 function SpeciesHeardCard({ species }: { species: DaySpeciesRow[] }) {
@@ -362,8 +362,8 @@ function SpeciesHeardCard({ species }: { species: DaySpeciesRow[] }) {
 							<div className="flex items-baseline justify-between gap-2">
 								<div className="flex min-w-0 items-baseline gap-2">
 									<Link
-										to="/species/$sciName"
-										params={{ sciName: row.speciesSlug }}
+										to="/species/$comName"
+										params={{ comName: row.speciesSlug }}
 										className="truncate font-medium no-underline hover:underline"
 									>
 										{row.comName}
@@ -531,8 +531,8 @@ function Bookend({
 					{label}
 				</div>
 				<Link
-					to="/species/$sciName"
-					params={{ sciName: moment.speciesSlug }}
+					to="/species/$comName"
+					params={{ comName: moment.speciesSlug }}
 					className="block truncate font-medium no-underline hover:underline"
 				>
 					{moment.comName}
@@ -593,8 +593,8 @@ function HourGridCard({ species }: { species: DaySpeciesRow[] }) {
 								style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
 							>
 								<Link
-									to="/species/$sciName"
-									params={{ sciName: row.speciesSlug }}
+									to="/species/$comName"
+									params={{ comName: row.speciesSlug }}
 									className="flex items-center gap-2 pr-3 no-underline"
 								>
 									<div className="flex size-6 shrink-0 items-center justify-center">
@@ -672,8 +672,8 @@ function BestRecordingsCard({
 						/>
 						<div className="min-w-0 flex-1">
 							<Link
-								to="/species/$sciName"
-								params={{ sciName: recording.speciesSlug }}
+								to="/species/$comName"
+								params={{ comName: recording.speciesSlug }}
 								className="block truncate font-medium no-underline hover:underline"
 							>
 								{recording.comName}

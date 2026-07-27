@@ -4,19 +4,11 @@ import {
 	stripSearchParams,
 } from "@tanstack/react-router";
 import { Bird, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
-import {
-	Area,
-	AreaChart,
-	CartesianGrid,
-	Line,
-	Tooltip as RechartsTooltip,
-	ResponsiveContainer,
-	XAxis,
-	YAxis,
-} from "recharts";
 import { z } from "zod";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
+import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { Button } from "~/components/ui/button.tsx";
@@ -33,7 +25,7 @@ import {
 	type RecentVisit,
 	type SpeciesDetail,
 } from "~/lib/species-detail.ts";
-import { formatTimeAgo, hourLabel } from "~/lib/time-ago.ts";
+import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 
@@ -51,7 +43,7 @@ const speciesDetailSearchSchema = z.object({
 		.catch(DEFAULT_YEAR),
 });
 
-export const Route = createFileRoute("/species/$sciName")({
+export const Route = createFileRoute("/species/$comName")({
 	validateSearch: speciesDetailSearchSchema,
 	search: {
 		middlewares: [stripSearchParams({ year: DEFAULT_YEAR })],
@@ -59,7 +51,7 @@ export const Route = createFileRoute("/species/$sciName")({
 	loaderDeps: ({ search }) => ({ year: search.year }),
 	loader: ({ params, deps }) =>
 		getSpeciesDetail({
-			data: { sciNameSlug: params.sciName, year: deps.year },
+			data: { comNameSlug: params.comName, year: deps.year },
 		}),
 	component: BirdPage,
 });
@@ -123,17 +115,6 @@ function buildHeatMap(history: TrendPoint[]): {
 
 	return { weeks, maximum };
 }
-
-const chartTooltipStyle = {
-	contentStyle: {
-		background: "var(--paper-raised)",
-		border: "1px solid var(--line)",
-		borderRadius: "var(--radius-sm)",
-		color: "var(--ink)",
-		fontSize: 13,
-	},
-	labelStyle: { color: "var(--ink)", fontWeight: 600 },
-};
 
 function BirdPage() {
 	const detail = Route.useLoaderData();
@@ -269,76 +250,17 @@ function BirdPage() {
 				</section>
 
 				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-					<section
-						aria-label="Daily activity"
-						className="feature-card order-2 flex min-h-[420px] flex-col rounded-md p-3 lg:col-start-2 lg:row-start-1"
-					>
-						<div className="island-kicker">Daily activity</div>
-						<div className="mt-4 min-h-0 flex-1">
-							<ResponsiveContainer width="100%" height="100%">
-								<AreaChart data={detail.hourActivity}>
-									<defs>
-										<linearGradient
-											id="hourDensityFill"
-											x1="0"
-											y1="0"
-											x2="0"
-											y2="1"
-										>
-											<stop
-												offset="0%"
-												stopColor="var(--moss)"
-												stopOpacity={0.2}
-											/>
-											<stop
-												offset="100%"
-												stopColor="var(--moss)"
-												stopOpacity={0}
-											/>
-										</linearGradient>
-									</defs>
-									<CartesianGrid stroke="var(--line)" vertical={false} />
-									<XAxis
-										dataKey="hour"
-										tickFormatter={(hour: number) => hourLabel(hour)}
-										stroke="var(--muted-foreground)"
-										fontSize={12}
-										tickLine={false}
-										interval={3}
-									/>
-									<YAxis
-										stroke="var(--muted-foreground)"
-										fontSize={12}
-										tickLine={false}
-										allowDecimals={false}
-										width={32}
-									/>
-									<RechartsTooltip
-										{...chartTooltipStyle}
-										labelFormatter={(hour: React.ReactNode) =>
-											hourLabel(Number(hour))
-										}
-										cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
-									/>
-									<Area
-										dataKey="count"
-										name="Detections"
-										stroke="none"
-										fill="url(#hourDensityFill)"
-									/>
-									<Line
-										type="monotone"
-										dataKey="count"
-										name="Detections"
-										stroke="var(--moss)"
-										strokeWidth={2}
-										dot={false}
-										activeDot={{ r: 3, fill: "var(--moss)" }}
-									/>
-								</AreaChart>
-							</ResponsiveContainer>
-						</div>
-					</section>
+					<div className="order-2 grid gap-4 lg:order-1 lg:grid-rows-2">
+						<DetectionsByHourCard
+							activity={detail.hourActivity}
+							className="lg:min-h-0"
+						/>
+
+						<DetectionsOverTimeCard
+							trend={detail.detectionTrend}
+							className="lg:min-h-0"
+						/>
+					</div>
 
 					<RecentVisitsCard visits={detail.recentVisits} offsetMs={offsetMs} />
 				</div>
@@ -550,7 +472,7 @@ function RecentVisitsCard({
 	return (
 		<section
 			aria-label="Visit log"
-			className="feature-card order-1 flex min-h-[420px] flex-col rounded-md p-4 lg:col-start-1 lg:row-start-1"
+			className="feature-card order-1 flex min-h-[420px] flex-col rounded-md p-4 lg:order-2"
 		>
 			<div className="island-kicker">Visit log</div>
 

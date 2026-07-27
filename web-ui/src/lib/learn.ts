@@ -15,7 +15,7 @@ import {
 	type LearnRound,
 	type PoolSpecies,
 } from "~/lib/learn-round.ts";
-import { sciNameToSlug } from "~/lib/species-slug.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 // A weak detection is usually a smear of wind or traffic that happens to score
@@ -111,7 +111,7 @@ function groupIntoSpecies(rows: ClipRow[]): PoolSpecies[] {
 			species = {
 				comName: row.comName,
 				sciName: row.sciName,
-				speciesSlug: sciNameToSlug(row.sciName),
+				speciesSlug: comNameToSlug(row.comName),
 				// Only the bundled illustrations here -- Wikipedia lookups are network
 				// calls, so they wait until we know which species the round uses.
 				imageUrl: illustrationUrlFor(row.sciName),

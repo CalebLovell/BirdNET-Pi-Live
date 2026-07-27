@@ -1,5 +1,6 @@
 export type HourActivity = { hour: number; count: number };
 export type BusiestHour = HourActivity;
+export type BusiestDay = { date: string; count: number };
 export type TrendGranularity = "day" | "week" | "month";
 export type TrendBucketCount = { bucket: string; count: number };
 export type TrendPoint = TrendBucketCount & { label: string };
@@ -140,6 +141,11 @@ export function selectBusiestHour(
 				: busiest,
 		null,
 	);
+}
+
+export function dayLabel(date: string): string {
+	const parsed = parseIsoDate(date);
+	return Number.isNaN(parsed.getTime()) ? date : DAY_LABEL.format(parsed);
 }
 
 export function hourLabel(hour: number): string {

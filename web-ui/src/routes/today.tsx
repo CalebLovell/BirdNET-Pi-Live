@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { SummaryStrip } from "~/components/now/summary-strip.tsx";
-import { TopDetectionsCard } from "~/components/now/top-detections-card.tsx";
+import { SpeciesList } from "~/components/species-list.tsx";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
@@ -74,7 +74,12 @@ function Today() {
 			<SummaryStrip summary={snapshot.summary} />
 
 			<div className="mt-4 grid gap-4 lg:grid-cols-2">
-				<TopDetectionsCard topSpecies={snapshot.topSpecies} />
+				<SpeciesList
+					title="Top detections"
+					ariaLabel="Top detections in the last 24 hours"
+					species={snapshot.topSpecies}
+					emptyMessage="Nothing detected in the last 24 hours."
+				/>
 				<RecentLogCard
 					recent={snapshot.recent}
 					offsetMs={offsetMs}

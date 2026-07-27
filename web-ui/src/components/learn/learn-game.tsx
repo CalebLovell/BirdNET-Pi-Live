@@ -169,8 +169,8 @@ export function LearnGame({
 							</span>
 							<ConfidencePill confidence={question.confidence} />
 							<Link
-								to="/species/$sciName"
-								params={{ sciName: answer.speciesSlug }}
+								to="/species/$comName"
+								params={{ comName: answer.speciesSlug }}
 								className="text-sm no-underline hover:underline"
 							>
 								About the {answer.comName}
@@ -356,8 +356,8 @@ function RoundSummary({
 							<ChoiceThumbnail choice={answer} />
 							<div className="min-w-0 flex-1">
 								<Link
-									to="/species/$sciName"
-									params={{ sciName: answer.speciesSlug }}
+									to="/species/$comName"
+									params={{ comName: answer.speciesSlug }}
 									className="block truncate font-medium no-underline hover:underline"
 								>
 									{answer.comName}
