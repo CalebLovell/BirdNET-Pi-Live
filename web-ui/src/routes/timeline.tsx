@@ -8,13 +8,19 @@ import {
 	Calendar,
 	CalendarDays,
 	CalendarRange,
+	ChartNoAxesColumnIncreasing,
 	Clock,
+	Clock3,
+	Feather,
 	Infinity as InfinityIcon,
 } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
 
-import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import {
+	PageHeaderCard,
+	type PageHeaderStat,
+} from "~/components/page-header-card.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
 	Tooltip,
@@ -111,14 +117,19 @@ function Timeline() {
 		);
 
 		return [
-			{ label: "Species", value: rows.length },
-			{ label: "Detections", value: detections },
+			{ label: "Species", value: rows.length, icon: Feather },
+			{
+				label: "Detections",
+				value: detections,
+				icon: ChartNoAxesColumnIncreasing,
+			},
 			{
 				label: "Busiest hour",
 				value: hasPeak ? hourLabel(peakHour) : "—",
 				detail: hasPeak
 					? `${hourTotals[peakHour].toLocaleString()} detections`
 					: undefined,
+				icon: Clock3,
 			},
 			{
 				label: "Most active",
@@ -126,8 +137,9 @@ function Timeline() {
 				detail: topRow
 					? `${topRow.totalDetections.toLocaleString()} detections`
 					: undefined,
+				icon: Bird,
 			},
-		];
+		] satisfies PageHeaderStat[];
 	}, [rows]);
 
 	return (

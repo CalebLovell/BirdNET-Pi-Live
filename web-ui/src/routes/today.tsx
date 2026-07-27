@@ -5,6 +5,7 @@ import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { SummaryStrip } from "~/components/now/summary-strip.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
+import { usePublishLiveStatus } from "~/lib/live-status.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
@@ -52,6 +53,9 @@ function Today() {
 		POLL_INTERVAL_MS,
 	);
 	const offsetMs = useAgeOffset(snapshot.generatedAt);
+	// The footer carries the station's liveness for the whole site, so the page
+	// that actually polls is what tells it when the last snapshot landed.
+	usePublishLiveStatus(snapshot.generatedAt);
 	const freshKeys = useFreshKeys(snapshot.recent.map((row) => row.key));
 
 	// Whenever anything has been heard inside the window, the hero bird is also
@@ -66,7 +70,6 @@ function Today() {
 			<CurrentBirdCard
 				current={snapshot.current}
 				summary={snapshot.summary}
-				generatedAt={snapshot.generatedAt}
 				offsetMs={offsetMs}
 				flash={heroIsNew}
 			/>

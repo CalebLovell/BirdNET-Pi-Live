@@ -8,14 +8,20 @@ import {
 	ArrowDownAZ,
 	BarChart3,
 	Bird,
+	ChartNoAxesColumnIncreasing,
 	ChevronDown,
 	ChevronUp,
 	Clock,
+	Clock3,
+	Feather,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
-import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import {
+	PageHeaderCard,
+	type PageHeaderStat,
+} from "~/components/page-header-card.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import {
 	Pagination,
@@ -147,13 +153,19 @@ function Species() {
 				label: "Species",
 				value: filtered.length,
 				detail: isSearching ? `of ${cards.length} recorded` : undefined,
+				icon: Feather,
 			},
-			{ label: "Total recordings", value: recordings },
+			{
+				label: "Total recordings",
+				value: recordings,
+				icon: ChartNoAxesColumnIncreasing,
+			},
 			{
 				label: "Most recently heard",
 				value: mostRecent ? formatSpeciesDate(mostRecent) : "—",
+				icon: Clock3,
 			},
-		];
+		] satisfies PageHeaderStat[];
 	}, [cards.length, filtered, search]);
 
 	const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));

@@ -1,14 +1,23 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { CircleAlert, Trash2 } from "lucide-react";
+import {
+	ChartNoAxesColumnIncreasing,
+	CircleAlert,
+	Feather,
+	Files,
+	Trash2,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
 	DetectionsTable,
 } from "~/components/detections/detections-table.tsx";
-import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import {
+	PageHeaderCard,
+	type PageHeaderStat,
+} from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { normalizeDetectionWorkspaceSearch } from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
@@ -47,13 +56,18 @@ function Detections() {
 		const pageCount = Math.max(1, Math.ceil(page.total / search.pageSize));
 
 		return [
-			{ label: "Matching detections", value: page.total },
-			{ label: "Species on this page", value: species },
+			{
+				label: "Matching detections",
+				value: page.total,
+				icon: ChartNoAxesColumnIncreasing,
+			},
+			{ label: "Species on this page", value: species, icon: Feather },
 			{
 				label: "Page",
 				value: `${Math.min(search.page, pageCount)} of ${pageCount}`,
+				icon: Files,
 			},
-		];
+		] satisfies PageHeaderStat[];
 	}, [page, search.page, search.pageSize]);
 
 	async function confirmDeletion() {

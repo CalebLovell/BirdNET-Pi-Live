@@ -8,7 +8,6 @@ import { formatConfidence } from "~/lib/confidence.ts";
 import type { CurrentBird, NowSummary } from "~/lib/now.ts";
 import {
 	formatClockTime,
-	formatClockTimeWithSeconds,
 	formatTimeAgo,
 	freshnessFor,
 } from "~/lib/time-ago.ts";
@@ -19,13 +18,11 @@ const CARD_SHELL =
 export function CurrentBirdCard({
 	current,
 	summary,
-	generatedAt,
 	offsetMs,
 	flash,
 }: {
 	current: CurrentBird | null;
 	summary: NowSummary;
-	generatedAt: string;
 	offsetMs: number;
 	flash: boolean;
 }) {
@@ -35,12 +32,11 @@ export function CurrentBirdCard({
 				label="Station status"
 				kicker="Waiting"
 				portrait={<NestPortrait />}
-				generatedAt={generatedAt}
 			>
 				<CenteredBody>
-					<h2 className="display-title font-bold text-2xl sm:text-3xl">
+					<h1 className="display-title font-bold text-2xl sm:text-3xl">
 						Nothing recorded yet
-					</h2>
+					</h1>
 					<p className="text-muted-foreground">
 						Once BirdNET-Pi's analysis pipeline writes to birds.db, detections
 						will appear here on their own.
@@ -62,12 +58,11 @@ export function CurrentBirdCard({
 				label="Station status"
 				kicker="All quiet"
 				portrait={<NestPortrait />}
-				generatedAt={generatedAt}
 			>
 				<CenteredBody>
-					<h2 className="display-title font-bold text-2xl sm:text-3xl">
+					<h1 className="display-title font-bold text-2xl sm:text-3xl">
 						It's quiet outside right now
-					</h2>
+					</h1>
 					<p className="text-muted-foreground">
 						Last heard{" "}
 						<Link
@@ -101,12 +96,11 @@ export function CurrentBirdCard({
 			portrait={
 				<BirdPortrait imageUrl={current.imageUrl} comName={current.comName} />
 			}
-			generatedAt={generatedAt}
 			className={flash ? `${CARD_SHELL} flash-in` : CARD_SHELL}
 			style={isSinging ? { borderColor: "var(--hover-line)" } : undefined}
 		>
 			<div className="flex-1">
-				<h2 className="display-title font-bold text-2xl sm:text-3xl">
+				<h1 className="display-title font-bold text-2xl sm:text-3xl">
 					<Link
 						to="/species/$comName"
 						params={{ comName: current.speciesSlug }}
@@ -114,7 +108,7 @@ export function CurrentBirdCard({
 					>
 						{current.comName}
 					</Link>
-				</h2>
+				</h1>
 				<p className="text-[var(--bark)] text-xs italic">{current.sciName}</p>
 
 				<p className="mt-3 font-semibold text-[var(--moss)] text-lg">
@@ -149,7 +143,6 @@ function HeroCard({
 	label,
 	kicker,
 	portrait,
-	generatedAt,
 	className = CARD_SHELL,
 	style,
 	children,
@@ -157,7 +150,6 @@ function HeroCard({
 	label: string;
 	kicker: string;
 	portrait: ReactNode;
-	generatedAt: string;
 	className?: string;
 	style?: React.CSSProperties;
 	children: ReactNode;
@@ -167,52 +159,11 @@ function HeroCard({
 			{portrait}
 
 			<div className="flex min-w-0 flex-col gap-3">
-				<div className="flex items-start justify-between gap-3">
-					<div className="island-kicker">{kicker}</div>
-					<LivePill />
-				</div>
+				<div className="island-kicker">{kicker}</div>
 
 				{children}
-
-				<UpdatedFooter generatedAt={generatedAt} />
 			</div>
 		</section>
-	);
-}
-
-/**
- * Borrows the confidence pills' shape so the polling indicator reads as part of
- * the same family, rather than as a second heading competing with the kicker.
- */
-function LivePill() {
-	return (
-		<span
-			className="flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 font-semibold text-[10px] uppercase tracking-[0.14em]"
-			style={{
-				backgroundColor:
-					"color-mix(in oklab, var(--moss) 10%, var(--paper-raised))",
-				color: "var(--moss)",
-			}}
-		>
-			<span className="live-dot" aria-hidden="true" />
-			Live
-		</span>
-	);
-}
-
-/**
- * A hairline rule gives the timestamp a reason to sit where it does -- as the
- * card's footer -- instead of floating as a loose line of small text. Reads from
- * the snapshot rather than a client clock, so it renders identically on the
- * server and never pops in after mount.
- */
-function UpdatedFooter({ generatedAt }: { generatedAt: string }) {
-	return (
-		<div className="mt-auto flex justify-end border-[var(--line)] border-t pt-2">
-			<span className="tabular-data text-[11px] text-muted-foreground">
-				Updated {formatClockTimeWithSeconds(generatedAt)}
-			</span>
-		</div>
 	);
 }
 

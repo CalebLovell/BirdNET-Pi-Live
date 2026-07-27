@@ -7,12 +7,15 @@ import {
 import {
 	CalendarDays,
 	Clock,
+	Headphones,
 	Infinity as InfinityIcon,
+	ListChecks,
 	Repeat2,
 } from "lucide-react";
 import { z } from "zod";
 
 import { LearnGame } from "~/components/learn/learn-game.tsx";
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { getLearnRound } from "~/lib/learn.ts";
 import {
@@ -64,18 +67,30 @@ function Learn() {
 
 	return (
 		<div className="page-wrap py-4">
-			{/* Same summary-card header the day and species pages use: kicker,
-			    title, one moss-coloured line. */}
-			<section aria-label="Learn" className="feature-card rounded-md p-4">
-				<div className="island-kicker">Ear training</div>
-				<h1 className="display-title mt-1 font-bold text-2xl">
-					Learn the calls
-				</h1>
-				<p className="mt-0.5 font-semibold text-[var(--moss)] text-sm">
-					{QUESTIONS_PER_ROUND} recordings from your own yard ·{" "}
-					{LEARN_POOL_DESCRIPTIONS[pool]}
-				</p>
-			</section>
+			<PageHeaderCard
+				title="Learn the calls"
+				description="Ear training on the recordings your own station captured."
+				stats={[
+					{
+						label: "Recordings",
+						value: QUESTIONS_PER_ROUND,
+						detail: "per round",
+						icon: Headphones,
+					},
+					{
+						label: "Choices",
+						value: CHOICES_PER_QUESTION,
+						detail: "per question",
+						icon: ListChecks,
+					},
+					{
+						label: "Drawing from",
+						value: LEARN_POOL_LABELS[pool],
+						detail: LEARN_POOL_DESCRIPTIONS[pool],
+						icon: POOL_ICONS[pool],
+					},
+				]}
+			/>
 
 			{/* Filters sit bare between the header card and the round, the way the
 			    species page keeps its search and sort row. */}
