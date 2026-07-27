@@ -9,8 +9,9 @@ type SearchInputProps = Omit<React.ComponentProps<"input">, "value"> & {
 	onClear: () => void;
 };
 
-// Shared search field so every list page gets the same width and the same
-// clear affordance (the X only appears once there is something to clear).
+// Shared search field so every list page gets the same behaviour: it fills the
+// row up to its sibling filters, and the X only appears once there is
+// something to clear.
 function SearchInput({
 	className,
 	value,
@@ -18,7 +19,7 @@ function SearchInput({
 	...props
 }: SearchInputProps) {
 	return (
-		<div className={cn("relative w-80 max-w-full", className)}>
+		<div className={cn("relative w-full min-w-0 flex-1", className)}>
 			<Input type="text" value={value} className="pr-9" {...props} />
 			{value ? (
 				<button

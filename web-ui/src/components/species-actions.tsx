@@ -46,7 +46,7 @@ function SpeciesActions({ audioUrl, ebirdUrl, comName }: SpeciesActionsProps) {
 					) : (
 						<Volume2 className="size-3" />
 					)}
-					{isPlaying ? "Pause" : "Bird call"}
+					{isPlaying ? "Pause" : "Bird Call"}
 				</Button>
 			)}
 			<Button
