@@ -30,11 +30,22 @@ const AVAILABLE_SLUGS = new Set([
 	"zonotrichia-albicollis",
 ]);
 
+/**
+ * Every bundled species ships two poses. "perched" reads clearly at thumbnail
+ * size, so it stays the default for lists; "flight" is for the large hero
+ * slots where the spread wings have room.
+ */
+export type IllustrationPose = "perched" | "flight";
+
 function slugify(sciName: string): string {
 	return sciName.trim().toLowerCase().replaceAll(/\s+/g, "-");
 }
 
-export function illustrationUrlFor(sciName: string): string | null {
+export function illustrationUrlFor(
+	sciName: string,
+	pose: IllustrationPose = "perched",
+): string | null {
 	const slug = slugify(sciName);
-	return AVAILABLE_SLUGS.has(slug) ? `/illustrations/${slug}.png` : null;
+	if (!AVAILABLE_SLUGS.has(slug)) return null;
+	return `/illustrations/${slug}${pose === "flight" ? "-2" : ""}.png`;
 }

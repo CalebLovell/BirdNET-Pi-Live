@@ -190,7 +190,8 @@ async function imageUrlFor(
 	comName: string,
 ): Promise<string | null> {
 	return (
-		illustrationUrlFor(sciName) ?? (await getSpeciesInfo(comName)).imageUrl
+		illustrationUrlFor(sciName, "flight") ??
+		(await getSpeciesInfo(comName)).imageUrl
 	);
 }
 

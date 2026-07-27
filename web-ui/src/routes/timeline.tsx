@@ -247,7 +247,7 @@ function HourRow({ row }: { row: TimelineRow }) {
 			<Link
 				to="/species/$comName"
 				params={{ comName: comNameToSlug(row.comName) }}
-				className="sticky left-0 z-10 flex items-center gap-2 bg-[var(--paper-raised)] pr-3"
+				className="group sticky left-0 z-10 flex items-center gap-2 bg-[var(--paper-raised)] pr-3 no-underline"
 			>
 				<div className="flex size-6 shrink-0 items-center justify-center">
 					{row.imageUrl ? (
@@ -261,14 +261,9 @@ function HourRow({ row }: { row: TimelineRow }) {
 						<Bird className="size-3.5 text-muted-foreground" />
 					)}
 				</div>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<div className="min-w-0 truncate font-semibold text-sm">
-							{row.comName}
-						</div>
-					</TooltipTrigger>
-					<TooltipContent>{row.comName}</TooltipContent>
-				</Tooltip>
+				<div className="min-w-0 truncate font-semibold text-sm group-hover:underline">
+					{row.comName}
+				</div>
 			</Link>
 
 			{row.hourCounts.map((count, hour) => (

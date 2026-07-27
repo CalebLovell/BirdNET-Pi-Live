@@ -194,7 +194,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 			return {
 				comName,
 				sciName: totals.sciName,
-				imageUrl: illustrationUrlFor(totals.sciName) ?? wikiImageUrl,
+				imageUrl: illustrationUrlFor(totals.sciName, "flight") ?? wikiImageUrl,
 				ebirdUrl: ebirdUrlFor(totals.sciName, comName),
 				totalDetections: totals.totalDetections,
 				availableYears: availableYearRows.map((row) => row.year),

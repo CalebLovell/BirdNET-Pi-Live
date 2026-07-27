@@ -4,7 +4,10 @@ import { and, avg, count, countDistinct, desc, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
-import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import {
+	type IllustrationPose,
+	illustrationUrlFor,
+} from "~/lib/illustrations.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import {
 	countVisits,
@@ -79,9 +82,11 @@ export type NowSnapshot = {
 async function imageUrlFor(
 	sciName: string,
 	comName: string,
+	pose: IllustrationPose,
 ): Promise<string | null> {
 	return (
-		illustrationUrlFor(sciName) ?? (await getSpeciesInfo(comName)).imageUrl
+		illustrationUrlFor(sciName, pose) ??
+		(await getSpeciesInfo(comName)).imageUrl
 	);
 }
 
@@ -116,7 +121,7 @@ async function buildCurrentBird(
 			.select({ timestamp: detectedAt })
 			.from(detections)
 			.where(and(isLast24h, isSameSpecies)),
-		imageUrlFor(latest.sciName, latest.comName),
+		imageUrlFor(latest.sciName, latest.comName, "flight"),
 	]);
 
 	return {
@@ -222,7 +227,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 					comName: row.comName,
 					sciName: row.sciName,
 					speciesSlug: comNameToSlug(row.comName),
-					imageUrl: await imageUrlFor(row.sciName, row.comName),
+					imageUrl: await imageUrlFor(row.sciName, row.comName, "perched"),
 					count: row.count,
 				})),
 			),
@@ -232,7 +237,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 					comName: row.comName,
 					sciName: row.sciName,
 					speciesSlug: comNameToSlug(row.comName),
-					imageUrl: await imageUrlFor(row.sciName, row.comName),
+					imageUrl: await imageUrlFor(row.sciName, row.comName, "flight"),
 					detectedAt: row.detectedAt,
 					ageMs: generatedAtMs - timestampToMillis(row.detectedAt),
 					confidence: row.confidence,

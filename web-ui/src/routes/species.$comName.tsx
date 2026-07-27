@@ -3,12 +3,25 @@ import {
 	Link,
 	stripSearchParams,
 } from "@tanstack/react-router";
-import { Bird, ChevronLeft, ChevronRight, Clock3 } from "lucide-react";
+import {
+	Bird,
+	CalendarDays,
+	ChartNoAxesColumnIncreasing,
+	ChevronLeft,
+	ChevronRight,
+	Clock3,
+	Gauge,
+	Sunrise,
+} from "lucide-react";
 import { z } from "zod";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
+import {
+	type PageHeaderStat,
+	PageHeaderStats,
+} from "~/components/page-header-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import { Button } from "~/components/ui/button.tsx";
@@ -148,106 +161,110 @@ function BirdPage() {
 			<div className="page-wrap">
 				<SummaryCard detail={detail} offsetMs={offsetMs} />
 
-				<section
-					aria-label="Detection history"
-					className="feature-card mt-4 w-full overflow-hidden rounded-md p-3"
-				>
-					<div className="flex flex-wrap items-center justify-between gap-4">
-						<div className="island-kicker">Detection history</div>
-						{showYearSelector ? (
-							<div className="flex items-center gap-2">
-								<Button
-									variant="outline"
-									size="icon-xs"
-									disabled={previousYear === null}
-									aria-label="Previous year"
-									onClick={() =>
-										navigate({
-											search: (prev) => ({
-												...prev,
-												year: previousYear ?? year,
-											}),
-											replace: true,
-										})
-									}
-								>
-									<ChevronLeft className="size-3" />
-								</Button>
-								<div className="tabular-data min-w-12 text-center font-semibold text-sm">
-									{year}
-								</div>
-								<Button
-									variant="outline"
-									size="icon-xs"
-									disabled={nextYear === null}
-									aria-label="Next year"
-									onClick={() =>
-										navigate({
-											search: (prev) => ({ ...prev, year: nextYear ?? year }),
-											replace: true,
-										})
-									}
-								>
-									<ChevronRight className="size-3" />
-								</Button>
-							</div>
-						) : null}
-					</div>
-
-					<div className="mt-4 overflow-x-auto pb-1">
-						<div className="w-full min-w-max">
-							<div className="mb-1 ml-9 flex w-max gap-1">
-								{weeks.map((week, index) => (
-									<div
-										key={`month-${index}`}
-										className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
+				<div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_11rem]">
+					<section
+						aria-label="Detection history"
+						className="feature-card w-full overflow-hidden rounded-md p-3"
+					>
+						<div className="flex flex-wrap items-center justify-between gap-4">
+							<div className="island-kicker">Detection history</div>
+							{showYearSelector ? (
+								<div className="flex items-center gap-2">
+									<Button
+										variant="outline"
+										size="icon-xs"
+										disabled={previousYear === null}
+										aria-label="Previous year"
+										onClick={() =>
+											navigate({
+												search: (prev) => ({
+													...prev,
+													year: previousYear ?? year,
+												}),
+												replace: true,
+											})
+										}
 									>
-										{week.monthLabel}
+										<ChevronLeft className="size-3" />
+									</Button>
+									<div className="tabular-data min-w-12 text-center font-semibold text-sm">
+										{year}
 									</div>
-								))}
-							</div>
-							<div className="flex gap-2">
-								<div className="flex w-7 flex-col gap-1 text-[9px] text-muted-foreground leading-3">
-									<span>Sun</span>
-									<span>Mon</span>
-									<span>Tue</span>
-									<span>Wed</span>
-									<span>Thu</span>
-									<span>Fri</span>
-									<span>Sat</span>
+									<Button
+										variant="outline"
+										size="icon-xs"
+										disabled={nextYear === null}
+										aria-label="Next year"
+										onClick={() =>
+											navigate({
+												search: (prev) => ({ ...prev, year: nextYear ?? year }),
+												replace: true,
+											})
+										}
+									>
+										<ChevronRight className="size-3" />
+									</Button>
 								</div>
-								<div className="flex w-max gap-1">
-									{weeks.map((week, weekIndex) => (
+							) : null}
+						</div>
+
+						<div className="mt-4 overflow-x-auto pb-1">
+							<div className="w-full min-w-max">
+								<div className="mb-1 ml-9 flex w-max gap-1">
+									{weeks.map((week, index) => (
 										<div
-											key={`week-${weekIndex}`}
-											className="flex shrink-0 flex-col gap-1"
+											key={`month-${index}`}
+											className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
 										>
-											{week.days.map(({ date, point }) => (
-												<HeatMapDay
-													key={date.toISOString()}
-													date={date}
-													point={point}
-													maximum={maximum}
-												/>
-											))}
+											{week.monthLabel}
 										</div>
 									))}
 								</div>
+								<div className="flex gap-2">
+									<div className="flex w-7 flex-col gap-1 text-[9px] text-muted-foreground leading-3">
+										<span>Sun</span>
+										<span>Mon</span>
+										<span>Tue</span>
+										<span>Wed</span>
+										<span>Thu</span>
+										<span>Fri</span>
+										<span>Sat</span>
+									</div>
+									<div className="flex w-max gap-1">
+										{weeks.map((week, weekIndex) => (
+											<div
+												key={`week-${weekIndex}`}
+												className="flex shrink-0 flex-col gap-1"
+											>
+												{week.days.map(({ date, point }) => (
+													<HeatMapDay
+														key={date.toISOString()}
+														date={date}
+														point={point}
+														maximum={maximum}
+													/>
+												))}
+											</div>
+										))}
+									</div>
+								</div>
 							</div>
 						</div>
-					</div>
-					<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
-						<span>Less</span>
-						{HEAT_COLORS.map((color, index) => (
-							<span
-								key={`legend-${index}`}
-								className="size-3 rounded-[3px] border border-[var(--line)]"
-								style={{ backgroundColor: color }}
-							/>
-						))}
-						<span>More</span>
-					</div>
-				</section>
+						<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+							<span>Less</span>
+							{HEAT_COLORS.map((color, index) => (
+								<span
+									key={`legend-${index}`}
+									className="size-3 rounded-[3px] border border-[var(--line)]"
+									style={{ backgroundColor: color }}
+								/>
+							))}
+							<span>More</span>
+						</div>
+					</section>
+
+					<BestRecordingCard recording={detail.bestRecording} />
+				</div>
 
 				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
 					<div className="order-2 grid gap-4 lg:order-1 lg:grid-rows-2">
@@ -340,6 +357,29 @@ function SummaryCard({
 	// the visit log instead of drifting against it.
 	const lastVisit = detail.recentVisits[0];
 
+	const stats = [
+		{
+			label: "Total detections",
+			value: detail.totalDetections,
+			icon: ChartNoAxesColumnIncreasing,
+		},
+		{
+			label: "Avg. confidence",
+			value: formatConfidence(detail.averageConfidence),
+			icon: Gauge,
+		},
+		{
+			label: "First heard",
+			value: formatHeardDate(detail.firstDetected.date),
+			icon: Sunrise,
+		},
+		{
+			label: "Last heard",
+			value: formatHeardDate(detail.lastDetected.date),
+			icon: CalendarDays,
+		},
+	] satisfies PageHeaderStat[];
+
 	return (
 		<section
 			aria-label="Species profile"
@@ -386,23 +426,7 @@ function SummaryCard({
 					</div>
 				</div>
 
-				<dl className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-					<Stat label="Total detections" value={detail.totalDetections} />
-					<Stat
-						label="Avg. confidence"
-						value={formatConfidence(detail.averageConfidence)}
-					/>
-					<Stat
-						label="First heard"
-						value={formatHeardDate(detail.firstDetected.date)}
-					/>
-					<Stat
-						label="Last heard"
-						value={formatHeardDate(detail.lastDetected.date)}
-					/>
-				</dl>
-
-				<BestRecordingFooter recording={detail.bestRecording} />
+				<PageHeaderStats stats={stats} />
 			</div>
 		</section>
 	);
@@ -418,21 +442,12 @@ function formatHeardDate(date: string): string {
 	});
 }
 
-function Stat({ label, value }: { label: string; value: string | number }) {
-	return (
-		<div>
-			<dd className="tabular-data truncate font-semibold">{value}</dd>
-			<dt className="text-muted-foreground text-xs">{label}</dt>
-		</div>
-	);
-}
-
 /**
- * Sits where the Today hero card keeps its "Updated" line -- a hairline footer
- * closing the card -- and plays through the shared RecordingButton so the
- * control reads the same here as it does in every detection row.
+ * The species' clearest clip: a kicker and the play control, nothing else. It
+ * rides alongside the heat map rather than in the profile card, so the label can
+ * stay a plain island heading like every other section's.
  */
-function BestRecordingFooter({
+function BestRecordingCard({
 	recording,
 }: {
 	recording: SpeciesDetail["bestRecording"];
@@ -442,16 +457,13 @@ function BestRecordingFooter({
 	}
 
 	return (
-		<div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-[var(--line)] border-t pt-2">
-			<div className="min-w-0">
-				<span className="mr-2 font-semibold text-xs">Best recording</span>
-				<span className="tabular-data text-[11px] text-muted-foreground">
-					{formatHeardDate(recording.date)} · {formatVisitTime(recording.time)}{" "}
-					· {formatConfidence(recording.confidence)} confidence
-				</span>
-			</div>
+		<section
+			aria-label="Best recording"
+			className="feature-card flex flex-wrap items-center justify-between gap-3 rounded-md p-3 lg:flex-col lg:items-start"
+		>
+			<div className="island-kicker">Best recording</div>
 			<RecordingButton audioUrl={recording.audioUrl} />
-		</div>
+		</section>
 	);
 }
 

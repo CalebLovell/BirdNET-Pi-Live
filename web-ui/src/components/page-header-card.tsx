@@ -33,23 +33,37 @@ export function PageHeaderCard({
 	/** Omit for a title-only masthead; otherwise up to four figures. */
 	stats?: PageHeaderStat[];
 }) {
-	const columns = COLUMN_CLASSES[Math.min(stats.length, 4)] ?? "lg:grid-cols-4";
-
 	return (
 		<section aria-label={title} className="feature-card rounded-md p-4">
 			<h1 className="display-title font-bold text-xl leading-tight">{title}</h1>
 			<p className="mt-1 text-muted-foreground text-sm">{description}</p>
 
-			{stats.length > 0 && (
-				<dl
-					className={`mt-4 grid grid-cols-2 gap-4 border-[var(--line)] border-t pt-4 ${columns}`}
-				>
-					{stats.map((stat) => (
-						<Figure key={stat.label} {...stat} />
-					))}
-				</dl>
-			)}
+			{stats.length > 0 && <PageHeaderStats stats={stats} />}
 		</section>
+	);
+}
+
+/**
+ * The masthead's figure row on its own, for cards that build their own heading
+ * -- a species portrait, say -- but should still read as the same page header.
+ */
+export function PageHeaderStats({
+	stats,
+	className = "",
+}: {
+	stats: PageHeaderStat[];
+	className?: string;
+}) {
+	const columns = COLUMN_CLASSES[Math.min(stats.length, 4)] ?? "lg:grid-cols-4";
+
+	return (
+		<dl
+			className={`mt-4 grid grid-cols-2 gap-4 border-[var(--line)] border-t pt-4 ${columns} ${className}`}
+		>
+			{stats.map((stat) => (
+				<Figure key={stat.label} {...stat} />
+			))}
+		</dl>
 	);
 }
 
