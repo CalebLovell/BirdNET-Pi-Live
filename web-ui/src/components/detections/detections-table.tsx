@@ -453,7 +453,7 @@ export function DetectionsTable({
 					<label className="flex items-center gap-2 text-muted-foreground">
 						<span className="sr-only">Detections per page</span>
 						<select
-							className="h-8 rounded-md border border-input bg-card px-2 text-sm outline-none hover:bg-accent focus-visible:border-[var(--hover-line)]"
+							className="h-8 rounded-md border border-input bg-card px-2 text-sm hover:bg-accent focus-visible:border-[var(--hover-line)]"
 							value={search.pageSize}
 							onChange={(event) =>
 								updateSearch({

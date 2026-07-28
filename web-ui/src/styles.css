@@ -25,6 +25,10 @@
 	   border reads fine at 15%, but a 6px track on near-white paper vanishes. */
 	--track: color-mix(in oklab, var(--moss) 28%, transparent);
 	--hover-line: color-mix(in oklab, var(--moss) 45%, var(--line));
+	/* Keyboard focus outline: a touch darker than --moss but noticeably more
+	   saturated (chroma 0.12 vs moss's 0.07). Darkening moss toward --ink
+	   instead drains the chroma and the 2px ring just reads black. */
+	--focus-ring: color-mix(in oklch, var(--moss) 50%, oklch(0.3 0.17 145));
   --kicker: var(--moss);
   --header-bg: color-mix(in oklab, var(--paper) 92%, var(--paper-raised) 8%);
   --link-bg-hover: color-mix(in oklab, var(--sage) 18%, var(--paper-raised));
@@ -278,7 +282,21 @@ a {
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+    /* Pre-set the resting outline colour so focusing never *changes* it.
+       Without this it defaults to currentColor, and any element carrying
+       `transition-colors` (which covers outline-color) fades its ring in from
+       near-black -- the ring reads as a black flash rather than green. */
+    outline-color: var(--focus-ring);
+  }
+  /* Single source of truth for keyboard focus across links, buttons, inputs,
+     selects, sort headers and filters: a thin dark-green outline held slightly
+     off the element so it reads as a separate marker, not a thicker border.
+     Components must NOT set `outline-none` -- to vary it, override just the
+     colour (e.g. `focus-visible:outline-destructive`). */
+  :focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
   }
   body {
     background-color: var(--background);

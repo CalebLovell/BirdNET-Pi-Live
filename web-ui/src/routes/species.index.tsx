@@ -378,11 +378,17 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 		: card.lastDetected || "—";
 
 	return (
-		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4">
+		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4 has-[[data-card-link]:focus-visible]:outline-2 has-[[data-card-link]:focus-visible]:outline-offset-2">
+			{/* The whole-card link is an invisible overlay pinned to the card's
+			    edges, so its own focus ring would land under `overflow-hidden` and
+			    never be seen. Instead the card wears the ring on the overlay's
+			    behalf -- scoped to [data-card-link] so focusing the Bird Call
+			    button or the eBird link inside doesn't light the whole card too. */}
 			<Link
 				to="/species/$comName"
 				params={{ comName: comNameToSlug(card.comName) }}
-				className="absolute inset-0 z-0"
+				data-card-link=""
+				className="absolute inset-0 z-0 focus-visible:outline-none"
 				aria-label={`View ${card.comName}`}
 			/>
 			<div className="flex flex-col gap-1">

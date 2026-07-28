@@ -251,11 +251,18 @@ export function ReviewWorkflow({
 								autoFocus
 							/>
 						</div>
-						<div className="mt-3 min-h-0 flex-1 space-y-1 overflow-auto">
+						{/* p-1 gives the full-width rows' focus rings room inside the
+						    scrollport instead of letting it shave them; -m-1 takes it back
+						    so the rows still line up with the search box, and mt-2 + the
+						    1 of padding restores the original mt-3 gap above the list. */}
+						<div className="-m-1 mt-2 min-h-0 flex-1 space-y-1 overflow-auto p-1">
 							{matches.map((item) => (
 								<button
 									type="button"
-									className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
+									// scroll-my-1 matches the list's padding: without it, scrolling
+									// a focused row to the top or bottom edge parks it flush
+									// against the border box and shaves its ring again.
+									className="w-full scroll-my-1 rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
 									key={item.sciName}
 									onClick={() => {
 										setAction({

@@ -3,10 +3,14 @@ import type * as React from "react";
 import { cn } from "~/lib/utils.ts";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
+	// -mx-1/px-1 cancel out, but the padding keeps the first and last columns'
+	// focus rings from being clipped by the scrollport they sit flush against.
+	// Width is left to auto so the negative margins widen the box by exactly the
+	// padding; `w-full` would pin it and shift the table left instead.
 	return (
 		<div
 			data-slot="table-container"
-			className="relative w-full overflow-x-auto"
+			className="-mx-1 relative overflow-x-auto px-1"
 		>
 			<table
 				data-slot="table"

@@ -299,7 +299,11 @@ function Timeline() {
 					{isEmpty ? (
 						<EmptyNote>{emptyMessage}</EmptyNote>
 					) : (
-						<div className="overflow-x-auto">
+						<div className="-m-1 overflow-x-auto p-1">
+							{/* p-1/-m-1 cancel out visually, but the padding gives the first
+							    column's focus ring somewhere to draw: the row links sit flush
+							    against the scrollport, so a 2px offset outline would be
+							    clipped on its left edge without the slack. */}
 							<div className="w-max min-w-full">
 								<div
 									className={`grid items-center ${HEADER_HEIGHT}`}

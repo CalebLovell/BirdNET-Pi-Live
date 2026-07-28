@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Bird, Check, RotateCcw, X } from "lucide-react";
+import { ArrowRight, Bird, Check, RotateCcw, Trophy, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { ClipPlayer } from "~/components/learn/clip-player.tsx";
@@ -177,9 +177,19 @@ export function LearnGame({
 							</Link>
 						</div>
 						<Button onClick={advance}>
-							{index + 1 >= round.questions.length
-								? "See your score"
-								: "Next bird"}
+							{index + 1 >= round.questions.length ? (
+								<>
+									<Trophy className="size-4" />
+									See your score
+								</>
+							) : (
+								// Trailing, unlike the leading icons elsewhere: the arrow is
+								// pointing at where the button takes you.
+								<>
+									Next bird
+									<ArrowRight className="size-4" />
+								</>
+							)}
 						</Button>
 					</div>
 				) : (

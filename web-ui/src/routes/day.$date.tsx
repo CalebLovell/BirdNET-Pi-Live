@@ -559,7 +559,10 @@ function HourGridCard({ species }: { species: DaySpeciesRow[] }) {
 		>
 			<div className="island-kicker mb-4">Detections by hour</div>
 
-			<div className="overflow-x-auto">
+			{/* See HourRow on the timeline page: the padding keeps the first
+			    column's focus ring from being clipped by the scrollport, and the
+			    matching negative margin keeps the grid visually where it was. */}
+			<div className="-m-1 overflow-x-auto p-1">
 				<div className="w-max min-w-full">
 					<div
 						className="mb-2 grid h-4 items-center"
