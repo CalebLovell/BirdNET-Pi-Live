@@ -83,12 +83,15 @@ const rtspStreamSchema = z
 		return protocol === "rtsp:" || protocol === "rtsps:";
 	}, "Use an rtsp:// or rtsps:// URL");
 
+// Accepts either the raw textarea text or the split lines the form already
+// holds. Both normalize the same way: blank lines are how anyone types a list,
+// and rejecting a trailing newline as "not a URL" was the form's own doing.
 const rtspStreamsSchema = z.preprocess((value) => {
-	if (typeof value !== "string") return value;
-	return value
-		.split(/\r?\n/)
-		.map((line) => line.trim())
-		.filter(Boolean);
+	const lines = typeof value === "string" ? value.split(/\r?\n/) : value;
+	if (!Array.isArray(lines)) return value;
+	return lines
+		.map((line) => (typeof line === "string" ? line.trim() : line))
+		.filter((line) => line !== "");
 }, z.array(rtspStreamSchema));
 
 export const audioSettingsSchema = z
@@ -191,6 +194,59 @@ export type SettingsPageData = SettingsByKind & {
 	supportedModels: SupportedModel[];
 	supportedTimezones: string[];
 };
+
+/**
+ * What a fresh install writes, per scripts/install_config.sh -- the values a
+ * reset returns the station to, and the values the read path falls back on for
+ * a key its config never carried, so the two cannot drift apart.
+ *
+ * Station is absent on purpose. Its four fields have no static default: the
+ * installer takes the name from the hostname, the coordinates from a network
+ * geolocation guess, and the timezone from the host. Blanking them would put
+ * the station at 0,0 and quietly wreck geographic species filtering, with the
+ * real coordinates gone.
+ */
+export const SETTINGS_DEFAULTS = {
+	detection: {
+		model: "BirdNET_GLOBAL_6K_V2.4_Model_FP16",
+		dataModelVersion: 1,
+		speciesFrequencyThreshold: 0.03,
+		confidence: 0.7,
+		sensitivity: 1.25,
+		overlap: 0,
+	},
+	privacy: { privacyThreshold: 0 },
+	audio: {
+		mode: "microphone",
+		recordingDevice: "default",
+		channels: 2,
+		rtspStreams: [],
+		livestreamIndex: 0,
+	},
+	recording: {
+		recordingLength: 15,
+		extractionLength: null,
+		audioFormat: "mp3",
+	},
+	storage: {
+		fullDiskAction: "purge",
+		purgeThreshold: 95,
+		maxFilesPerSpecies: 0,
+	},
+	review: { rareSpeciesMax: DEFAULT_REVIEW_RARE_SPECIES_MAX },
+} satisfies Omit<SettingsByKind, "station">;
+
+/** The cards a reset covers, in the order they appear on the page. */
+export const RESETTABLE_CARDS = [
+	"detection",
+	"privacy",
+	"audio",
+	"recording",
+	"storage",
+	"review",
+] as const satisfies readonly Exclude<SettingsCardKind, "station">[];
+
+export type ResettableCard = (typeof RESETTABLE_CARDS)[number];
 
 export type SettingsSaveResult<T> = {
 	status: "saved" | "saved-restart-skipped" | "saved-action-failed";

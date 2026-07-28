@@ -6,12 +6,15 @@ import test from "node:test";
 
 import {
 	loadSettingsPageData,
+	resetSettings,
 	savePrivacySettings,
 	saveStorageSettings,
 } from "./settings.server.ts";
 
 async function fixtureConfig(contents: string) {
-	const directory = await mkdtemp(path.join(tmpdir(), "birdnet-settings-save-"));
+	const directory = await mkdtemp(
+		path.join(tmpdir(), "birdnet-settings-save-"),
+	);
 	const file = path.join(directory, "birdnet.conf");
 	await writeFile(file, contents, "utf8");
 	return { directory, file };
@@ -118,8 +121,119 @@ test("loads installed model choices and normalized configuration", async () => {
 	assert.equal(page.review.rareSpeciesMax, 10);
 });
 
+test("reset returns every card but Station to its defaults", async () => {
+	const { directory, file } = await fixtureConfig(
+		[
+			'SITE_NAME="Backyard"',
+			"LATITUDE=41.1",
+			"LONGITUDE=-93.2",
+			"MODEL=Perch_v2",
+			"DATA_MODEL_VERSION=2",
+			"SF_THRESH=0.5",
+			"CONFIDENCE=0.95",
+			"SENSITIVITY=0.8",
+			"OVERLAP=2",
+			"PRIVACY_THRESHOLD=2.5",
+			"REC_CARD=hw:1,0",
+			"CHANNELS=1",
+			'RTSP_STREAM="rtsp://camera/live"',
+			"RTSP_STREAM_TO_LIVESTREAM=0",
+			"RECORDING_LENGTH=30",
+			"EXTRACTION_LENGTH=9",
+			"AUDIOFMT=flac",
+			"FULL_DISK=keep",
+			"PURGE_THRESHOLD=40",
+			"MAX_FILES_SPECIES=25",
+			"REVIEW_RARE_SPECIES_MAX=99",
+			"BIRDWEATHER_ID=secret-that-must-survive",
+		].join("\n"),
+	);
+	const result = await resetSettings({
+		settingsPath: file,
+		skipSystemActions: true,
+	});
+	assert.equal(result.status, "reset-restart-skipped");
+
+	const page = await loadSettingsPageData({
+		settingsPath: file,
+		modelDirectory: directory,
+		currentTimezone: "America/Chicago",
+	});
+	assert.deepEqual(page.detection, {
+		model: "BirdNET_GLOBAL_6K_V2.4_Model_FP16",
+		dataModelVersion: 1,
+		speciesFrequencyThreshold: 0.03,
+		confidence: 0.7,
+		sensitivity: 1.25,
+		overlap: 0,
+	});
+	assert.deepEqual(page.privacy, { privacyThreshold: 0 });
+	assert.deepEqual(page.audio, {
+		mode: "microphone",
+		recordingDevice: "default",
+		channels: 2,
+		rtspStreams: [],
+		livestreamIndex: 0,
+	});
+	assert.deepEqual(page.recording, {
+		recordingLength: 15,
+		extractionLength: null,
+		audioFormat: "mp3",
+	});
+	assert.deepEqual(page.storage, {
+		fullDiskAction: "purge",
+		purgeThreshold: 95,
+		maxFilesPerSpecies: 0,
+	});
+	assert.deepEqual(page.review, { rareSpeciesMax: 10 });
+
+	// The two things a reset must not touch: the station's own identity, and
+	// every unrelated line of the file.
+	assert.equal(page.station.siteName, "Backyard");
+	assert.equal(page.station.latitude, 41.1);
+	assert.equal(page.station.longitude, -93.2);
+	assert.match(
+		await readFile(file, "utf8"),
+		/^BIRDWEATHER_ID=secret-that-must-survive$/m,
+	);
+});
+
+test("reset restarts each affected service once", async () => {
+	const { file } = await fixtureConfig("PRIVACY_THRESHOLD=1\n");
+	const commands: string[][] = [];
+	const result = await resetSettings({
+		settingsPath: file,
+		runner: async (executable, args) => {
+			commands.push([executable, ...args]);
+		},
+	});
+	assert.equal(result.status, "reset");
+	assert.equal(commands.length, 1);
+	const services = commands[0].slice(3);
+	assert.deepEqual(services, [...new Set(services)]);
+	assert.ok(services.includes("birdnet_analysis.service"));
+	assert.ok(services.includes("birdnet_recording.service"));
+});
+
+test("a failed restart still reports the reset that landed", async () => {
+	const { file } = await fixtureConfig("PRIVACY_THRESHOLD=1\n");
+	const result = await resetSettings({
+		settingsPath: file,
+		runner: async () => {
+			throw new Error("systemctl exposed output");
+		},
+	});
+	assert.equal(result.status, "reset-action-failed");
+	assert.doesNotMatch(result.message, /systemctl exposed output/);
+	assert.match(await readFile(file, "utf8"), /^PRIVACY_THRESHOLD=0$/m);
+});
+
 test("configuration access errors do not reveal paths", async () => {
-	const missing = path.join(tmpdir(), "birdnet-secret-location", "missing.conf");
+	const missing = path.join(
+		tmpdir(),
+		"birdnet-secret-location",
+		"missing.conf",
+	);
 	await assert.rejects(
 		loadSettingsPageData({ settingsPath: missing }),
 		(error: Error) => {

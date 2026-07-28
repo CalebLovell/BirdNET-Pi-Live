@@ -58,7 +58,6 @@ test("renders every settings card in order with independent save controls", () =
 		"Audio input",
 		"Recording",
 		"Storage",
-		"Review queue",
 	];
 	let priorIndex = -1;
 	for (const heading of headings) {
@@ -69,15 +68,32 @@ test("renders every settings card in order with independent save controls", () =
 		);
 		priorIndex = index;
 	}
-	assert.equal((markup.match(/<form/g) ?? []).length, 7);
-	assert.equal((markup.match(/>Save</g) ?? []).length, 7);
+	assert.equal((markup.match(/<form/g) ?? []).length, 6);
+	assert.equal((markup.match(/>Save</g) ?? []).length, 6);
 });
 
-test("explains consequential storage and Review settings beside their controls", () => {
+test("offers reset only when the page can perform one, and asks first", () => {
+	const withoutReset = renderToStaticMarkup(<SettingsPage data={data} />);
+	assert.doesNotMatch(withoutReset, />Reset to defaults</);
+
+	const withReset = renderToStaticMarkup(
+		<SettingsPage data={data} onReset={async () => "Reset to defaults."} />,
+	);
+	assert.match(withReset, />Reset to defaults</);
+	// Destructive, so nothing happens until the dialog is opened and confirmed.
+	assert.doesNotMatch(withReset, /role="alertdialog"/);
+});
+
+test("leaves the review-queue threshold to the Review page", () => {
+	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
+	assert.doesNotMatch(markup, />Review queue</);
+	assert.doesNotMatch(markup, />Rare species threshold</);
+});
+
+test("explains consequential storage settings beside their controls", () => {
 	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
 	assert.match(markup, /removes the oldest recordings/i);
 	assert.match(markup, /stops core services/i);
-	assert.match(markup, /strictly fewer lifetime detections/i);
 	for (const label of [
 		"Station name",
 		"Minimum confidence",
@@ -85,7 +101,6 @@ test("explains consequential storage and Review settings beside their controls",
 		"Input mode",
 		"Recording length",
 		"Disk-full action",
-		"Rare species threshold",
 	]) {
 		assert.match(markup, new RegExp(`>${label}<`));
 	}

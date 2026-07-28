@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
 	loadSettingsPageData,
+	resetSettings,
 	saveAudioSettings,
 	saveDetectionSettings,
 	savePrivacySettings,
@@ -50,3 +51,7 @@ export const saveStorageSettingsFn = createServerFn({ method: "POST" })
 export const saveReviewSettingsFn = createServerFn({ method: "POST" })
 	.validator(reviewSettingsSchema)
 	.handler(({ data }) => saveReviewSettings(data));
+
+export const resetSettingsFn = createServerFn({ method: "POST" }).handler(() =>
+	resetSettings(),
+);

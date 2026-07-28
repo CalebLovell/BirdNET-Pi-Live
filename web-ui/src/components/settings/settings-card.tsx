@@ -21,6 +21,7 @@ export function SettingsCard({
 	state,
 	message,
 	onSubmit,
+	action,
 	children,
 }: {
 	title: string;
@@ -29,6 +30,12 @@ export function SettingsCard({
 	state: CardSaveState;
 	message?: string;
 	onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+	/**
+	 * A control for the card as a whole, set against its title. It sits inside
+	 * the card's form, so anything interactive here needs `type="button"` --
+	 * a bare button would submit the card.
+	 */
+	action?: ReactNode;
 	children: ReactNode;
 }) {
 	return (
@@ -41,7 +48,7 @@ export function SettingsCard({
 					<div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
 						<Icon aria-hidden="true" className="size-4 text-[var(--moss)]" />
 					</div>
-					<div>
+					<div className="min-w-0">
 						<h2
 							id={`settings-${title.toLowerCase().replaceAll(" ", "-")}`}
 							className="display-title font-semibold text-lg leading-tight"
@@ -52,6 +59,7 @@ export function SettingsCard({
 							{description}
 						</p>
 					</div>
+					{action ? <div className="ml-auto shrink-0">{action}</div> : null}
 				</header>
 
 				<div className="flex-1 space-y-4 px-4 py-5 sm:px-5">{children}</div>

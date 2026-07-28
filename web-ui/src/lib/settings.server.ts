@@ -14,8 +14,10 @@ import {
 	type DetectionSettings,
 	type PrivacySettings,
 	parseSettingsCard,
+	RESETTABLE_CARDS,
 	type RecordingSettings,
 	type ReviewSettings,
+	SETTINGS_DEFAULTS,
 	type SettingsByKind,
 	type SettingsCardKind,
 	type SettingsPageData,
@@ -26,6 +28,7 @@ import {
 } from "./settings-data.ts";
 import {
 	runCardSystemActions,
+	runResetSystemActions,
 	type SettingsCommandRunner,
 } from "./settings-system.server.ts";
 
@@ -202,4 +205,57 @@ export function saveReviewSettings(
 	dependencies: SettingsServerDependencies = {},
 ) {
 	return saveSettings("review", input, dependencies);
+}
+
+export type SettingsResetResult = {
+	status: "reset" | "reset-restart-skipped" | "reset-action-failed";
+	message: string;
+};
+
+/**
+ * Returns every card but Station to its install default. Station is left alone
+ * deliberately -- see `SETTINGS_DEFAULTS`, which has no entry for it.
+ *
+ * Cards are written one at a time rather than in a single pass because each
+ * still goes through its own schema on the way out; a value that cannot be
+ * parsed stops the reset before it touches the file. Nothing is rolled back if
+ * a later write fails, so the file is left part-reset and the caller is told
+ * plainly -- the alternative, a staged rewrite of birdnet.conf, would risk the
+ * lines this UI does not own.
+ */
+export async function resetSettings(
+	dependencies: SettingsServerDependencies = {},
+): Promise<SettingsResetResult> {
+	const settingsPath = dependencies.settingsPath ?? resolveSettingsPath();
+	for (const kind of RESETTABLE_CARDS) {
+		try {
+			await writeSettingsCard(kind, SETTINGS_DEFAULTS[kind], settingsPath);
+		} catch {
+			throw new Error("Settings could not be reset.");
+		}
+	}
+	try {
+		const action = await runResetSystemActions(
+			{ skipSystemActions: dependencies.skipSystemActions },
+			dependencies.runner,
+		);
+		return action.skipped
+			? {
+					status: "reset-restart-skipped",
+					message:
+						"Reset to defaults. System actions were skipped in this environment.",
+				}
+			: {
+					status: "reset",
+					message: action.attempted
+						? "Reset to defaults and applied."
+						: "Reset to defaults.",
+				};
+	} catch {
+		return {
+			status: "reset-action-failed",
+			message:
+				"Reset to defaults, but the affected system services could not be restarted.",
+		};
+	}
 }

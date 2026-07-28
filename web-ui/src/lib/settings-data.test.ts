@@ -42,9 +42,7 @@ test("rejects detector values outside their supported ranges", () => {
 			speciesFrequencyThreshold: 0.0004,
 		}),
 	);
-	assert.throws(() =>
-		parseSettingsCard("detection", { ...valid, overlap: 3 }),
-	);
+	assert.throws(() => parseSettingsCard("detection", { ...valid, overlap: 3 }));
 });
 
 test("validates station coordinates, timezone, and safe text", () => {
@@ -101,6 +99,22 @@ test("normalizes RTSP lines and validates the selected live stream", () => {
 	);
 });
 
+test("normalizes RTSP streams the form has already split into lines", () => {
+	// The textarea sends its split lines, so a trailing newline arrives as a
+	// blank entry rather than as text the schema can re-split.
+	const settings = parseSettingsCard("audio", {
+		mode: "rtsp",
+		recordingDevice: "default",
+		channels: 2,
+		rtspStreams: ["rtsp://one/live", " rtsps://two/live ", ""],
+		livestreamIndex: 1,
+	});
+	assert.deepEqual(settings.rtspStreams, [
+		"rtsp://one/live",
+		"rtsps://two/live",
+	]);
+});
+
 test("requires a recording device in microphone mode", () => {
 	assert.throws(() =>
 		parseSettingsCard("audio", {
@@ -149,9 +163,7 @@ test("enforces privacy and storage boundaries", () => {
 			maxFilesPerSpecies: 0,
 		},
 	);
-	assert.throws(() =>
-		parseSettingsCard("privacy", { privacyThreshold: 3.1 }),
-	);
+	assert.throws(() => parseSettingsCard("privacy", { privacyThreshold: 3.1 }));
 	assert.throws(() =>
 		parseSettingsCard("storage", {
 			fullDiskAction: "delete-everything",
@@ -164,7 +176,5 @@ test("enforces privacy and storage boundaries", () => {
 test("defaults Review rarity to ten and rejects zero", () => {
 	assert.equal(DEFAULT_REVIEW_RARE_SPECIES_MAX, 10);
 	assert.deepEqual(parseSettingsCard("review", {}), { rareSpeciesMax: 10 });
-	assert.throws(() =>
-		parseSettingsCard("review", { rareSpeciesMax: 0 }),
-	);
+	assert.throws(() => parseSettingsCard("review", { rareSpeciesMax: 0 }));
 });

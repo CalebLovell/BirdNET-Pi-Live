@@ -6,6 +6,7 @@ import { chmod, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import {
 	DEFAULT_REVIEW_RARE_SPECIES_MAX,
 	parseSettingsCard,
+	SETTINGS_DEFAULTS,
 	type SettingsByKind,
 	type SettingsCardKind,
 } from "./settings-data.ts";
@@ -55,6 +56,7 @@ export async function readSettingsPageValues(
 	timezone = Intl.DateTimeFormat().resolvedOptions().timeZone,
 ): Promise<SettingsByKind> {
 	const values = parseBirdnetConfig(await readFile(settingsPath, "utf8"));
+	const defaults = SETTINGS_DEFAULTS;
 	const streams = (values.RTSP_STREAM ?? "")
 		.split(",")
 		.map((stream) => stream.trim())
@@ -68,34 +70,72 @@ export async function readSettingsPageValues(
 			timezone,
 		}),
 		detection: parseSettingsCard("detection", {
-			model: values.MODEL ?? "BirdNET_GLOBAL_6K_V2.4_Model_FP16",
-			dataModelVersion: integerValue(values, "DATA_MODEL_VERSION", 1),
-			speciesFrequencyThreshold: numberValue(values, "SF_THRESH", 0.03),
-			confidence: numberValue(values, "CONFIDENCE", 0.7),
-			sensitivity: numberValue(values, "SENSITIVITY", 1.25),
-			overlap: numberValue(values, "OVERLAP", 0),
+			model: values.MODEL ?? defaults.detection.model,
+			dataModelVersion: integerValue(
+				values,
+				"DATA_MODEL_VERSION",
+				defaults.detection.dataModelVersion,
+			),
+			speciesFrequencyThreshold: numberValue(
+				values,
+				"SF_THRESH",
+				defaults.detection.speciesFrequencyThreshold,
+			),
+			confidence: numberValue(
+				values,
+				"CONFIDENCE",
+				defaults.detection.confidence,
+			),
+			sensitivity: numberValue(
+				values,
+				"SENSITIVITY",
+				defaults.detection.sensitivity,
+			),
+			overlap: numberValue(values, "OVERLAP", defaults.detection.overlap),
 		}),
 		privacy: parseSettingsCard("privacy", {
-			privacyThreshold: numberValue(values, "PRIVACY_THRESHOLD", 0),
+			privacyThreshold: numberValue(
+				values,
+				"PRIVACY_THRESHOLD",
+				defaults.privacy.privacyThreshold,
+			),
 		}),
 		audio: parseSettingsCard("audio", {
 			mode: streams.length > 0 ? "rtsp" : "microphone",
-			recordingDevice: values.REC_CARD ?? "default",
-			channels: integerValue(values, "CHANNELS", 2),
+			recordingDevice: values.REC_CARD ?? defaults.audio.recordingDevice,
+			channels: integerValue(values, "CHANNELS", defaults.audio.channels),
 			rtspStreams: streams,
-			livestreamIndex: integerValue(values, "RTSP_STREAM_TO_LIVESTREAM", 0),
+			livestreamIndex: integerValue(
+				values,
+				"RTSP_STREAM_TO_LIVESTREAM",
+				defaults.audio.livestreamIndex,
+			),
 		}),
 		recording: parseSettingsCard("recording", {
-			recordingLength: integerValue(values, "RECORDING_LENGTH", 15),
+			recordingLength: integerValue(
+				values,
+				"RECORDING_LENGTH",
+				defaults.recording.recordingLength,
+			),
+			// Blank is the documented way to ask for the backend's own 6 seconds,
+			// so an empty key stays null rather than being filled in here.
 			extractionLength: extraction
 				? integerValue(values, "EXTRACTION_LENGTH", 6)
 				: null,
-			audioFormat: values.AUDIOFMT ?? "mp3",
+			audioFormat: values.AUDIOFMT ?? defaults.recording.audioFormat,
 		}),
 		storage: parseSettingsCard("storage", {
-			fullDiskAction: values.FULL_DISK ?? "purge",
-			purgeThreshold: integerValue(values, "PURGE_THRESHOLD", 95),
-			maxFilesPerSpecies: integerValue(values, "MAX_FILES_SPECIES", 0),
+			fullDiskAction: values.FULL_DISK ?? defaults.storage.fullDiskAction,
+			purgeThreshold: integerValue(
+				values,
+				"PURGE_THRESHOLD",
+				defaults.storage.purgeThreshold,
+			),
+			maxFilesPerSpecies: integerValue(
+				values,
+				"MAX_FILES_SPECIES",
+				defaults.storage.maxFilesPerSpecies,
+			),
 		}),
 		review: parseSettingsCard("review", {
 			rareSpeciesMax: integerValue(
@@ -179,20 +219,25 @@ function assignmentsFor<K extends SettingsCardKind>(
 	}
 }
 
-function replaceAssignments(
-	text: string,
-	assignments: Record<string, string>,
-	allowAppend: boolean,
-) {
+/**
+ * Rewrites in place, appending a key the file has never carried. Appending is
+ * the same promise the read path already makes: `readSettingsPageValues` fills a
+ * missing key with a default and shows it, so refusing to write it back would
+ * leave a card displaying a value it cannot save -- which is what a station
+ * installed before a key existed (REVIEW_RARE_SPECIES_MAX, say) would hit.
+ * Every other line of the file, including secrets this UI never reads, is left
+ * exactly as it was.
+ */
+function replaceAssignments(text: string, assignments: Record<string, string>) {
 	let updated = text;
 	for (const [key, value] of Object.entries(assignments)) {
 		const expression = new RegExp(`^${key}=.*$`, "m");
 		if (expression.test(updated))
 			updated = updated.replace(expression, `${key}=${value}`);
-		else if (allowAppend && key === "REVIEW_RARE_SPECIES_MAX") {
+		else {
 			if (updated.length > 0 && !updated.endsWith("\n")) updated += "\n";
 			updated += `${key}=${value}\n`;
-		} else throw new Error(`Missing configuration assignment: ${key}`);
+		}
 	}
 	return updated;
 }
@@ -205,7 +250,7 @@ export async function writeSettingsCard<K extends SettingsCardKind>(
 	const assignments = assignmentsFor(kind, values);
 	const source = await readFile(settingsPath, "utf8");
 	const sourceStat = await stat(settingsPath);
-	const updated = replaceAssignments(source, assignments, kind === "review");
+	const updated = replaceAssignments(source, assignments);
 	const temporaryPath = `${settingsPath}.tmp-${process.pid}-${randomUUID()}`;
 	try {
 		await writeFile(temporaryPath, updated, {

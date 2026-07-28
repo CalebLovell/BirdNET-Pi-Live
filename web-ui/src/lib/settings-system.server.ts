@@ -3,7 +3,7 @@ import "@tanstack/react-start/server-only";
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 
-import type { SettingsCardKind } from "./settings-data.ts";
+import { RESETTABLE_CARDS, type SettingsCardKind } from "./settings-data.ts";
 
 export type SettingsCommandRunner = (
 	executable: string,
@@ -88,4 +88,26 @@ export async function runCardSystemActions(
 		await runner("sudo", ["systemctl", "restart", ...services]);
 	}
 	return { attempted, skipped: false };
+}
+
+/**
+ * A reset rewrites every card at once, so the services they share are restarted
+ * once between them -- card by card, birdnet_analysis would be bounced four
+ * times over, and a station mid-analysis pays for each one.
+ */
+export async function runResetSystemActions(
+	context: SettingsSystemContext = {},
+	runner: SettingsCommandRunner = defaultRunner,
+) {
+	const services = [
+		...new Set(RESETTABLE_CARDS.flatMap((kind) => SERVICES[kind])),
+	];
+	if (
+		context.skipSystemActions ||
+		process.env.BIRDNET_SKIP_SYSTEM_ACTIONS === "1"
+	)
+		return { attempted: false, skipped: services.length > 0 };
+	if (services.length === 0) return { attempted: false, skipped: false };
+	await runner("sudo", ["systemctl", "restart", ...services]);
+	return { attempted: true, skipped: false };
 }

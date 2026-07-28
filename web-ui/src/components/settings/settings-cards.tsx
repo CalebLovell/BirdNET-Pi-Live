@@ -1,13 +1,12 @@
 import {
 	Disc3,
 	HardDrive,
-	ListChecks,
 	MapPin,
 	Mic2,
 	ShieldCheck,
 	SlidersHorizontal,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import { useState } from "react";
 
 import { Input } from "~/components/ui/input.tsx";
@@ -16,13 +15,13 @@ import type {
 	DetectionSettings,
 	PrivacySettings,
 	RecordingSettings,
-	ReviewSettings,
 	SettingsPageData,
 	SettingsSaveResult,
 	StationSettings,
 	StorageSettings,
 } from "~/lib/settings-data.ts";
 import { type CardSaveState, SettingsCard } from "./settings-card.tsx";
+import { StationLocation } from "./station-location.tsx";
 
 type Saver<T> = (values: T) => Promise<SettingsSaveResult<T>>;
 
@@ -33,7 +32,6 @@ export type SettingsSavers = {
 	audio?: Saver<AudioSettings>;
 	recording?: Saver<RecordingSettings>;
 	storage?: Saver<StorageSettings>;
-	review?: Saver<ReviewSettings>;
 };
 
 function useCardSave<T>(initial: T, save?: Saver<T>) {
@@ -93,6 +91,17 @@ function twoColumns(children: ReactNode) {
 	return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
 }
 
+/**
+ * A number input reports NaN while it is empty -- mid-edit, or cleared outright.
+ * Storing that would hand React an invalid `value` and strand the field, so the
+ * last good number is held until a real one is typed; `required` plus the input's
+ * own min/max still block a submit while the box reads empty.
+ */
+function numberOr(event: ChangeEvent<HTMLInputElement>, fallback: number) {
+	const parsed = event.target.valueAsNumber;
+	return Number.isNaN(parsed) ? fallback : parsed;
+}
+
 export function SettingsCards({
 	data,
 	savers,
@@ -101,7 +110,9 @@ export function SettingsCards({
 	savers: SettingsSavers;
 }) {
 	return (
-		<div className="grid items-start gap-4 lg:grid-cols-2">
+		// One card per row, always. Side by side, cards of unequal height left
+		// ragged gaps and no reliable reading order down the page.
+		<div className="space-y-4">
 			<StationCard
 				initial={data.station}
 				timezones={data.supportedTimezones}
@@ -116,7 +127,6 @@ export function SettingsCards({
 			<AudioCard initial={data.audio} save={savers.audio} />
 			<RecordingCard initial={data.recording} save={savers.recording} />
 			<StorageCard initial={data.storage} save={savers.storage} />
-			<ReviewCard initial={data.review} save={savers.review} />
 		</div>
 	);
 }
@@ -142,6 +152,17 @@ function StationCard({
 				event.preventDefault();
 				void form.submit();
 			}}
+			action={
+				<StationLocation
+					current={{
+						latitude: form.values.latitude,
+						longitude: form.values.longitude,
+					}}
+					onApply={(coordinates) =>
+						form.setValues({ ...form.values, ...coordinates })
+					}
+				/>
+			}
 		>
 			<Field label="Station name">
 				<Input
@@ -165,7 +186,7 @@ function StationCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									latitude: event.target.valueAsNumber,
+									latitude: numberOr(event, form.values.latitude),
 								})
 							}
 						/>
@@ -181,7 +202,7 @@ function StationCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									longitude: event.target.valueAsNumber,
+									longitude: numberOr(event, form.values.longitude),
 								})
 							}
 						/>
@@ -265,7 +286,7 @@ function DetectionCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									confidence: event.target.valueAsNumber,
+									confidence: numberOr(event, form.values.confidence),
 								})
 							}
 						/>
@@ -284,7 +305,7 @@ function DetectionCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									sensitivity: event.target.valueAsNumber,
+									sensitivity: numberOr(event, form.values.sensitivity),
 								})
 							}
 						/>
@@ -303,7 +324,7 @@ function DetectionCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									overlap: event.target.valueAsNumber,
+									overlap: numberOr(event, form.values.overlap),
 								})
 							}
 						/>
@@ -342,7 +363,10 @@ function DetectionCard({
 									onChange={(event) =>
 										form.setValues({
 											...form.values,
-											speciesFrequencyThreshold: event.target.valueAsNumber,
+											speciesFrequencyThreshold: numberOr(
+												event,
+												form.values.speciesFrequencyThreshold,
+											),
 										})
 									}
 								/>
@@ -386,7 +410,9 @@ function PrivacyCard({
 					required
 					value={form.values.privacyThreshold}
 					onChange={(event) =>
-						form.setValues({ privacyThreshold: event.target.valueAsNumber })
+						form.setValues({
+							privacyThreshold: numberOr(event, form.values.privacyThreshold),
+						})
 					}
 				/>
 			</Field>
@@ -463,7 +489,7 @@ function AudioCard({
 								onChange={(event) =>
 									form.setValues({
 										...form.values,
-										channels: event.target.valueAsNumber,
+										channels: numberOr(event, form.values.channels),
 									})
 								}
 							/>
@@ -480,12 +506,20 @@ function AudioCard({
 							className={`${controlClass} min-h-28 py-2 font-mono text-xs`}
 							required
 							value={form.values.rtspStreams.join("\n")}
-							onChange={(event) =>
+							onChange={(event) => {
+								const rtspStreams = event.target.value.split(/\r?\n/);
 								form.setValues({
 									...form.values,
-									rtspStreams: event.target.value.split(/\r?\n/),
-								})
-							}
+									rtspStreams,
+									// Removing streams would otherwise leave the live-player
+									// index pointing past the end of the list, and the save
+									// would fail on a selector the card no longer shows.
+									livestreamIndex: Math.min(
+										form.values.livestreamIndex,
+										Math.max(0, rtspStreams.filter(Boolean).length - 1),
+									),
+								});
+							}}
 						/>
 					</Field>
 					{form.values.rtspStreams.filter(Boolean).length > 1 ? (
@@ -551,7 +585,7 @@ function RecordingCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									recordingLength: event.target.valueAsNumber,
+									recordingLength: numberOr(event, form.values.recordingLength),
 								})
 							}
 						/>
@@ -568,10 +602,12 @@ function RecordingCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									extractionLength:
-										event.target.value === ""
-											? null
-											: event.target.valueAsNumber,
+									// Blank is a real choice here -- it hands the backend
+									// default back -- so NaN becomes null rather than being
+									// held at the last number.
+									extractionLength: Number.isNaN(event.target.valueAsNumber)
+										? null
+										: event.target.valueAsNumber,
 								})
 							}
 						/>
@@ -674,7 +710,7 @@ function StorageCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									purgeThreshold: event.target.valueAsNumber,
+									purgeThreshold: numberOr(event, form.values.purgeThreshold),
 								})
 							}
 						/>
@@ -691,57 +727,16 @@ function StorageCard({
 							onChange={(event) =>
 								form.setValues({
 									...form.values,
-									maxFilesPerSpecies: event.target.valueAsNumber,
+									maxFilesPerSpecies: numberOr(
+										event,
+										form.values.maxFilesPerSpecies,
+									),
 								})
 							}
 						/>
 					</Field>
 				</>,
 			)}
-		</SettingsCard>
-	);
-}
-
-function ReviewCard({
-	initial,
-	save,
-}: {
-	initial: ReviewSettings;
-	save?: Saver<ReviewSettings>;
-}) {
-	const form = useCardSave(initial, save);
-	return (
-		<SettingsCard
-			title="Review queue"
-			description="Define which uncommon species appear for manual confirmation."
-			icon={ListChecks}
-			state={form.state}
-			message={form.message}
-			onSubmit={(event) => {
-				event.preventDefault();
-				void form.submit();
-			}}
-		>
-			<Field
-				label="Rare species threshold"
-				hint="Review includes species with strictly fewer lifetime detections than this number."
-			>
-				<Input
-					type="number"
-					min={1}
-					max={10000}
-					required
-					value={form.values.rareSpeciesMax}
-					onChange={(event) =>
-						form.setValues({ rareSpeciesMax: event.target.valueAsNumber })
-					}
-				/>
-			</Field>
-			<p className="rounded-md bg-muted p-3 text-muted-foreground text-xs leading-relaxed">
-				For example, a threshold of {form.values.rareSpeciesMax} includes
-				species heard {form.values.rareSpeciesMax - 1} times or fewer. The
-				Review page reads this value on every load.
-			</p>
 		</SettingsCard>
 	);
 }

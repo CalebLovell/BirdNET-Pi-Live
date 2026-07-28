@@ -1,20 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert } from "lucide-react";
 
 import { SettingsPage } from "~/components/settings/settings-page.tsx";
+import { pageTitle } from "~/lib/page-title.ts";
 import {
 	getSettingsPage,
+	resetSettingsFn,
 	saveAudioSettingsFn,
 	saveDetectionSettingsFn,
 	savePrivacySettingsFn,
 	saveRecordingSettingsFn,
-	saveReviewSettingsFn,
 	saveStationSettingsFn,
 	saveStorageSettingsFn,
 } from "~/lib/settings.ts";
 
 export const Route = createFileRoute("/settings")({
+	head: () => ({ meta: [{ title: pageTitle("Settings") }] }),
 	loader: () => getSettingsPage(),
 	component: SettingsRoute,
 	errorComponent: SettingsUnavailable,
@@ -28,11 +30,19 @@ function SettingsRoute() {
 	const saveAudio = useServerFn(saveAudioSettingsFn);
 	const saveRecording = useServerFn(saveRecordingSettingsFn);
 	const saveStorage = useServerFn(saveStorageSettingsFn);
-	const saveReview = useServerFn(saveReviewSettingsFn);
+	const reset = useServerFn(resetSettingsFn);
+	const router = useRouter();
 
 	return (
 		<SettingsPage
 			data={data}
+			onReset={async () => {
+				const result = await reset({});
+				// The cards remount against this reload, so it has to land before
+				// the page reports the reset as done.
+				await router.invalidate();
+				return result.message;
+			}}
 			savers={{
 				station: (values) => saveStation({ data: values }),
 				detection: (values) => saveDetection({ data: values }),
@@ -40,7 +50,6 @@ function SettingsRoute() {
 				audio: (values) => saveAudio({ data: values }),
 				recording: (values) => saveRecording({ data: values }),
 				storage: (values) => saveStorage({ data: values }),
-				review: (values) => saveReview({ data: values }),
 			}}
 		/>
 	);

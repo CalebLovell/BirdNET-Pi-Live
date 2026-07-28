@@ -97,6 +97,22 @@ test("appends the Review setting once and defaults older files", async () => {
 	assert.equal(await readReviewRareSpeciesMax(file), 14);
 });
 
+test("appends any key an older config never carried", async () => {
+	// The read path defaults a missing key and shows it, so the write path has
+	// to be able to put it back -- otherwise the card is unsaveable.
+	const file = await fixtureConfig("BIRDWEATHER_ID=keep-me\n");
+	await writeSettingsCard(
+		"storage",
+		{ fullDiskAction: "keep", purgeThreshold: 80, maxFilesPerSpecies: 5 },
+		file,
+	);
+	const text = await readFile(file, "utf8");
+	assert.match(text, /^BIRDWEATHER_ID=keep-me$/m);
+	assert.match(text, /^FULL_DISK=keep$/m);
+	assert.match(text, /^PURGE_THRESHOLD=80$/m);
+	assert.match(text, /^MAX_FILES_SPECIES=5$/m);
+});
+
 test("round-trips RTSP streams and blank extraction length", async () => {
 	const file = await fixtureConfig(
 		[

@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert, Feather, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
 import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
 import { CONFIDENT_MIN, formatConfidence } from "~/lib/confidence.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -17,6 +18,7 @@ import {
 	normalizeReviewSearch,
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
+import { saveReviewSettingsFn } from "~/lib/settings.ts";
 
 export const Route = createFileRoute("/review")({
 	head: () => ({ meta: [{ title: pageTitle("Review") }] }),
@@ -36,7 +38,8 @@ function Review() {
 	const router = useRouter();
 	const correct = useServerFn(confirmReviewDetection),
 		recategorize = useServerFn(recategorizeReviewDetection),
-		remove = useServerFn(deleteReviewDetection);
+		remove = useServerFn(deleteReviewDetection),
+		saveQueueSettings = useServerFn(saveReviewSettingsFn);
 	const [busy, setBusy] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	async function run(work: () => Promise<unknown>) {
@@ -70,6 +73,17 @@ function Review() {
 						icon: Feather,
 					},
 				]}
+				action={
+					<ReviewQueueSettings
+						rareSpeciesMax={page.rareSpeciesMax}
+						onSave={async (rareSpeciesMax) => {
+							await saveQueueSettings({ data: { rareSpeciesMax } });
+							// The threshold decides the queue, so the page has to be
+							// refetched before the new number means anything on screen.
+							await router.invalidate();
+						}}
+					/>
+				}
 			/>
 			{error ? (
 				<p className="flex items-center gap-2 text-destructive text-sm">
