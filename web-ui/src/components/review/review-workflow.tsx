@@ -68,7 +68,7 @@ export function ReviewWorkflow({
 				<p className="mt-2 text-muted-foreground text-sm">
 					No more recordings in this batch.
 				</p>
-				{page.candidates.length >= page.limit && page.limit < 200 ? (
+				{page.candidates.length >= page.limit ? (
 					<Button className="mt-4" onClick={onLoadMore}>
 						Load more
 					</Button>

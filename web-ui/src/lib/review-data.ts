@@ -13,8 +13,8 @@ export function normalizeReviewSearch(
 		: "rare";
 	const limit =
 		typeof input.limit === "number" &&
+		Number.isSafeInteger(input.limit) &&
 		input.limit >= 20 &&
-		input.limit <= 200 &&
 		input.limit % 20 === 0
 			? input.limit
 			: 20;

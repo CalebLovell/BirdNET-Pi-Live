@@ -15,6 +15,10 @@ test("normalizes review queue and batch size", () => {
 		queue: "rare",
 		limit: 20,
 	});
+	assert.deepEqual(
+		normalizeReviewSearch({ queue: "low-confidence", limit: 220 }),
+		{ queue: "low-confidence", limit: 220 },
+	);
 });
 
 test("parses and sorts the BirdNET species catalog", () => {

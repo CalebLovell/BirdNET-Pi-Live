@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 
 import { existsSync, readFileSync } from "node:fs";
-import { mkdir, rename, rm } from "node:fs/promises";
+import { copyFile, mkdir, rename, rm } from "node:fs/promises";
 import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
@@ -34,6 +34,20 @@ export type ReviewPage = {
 	rareTotal: number;
 	lowConfidenceTotal: number;
 	candidates: ReviewCandidate[];
+};
+
+type ReviewFileOperations = {
+	copyFile: typeof copyFile;
+	mkdir: typeof mkdir;
+	rename: typeof rename;
+	rm: typeof rm;
+};
+
+const defaultFileOperations: ReviewFileOperations = {
+	copyFile,
+	mkdir,
+	rename,
+	rm,
 };
 
 type RawCandidate = {
@@ -150,6 +164,7 @@ export async function recategorizeDetection(
 	rowId: number,
 	species: SpeciesOption,
 	catalog: SpeciesOption[],
+	files: ReviewFileOperations = defaultFileOperations,
 ) {
 	if (
 		!catalog.some(
@@ -180,11 +195,27 @@ export async function recategorizeDetection(
 		throw new Error("Recording audio is unavailable");
 	if (existsSync(newPath) || existsSync(`${newPath}.png`))
 		throw new Error("Replacement recording already exists");
-	await mkdir(path.dirname(newPath), { recursive: true });
-	await rename(oldPath, newPath);
-	const movedImage = existsSync(`${oldPath}.png`);
-	if (movedImage) await rename(`${oldPath}.png`, `${newPath}.png`);
+	const references = Number(
+		database
+			.prepare(
+				"SELECT COUNT(*) n FROM detections WHERE Date=? AND Com_Name=? AND File_Name=?",
+			)
+			.get(row.date, row.comName, row.fileName)?.n ?? 0,
+	);
+	const shared = references > 1;
+	const hasImage = existsSync(`${oldPath}.png`);
+	let audioPlaced = false;
+	let imagePlaced = false;
+	await files.mkdir(path.dirname(newPath), { recursive: true });
 	try {
+		if (shared) await files.copyFile(oldPath, newPath);
+		else await files.rename(oldPath, newPath);
+		audioPlaced = true;
+		if (hasImage) {
+			if (shared) await files.copyFile(`${oldPath}.png`, `${newPath}.png`);
+			else await files.rename(`${oldPath}.png`, `${newPath}.png`);
+			imagePlaced = true;
+		}
 		const result = database
 			.prepare(
 				"UPDATE detections SET Sci_Name=?, Com_Name=?, File_Name=?, Confidence=1.0 WHERE rowid=?",
@@ -192,8 +223,26 @@ export async function recategorizeDetection(
 			.run(species.sciName, species.comName, fileName, rowId);
 		if (result.changes !== 1) throw new Error("Detection was not updated");
 	} catch (error) {
-		await rename(newPath, oldPath);
-		if (movedImage) await rename(`${newPath}.png`, `${oldPath}.png`);
+		const rollbackErrors: unknown[] = [];
+		if (imagePlaced)
+			try {
+				if (shared) await files.rm(`${newPath}.png`, { force: true });
+				else await files.rename(`${newPath}.png`, `${oldPath}.png`);
+			} catch (rollbackError) {
+				rollbackErrors.push(rollbackError);
+			}
+		if (audioPlaced)
+			try {
+				if (shared) await files.rm(newPath, { force: true });
+				else await files.rename(newPath, oldPath);
+			} catch (rollbackError) {
+				rollbackErrors.push(rollbackError);
+			}
+		if (rollbackErrors.length > 0)
+			throw new AggregateError(
+				[error, ...rollbackErrors],
+				"Recategorization failed and assets could not be fully restored",
+			);
 		throw error;
 	}
 }
