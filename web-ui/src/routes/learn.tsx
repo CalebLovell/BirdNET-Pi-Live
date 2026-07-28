@@ -4,25 +4,21 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import {
-	CalendarDays,
-	Clock,
-	Headphones,
-	Infinity as InfinityIcon,
-	ListChecks,
-	Repeat2,
-} from "lucide-react";
+import { Headphones, ListChecks } from "lucide-react";
 import { z } from "zod";
 
 import { LearnGame } from "~/components/learn/learn-game.tsx";
+import {
+	LearnPoolSelector,
+	LearnRoundShell,
+} from "~/components/learn/learn-layout.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { getLearnRound } from "~/lib/learn.ts";
 import {
 	LEARN_POOL_DESCRIPTIONS,
 	LEARN_POOL_LABELS,
-	LEARN_POOLS,
 	type LearnPool,
+	LEARN_POOLS,
 } from "~/lib/learn-pools.ts";
 import {
 	CHOICES_PER_QUESTION,
@@ -46,16 +42,6 @@ export const Route = createFileRoute("/learn")({
 	loader: ({ deps }) => getLearnRound({ data: deps.pool }),
 	component: Learn,
 });
-
-const POOL_ICONS: Record<
-	LearnPool,
-	React.ComponentType<{ className?: string }>
-> = {
-	today: Clock,
-	week: CalendarDays,
-	frequent: Repeat2,
-	all: InfinityIcon,
-};
 
 function Learn() {
 	const { round, hasAnyDetections } = Route.useLoaderData();
@@ -100,41 +86,22 @@ function Learn() {
 				}
 			/>
 
-			{/* Filters sit bare between the header card and the round, the way the
-			    species page keeps its search and sort row. Gated on the station, not
-			    the pool: an empty pool still needs the switcher to reach a fuller
-			    one, which is exactly what the empty card advises. */}
+			{/* Gated on the station, not the pool: an empty pool still needs the
+			    switcher to reach a fuller one, which is exactly what the empty card
+			    advises. */}
 			{hasAnyDetections && (
-				<div className="mt-4 flex justify-end">
-					<ToggleGroup
-						type="single"
-						variant="outline"
-						value={pool}
-						onValueChange={(value) => {
-							if (!value) return;
-							navigate({
-								search: (previous) => ({
-									...previous,
-									pool: value as LearnPool,
-								}),
-								replace: true,
-							});
-						}}
-					>
-						{LEARN_POOLS.map((option) => {
-							const Icon = POOL_ICONS[option];
-							return (
-								<ToggleGroupItem key={option} value={option}>
-									<Icon className="size-4" />
-									{LEARN_POOL_LABELS[option]}
-								</ToggleGroupItem>
-							);
-						})}
-					</ToggleGroup>
-				</div>
+				<LearnPoolSelector
+					pool={pool}
+					onPoolChange={(value) => {
+						navigate({
+							search: (previous) => ({ ...previous, pool: value }),
+							replace: true,
+						});
+					}}
+				/>
 			)}
 
-			<div className="mx-auto mt-4 max-w-3xl">
+			<LearnRoundShell isEmpty={round.questions.length === 0}>
 				{round.questions.length === 0 ? (
 					<EmptyPool
 						speciesInPool={round.speciesInPool}
@@ -148,7 +115,7 @@ function Learn() {
 						isLoadingNextRound={isLoading}
 					/>
 				)}
-			</div>
+			</LearnRoundShell>
 		</div>
 	);
 }
