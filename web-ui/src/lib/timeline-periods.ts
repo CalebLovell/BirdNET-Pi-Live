@@ -11,9 +11,9 @@ export const TIMELINE_PERIODS = [
 export type TimelinePeriod = (typeof TIMELINE_PERIODS)[number];
 
 export const TIMELINE_PERIOD_LABELS: Record<TimelinePeriod, string> = {
-	day: "Last 24 Hours",
-	week: "Last 7 Days",
-	month: "Last 30 Days",
-	year: "Last Year",
+	day: "Daily",
+	week: "Weekly",
+	month: "Monthly",
+	year: "Annually",
 	all: "All Time",
 };

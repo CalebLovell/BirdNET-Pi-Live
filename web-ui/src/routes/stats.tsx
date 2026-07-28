@@ -12,7 +12,18 @@ import {
 	PageHeaderCard,
 	type PageHeaderStat,
 } from "~/components/page-header-card.tsx";
+import {
+	type SpeciesActivityItem,
+	SpeciesActivityList,
+} from "~/components/species-activity-list.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
+import { TooltipProvider } from "~/components/ui/tooltip.tsx";
+import {
+	ARRIVAL_WINDOW_DAYS,
+	QUIET_AFTER_DAYS,
+	RESIDENT_MIN_DAYS,
+	shortDateLabel,
+} from "~/lib/migration-data.ts";
 import { getStats } from "~/lib/stats.ts";
 import { dayLabel, hourLabel } from "~/lib/stats-data.ts";
 
@@ -55,6 +66,30 @@ function Stats() {
 				},
 			];
 
+	// Both cards date their rows by the marker detection each one stands on --
+	// the last one heard, or the first of an arrival.
+	const quietItems: SpeciesActivityItem[] = stats.quietSpecies.map((item) => ({
+		comName: item.comName,
+		sciName: item.sciName,
+		imageUrl: item.imageUrl,
+		detectedAt: item.detectedAt,
+		ageMs: item.ageMs,
+		timeLabel: shortDateLabel(item.lastSeen),
+		confidence: item.confidence,
+		audioUrl: item.audioUrl,
+	}));
+
+	const arrivalItems: SpeciesActivityItem[] = stats.newArrivals.map((item) => ({
+		comName: item.comName,
+		sciName: item.sciName,
+		imageUrl: item.imageUrl,
+		detectedAt: item.detectedAt,
+		ageMs: item.ageMs,
+		timeLabel: shortDateLabel(item.firstSeen),
+		confidence: item.confidence,
+		audioUrl: item.audioUrl,
+	}));
+
 	return (
 		<div className="page-wrap py-4">
 			<PageHeaderCard
@@ -71,6 +106,21 @@ function Stats() {
 				    padded them with dead space until the lists were long enough. */}
 				<SpeciesList title="Top species" species={stats.topSpeciesList} />
 				<SpeciesList title="Rarest species" species={stats.rarestSpeciesList} />
+
+				<TooltipProvider>
+					<SpeciesActivityList
+						title="New arrivals"
+						description={`Species heard in the last ${ARRIVAL_WINDOW_DAYS} days that were absent for the ${ARRIVAL_WINDOW_DAYS} days before that — new sightings and returning migrants alike.`}
+						species={arrivalItems}
+						emptyMessage="No new arrivals in the last two weeks."
+					/>
+					<SpeciesActivityList
+						title="Gone quiet"
+						description={`Regular visitors — heard on at least ${RESIDENT_MIN_DAYS} separate days — with no detection in the last ${QUIET_AFTER_DAYS} days. They may have migrated away or shifted territory.`}
+						species={quietItems}
+						emptyMessage="Every regular visitor has been heard recently."
+					/>
+				</TooltipProvider>
 			</div>
 		</div>
 	);

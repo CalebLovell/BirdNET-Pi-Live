@@ -33,6 +33,7 @@ import {
 } from "~/components/ui/tooltip.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	getSpeciesDetail,
 	type RecentVisit,
@@ -41,6 +42,7 @@ import {
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 import type { TrendPoint } from "~/lib/trend.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
+import { useFavicon } from "~/lib/use-favicon.ts";
 
 const CURRENT_YEAR = new Date().getFullYear();
 const MIN_YEAR = 2000;
@@ -135,6 +137,11 @@ function BirdPage() {
 	const navigate = Route.useNavigate();
 	// Before the early return: hooks cannot sit behind a conditional.
 	const offsetMs = useAgeOffset(detail?.generatedAt ?? "");
+	// The same flight illustration the hero draws, so the browser serves it from
+	// cache rather than pulling a second half-megabyte PNG. The wings lose their
+	// detail at 16px, but the silhouette still reads. Species without a bundled
+	// illustration keep the nest.
+	useFavicon(detail ? illustrationUrlFor(detail.sciName, "flight") : null);
 
 	if (!detail) {
 		return (

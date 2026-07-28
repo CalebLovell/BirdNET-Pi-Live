@@ -48,7 +48,7 @@ export function Header() {
 					</Link>
 					<Link
 						to="/review"
-						search={{ queue: "rare", limit: 20 }}
+						search={{ limit: 20 }}
 						className="nav-link"
 						activeOptions={{ includeSearch: false }}
 						activeProps={{ className: "nav-link is-active" }}

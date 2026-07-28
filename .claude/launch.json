@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "web-ui", "--", "--port", "3010"],
       "port": 3010
+    },
+    {
+      "name": "web-ui-alt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "web-ui", "--", "--port", "3211"],
+      "port": 3211
     }
   ]
 }

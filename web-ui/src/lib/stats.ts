@@ -4,6 +4,8 @@ import { count, countDistinct, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { getNewArrivals, getQuietSpecies } from "~/lib/migration.ts";
+import type { ArrivalSpecies, QuietSpecies } from "~/lib/migration-data.ts";
 import {
 	type BusiestDay,
 	type BusiestHour,
@@ -25,6 +27,8 @@ export type StatsData = {
 	rarestSpeciesList: SpeciesCount[];
 	hourActivity: HourActivity[];
 	detectionTrend: TrendPoint[];
+	quietSpecies: QuietSpecies[];
+	newArrivals: ArrivalSpecies[];
 };
 
 async function getSpeciesRanking(
@@ -92,6 +96,8 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			rarestSpeciesList,
 			hourActivity,
 			detectionTrend,
+			quietSpecies,
+			newArrivals,
 		] = await Promise.all([
 			db.select({ totalDetections: count() }).from(detections),
 			db
@@ -102,6 +108,8 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			getSpeciesRanking(10, "least"),
 			getHourActivity(),
 			getDetectionTrend(),
+			getQuietSpecies(),
+			getNewArrivals(),
 		]);
 
 		return {
@@ -113,6 +121,8 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			rarestSpeciesList,
 			hourActivity,
 			detectionTrend,
+			quietSpecies,
+			newArrivals,
 		};
 	},
 );

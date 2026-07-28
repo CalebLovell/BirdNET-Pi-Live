@@ -1,5 +1,8 @@
 import {
+	ChartNoAxesColumnIncreasing,
+	Clock3,
 	ExternalLink,
+	Gauge,
 	Search,
 	ShieldCheck,
 	Shuffle,
@@ -7,10 +10,18 @@ import {
 	Trash2,
 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import {
+	type PageHeaderStat,
+	PageHeaderStats,
+} from "~/components/page-header-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
+import {
+	HeroCardShell,
+	HeroPortrait,
+} from "~/components/species-hero-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
+import { formatConfidence } from "~/lib/confidence.ts";
 import type { ReviewCandidate, ReviewPage } from "~/lib/review.server.ts";
 import type { SpeciesOption } from "~/lib/review-data.ts";
 
@@ -18,6 +29,23 @@ type Action =
 	| { kind: "correct"; row: ReviewCandidate }
 	| { kind: "delete"; row: ReviewCandidate }
 	| { kind: "recategorize"; row: ReviewCandidate; species: SpeciesOption };
+
+/** "Jul 27, 2026" and "6:04 AM" from the detection's separate date/time columns. */
+function formatRecorded(date: string, time: string) {
+	const parsed = new Date(`${date}T${time}`);
+	if (Number.isNaN(parsed.getTime())) return { day: date, clock: time };
+	return {
+		day: new Intl.DateTimeFormat(undefined, {
+			month: "short",
+			day: "numeric",
+			year: "numeric",
+		}).format(parsed),
+		clock: new Intl.DateTimeFormat(undefined, {
+			hour: "numeric",
+			minute: "2-digit",
+		}).format(parsed),
+	};
+}
 
 export function ReviewWorkflow({
 	page,
@@ -63,93 +91,121 @@ export function ReviewWorkflow({
 	}
 	if (!row)
 		return (
-			<section className="feature-card rounded-md p-8 text-center">
-				<h2 className="display-title font-semibold text-xl">All caught up</h2>
-				<p className="mt-2 text-muted-foreground text-sm">
+			<section
+				aria-label="Review queue"
+				className="feature-card rounded-md p-4 text-center"
+			>
+				{/* The same empty-nest artwork the Today hero falls back to, so a
+				    cleared queue reads as a state of the station, not a broken page. */}
+				<img
+					src="/illustrations/nest.webp"
+					alt=""
+					className="mx-auto h-32 object-contain"
+				/>
+				<h2 className="display-title mt-2 font-bold text-xl">All caught up</h2>
+				<p className="mt-1 text-muted-foreground text-sm">
 					No more recordings in this batch.
 				</p>
-				{page.candidates.length >= page.limit ? (
-					<Button className="mt-4" onClick={onLoadMore}>
+				{page.total > page.candidates.length ? (
+					<Button
+						className="mt-4"
+						variant="outline"
+						size="sm"
+						onClick={onLoadMore}
+					>
 						Load more
 					</Button>
 				) : null}
 			</section>
 		);
+	const recorded = formatRecorded(row.date, row.time);
+	// The three figures that decide the verdict: how sure BirdNET was, how
+	// established the species is at this station, and when it was heard.
+	const stats = [
+		{
+			label: "Confidence",
+			value: formatConfidence(row.confidence),
+			icon: Gauge,
+			hint: "BirdNET's score for this recording",
+		},
+		{
+			label: "Lifetime detections",
+			value: row.lifetimeCount,
+			icon: ChartNoAxesColumnIncreasing,
+			hint: "Times this species has been recorded at this station",
+		},
+		{
+			label: "Recorded",
+			value: recorded.day,
+			detail: recorded.clock,
+			icon: Clock3,
+		},
+	] satisfies PageHeaderStat[];
 	return (
 		<>
-			<section className="feature-card overflow-hidden rounded-md">
-				<div className="border-b bg-[color-mix(in_oklab,var(--sage)_18%,transparent)] p-4">
-					<div className="flex items-start justify-between gap-4">
-						<div>
-							<div className="island-kicker">
-								Recording {index + 1} of {rows.length}
-							</div>
-							<h2 className="display-title mt-1 font-bold text-2xl">
-								{row.comName}
-							</h2>
-							<em className="text-[var(--bark)] text-sm">{row.sciName}</em>
+			<HeroCardShell
+				label="Detection under review"
+				portrait={
+					<HeroPortrait imageUrl={row.imageUrl} comName={row.comName} />
+				}
+			>
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div className="min-w-0">
+						<div className="island-kicker">
+							Recording {index + 1} of {rows.length}
 						</div>
-						<ConfidencePill confidence={row.confidence} />
+						<h2 className="display-title mt-1 font-bold text-2xl text-[var(--moss)] sm:text-3xl">
+							{row.comName}
+						</h2>
+						<p className="text-[var(--bark)] text-xs italic">{row.sciName}</p>
 					</div>
+					<Button asChild variant="outline" size="sm">
+						<a href={row.ebirdUrl} target="_blank" rel="noreferrer">
+							<ExternalLink />
+							eBird reference
+						</a>
+					</Button>
 				</div>
-				<div className="grid gap-6 p-4 md:grid-cols-[1fr_auto] md:items-center">
-					<div>
-						<p className="tabular-data text-muted-foreground text-sm">
-							{row.date} · {row.time}
-						</p>
-						<p className="mt-2 text-sm">
-							{page.queue === "rare"
-								? `${row.lifetimeCount} lifetime detection${row.lifetimeCount === 1 ? "" : "s"}`
-								: "One of the station’s lowest-confidence matches"}
-						</p>
-						<div className="mt-4 flex flex-wrap items-center gap-2">
-							<RecordingButton
-								audioUrl={row.audioAvailable ? row.audioUrl : null}
-							/>
-							<Button asChild variant="outline" size="sm">
-								<a
-									href={row.ebirdUrl}
-									target="_blank"
-									rel="noreferrer"
-									aria-label="Open eBird reference"
-								>
-									<ExternalLink />
-									eBird reference
-								</a>
-							</Button>
-						</div>
-						{!row.audioAvailable ? (
-							<p className="mt-3 text-destructive text-sm">
-								Audio unavailable. You can delete or skip this orphaned entry.
-							</p>
-						) : null}
-					</div>
-					<div className="grid min-w-48 gap-2">
-						<Button
-							disabled={!row.audioAvailable || busy}
-							onClick={() => setAction({ kind: "correct", row })}
-						>
-							<ShieldCheck />
-							Correct
-						</Button>
-						<Button
-							variant="outline"
-							disabled={!row.audioAvailable || busy}
-							onClick={() => setPicker(row)}
-						>
-							<Shuffle />
-							Recategorize
-						</Button>
-						<Button
-							variant="destructive"
-							disabled={busy}
-							onClick={() => setAction({ kind: "delete", row })}
-						>
-							<Trash2 />
-							Delete
-						</Button>
+
+				<div className="tabular-data flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+					<span>A weak match on a species the station rarely hears</span>
+					<RecordingButton
+						audioUrl={row.audioAvailable ? row.audioUrl : null}
+					/>
+				</div>
+
+				{!row.audioAvailable ? (
+					<p className="text-destructive text-sm">
+						Audio unavailable. You can delete or skip this orphaned entry.
+					</p>
+				) : null}
+
+				<PageHeaderStats stats={stats} />
+
+				{/* Horizontal, at the foot of the card: the verdict pair reads left to
+				    right, and the two ways out sit apart from them on the right. */}
+				<div className="flex flex-wrap items-center gap-2 border-[var(--line)] border-t pt-4">
+					<Button
+						size="sm"
+						disabled={!row.audioAvailable || busy}
+						onClick={() => setAction({ kind: "correct", row })}
+					>
+						<ShieldCheck />
+						Correct
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={!row.audioAvailable || busy}
+						onClick={() => setPicker(row)}
+					>
+						<Shuffle />
+						Recategorize
+					</Button>
+					<div className="ml-auto flex items-center gap-2">
 						<Button
 							variant="ghost"
+							size="sm"
 							disabled={busy}
 							onClick={() => {
 								setSkipped(new Set(skipped).add(row.rowId));
@@ -159,18 +215,30 @@ export function ReviewWorkflow({
 							<SkipForward />
 							Skip
 						</Button>
+						<Button
+							variant="destructive"
+							size="sm"
+							disabled={busy}
+							onClick={() => setAction({ kind: "delete", row })}
+						>
+							<Trash2 />
+							Delete
+						</Button>
 					</div>
 				</div>
-			</section>
+			</HeroCardShell>
 			{picker ? (
 				<div
 					role="dialog"
 					aria-modal="true"
-					aria-label="Recategorize detection"
-					className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4"
+					aria-labelledby="recategorize-review-title"
+					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-4"
 				>
-					<div className="feature-card max-h-[80vh] w-full max-w-xl overflow-hidden rounded-md p-4">
-						<h2 className="display-title font-semibold text-xl">
+					<div className="feature-card flex max-h-[80vh] w-full max-w-xl flex-col rounded-md p-4 shadow-xl">
+						<h2
+							id="recategorize-review-title"
+							className="font-semibold text-lg"
+						>
 							Choose the correct species
 						</h2>
 						<div className="relative mt-4">
@@ -183,11 +251,11 @@ export function ReviewWorkflow({
 								autoFocus
 							/>
 						</div>
-						<div className="mt-3 max-h-80 space-y-1 overflow-auto">
+						<div className="mt-3 min-h-0 flex-1 space-y-1 overflow-auto">
 							{matches.map((item) => (
 								<button
 									type="button"
-									className="w-full rounded-md px-3 py-2 text-left hover:bg-accent"
+									className="w-full rounded-md px-3 py-2 text-left text-sm hover:bg-accent"
 									key={item.sciName}
 									onClick={() => {
 										setAction({
@@ -205,13 +273,11 @@ export function ReviewWorkflow({
 								</button>
 							))}
 						</div>
-						<Button
-							className="mt-3"
-							variant="outline"
-							onClick={() => setPicker(null)}
-						>
-							Cancel
-						</Button>
+						<div className="mt-4 flex justify-end">
+							<Button variant="outline" onClick={() => setPicker(null)}>
+								Cancel
+							</Button>
+						</div>
 					</div>
 				</div>
 			) : null}
@@ -220,21 +286,20 @@ export function ReviewWorkflow({
 					role="alertdialog"
 					aria-modal="true"
 					aria-labelledby="confirm-review-title"
-					className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4"
+					className="fixed inset-0 z-50 grid place-items-center bg-black/20 p-4"
 				>
 					<div className="feature-card w-full max-w-md rounded-md p-4 shadow-xl">
-						<h2
-							id="confirm-review-title"
-							className="display-title font-semibold text-xl"
-						>
-							Confirm correction
+						<h2 id="confirm-review-title" className="font-semibold text-lg">
+							{action.kind === "delete"
+								? "Delete this detection?"
+								: "Confirm correction"}
 						</h2>
 						<p className="mt-2 text-muted-foreground text-sm">
 							{action.kind === "correct"
-								? `Mark ${action.row.comName} as correct at 100% confidence?`
+								? `Sign off on this ${action.row.comName}? It leaves the queue, and BirdNET's ${formatConfidence(action.row.confidence)} score is kept as recorded.`
 								: action.kind === "delete"
-									? `Permanently delete this ${action.row.comName} detection and its unreferenced audio?`
-									: `Change ${action.row.comName} to ${action.species.comName} and mark it 100% confident?`}
+									? `This permanently removes the ${action.row.comName} record and its unreferenced audio. This cannot be undone.`
+									: `Change this ${action.row.comName} to ${action.species.comName}? The recording is renamed to match and leaves the queue.`}
 						</p>
 						<div className="mt-4 flex justify-end gap-2">
 							<Button

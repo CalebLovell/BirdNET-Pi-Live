@@ -6,19 +6,13 @@ import {
 	recategorizedFileName,
 } from "./review-data.ts";
 
-test("normalizes review queue and batch size", () => {
-	assert.deepEqual(normalizeReviewSearch({ queue: "rare", limit: 40 }), {
-		queue: "rare",
-		limit: 40,
-	});
-	assert.deepEqual(normalizeReviewSearch({ queue: "unknown", limit: 999 }), {
-		queue: "rare",
-		limit: 20,
-	});
-	assert.deepEqual(
-		normalizeReviewSearch({ queue: "low-confidence", limit: 220 }),
-		{ queue: "low-confidence", limit: 220 },
-	);
+test("normalizes the review batch size", () => {
+	assert.deepEqual(normalizeReviewSearch({ limit: 40 }), { limit: 40 });
+	assert.deepEqual(normalizeReviewSearch({ limit: 220 }), { limit: 220 });
+	// Off the 20-step grid, below the floor, or absent: back to one batch.
+	assert.deepEqual(normalizeReviewSearch({ limit: 999 }), { limit: 20 });
+	assert.deepEqual(normalizeReviewSearch({ limit: 5 }), { limit: 20 });
+	assert.deepEqual(normalizeReviewSearch({}), { limit: 20 });
 });
 
 test("parses and sorts the BirdNET species catalog", () => {

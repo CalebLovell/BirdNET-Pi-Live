@@ -6,14 +6,18 @@ import path from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 
 import { audioUrlFor } from "~/lib/audio.ts";
+import { CONFIDENT_MIN } from "~/lib/confidence.ts";
 import { resolveDetectionClipPath } from "~/lib/detection-file-path.server.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
+import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	parseSpeciesCatalog,
+	RARE_SPECIES_MAX,
 	type ReviewSearch,
 	recategorizedFileName,
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
+import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type ReviewCandidate = {
 	rowId: number;
@@ -27,12 +31,15 @@ export type ReviewCandidate = {
 	audioUrl: string;
 	audioAvailable: boolean;
 	ebirdUrl: string;
+	/** Bundled illustration where there is one; see `attachSpeciesImages`. */
+	imageUrl: string | null;
 };
 export type ReviewPage = {
-	queue: ReviewSearch["queue"];
 	limit: number;
-	rareTotal: number;
-	lowConfidenceTotal: number;
+	/** Recordings meeting the review criteria, of which `candidates` is a page. */
+	total: number;
+	/** How many distinct species those recordings span. */
+	speciesTotal: number;
 	candidates: ReviewCandidate[];
 };
 
@@ -50,6 +57,65 @@ const defaultFileOperations: ReviewFileOperations = {
 	rm,
 };
 
+/**
+ * Our own table, not BirdNET-Pi's. It exists because `detections` cannot grow a
+ * column: both writers (scripts/utils/reporting.py and scripts/seed_test_data.py)
+ * INSERT positionally with no column list, so a thirteenth column would stop the
+ * station recording. Keeping review state alongside instead leaves their SQL --
+ * and BirdNET's own confidence scores -- exactly as they were.
+ *
+ * Keyed on the detection's identity rather than its rowid: SQLite hands deleted
+ * rowids out to later inserts, so a rowid-keyed record could eventually attach
+ * itself to an unrelated new detection and mark it reviewed before anyone
+ * listened to it.
+ */
+const CREATE_REVIEWS_TABLE = `CREATE TABLE IF NOT EXISTS reviews (
+  Date TEXT NOT NULL,
+  Time TEXT NOT NULL,
+  Com_Name TEXT NOT NULL,
+  File_Name TEXT NOT NULL,
+  action TEXT NOT NULL,
+  confidence REAL,
+  reviewed_at TEXT NOT NULL,
+  PRIMARY KEY (Date, Time, Com_Name, File_Name)
+)`;
+
+/** Matches a `reviews` row to the `detections` row it describes. */
+const REVIEW_MATCHES_DETECTION =
+	"r.Date = d.Date AND r.Time = d.Time AND r.Com_Name = d.Com_Name AND r.File_Name = d.File_Name";
+
+export function ensureReviewsTable(database: DatabaseSync) {
+	database.exec(CREATE_REVIEWS_TABLE);
+}
+
+/**
+ * Reads run against a read-only handle and must work on a station that has
+ * never reviewed anything, so the table is only joined once it exists rather
+ * than being created on the read path.
+ */
+function reviewsTableExists(database: DatabaseSync): boolean {
+	return (
+		database
+			.prepare(
+				"SELECT 1 AS present FROM sqlite_master WHERE type='table' AND name='reviews'",
+			)
+			.get() !== undefined
+	);
+}
+
+/**
+ * The whole queue in one clause: a species the station barely hears, on a
+ * recording BirdNET was not already sure about, that nobody has signed off yet.
+ * Reviewing a confident call from a bird the station logs hundreds of times a
+ * year tells nobody anything, so none of the three is optional.
+ */
+function rareAndUnsure(reviewed: boolean): string {
+	const unreviewed = reviewed
+		? ` AND NOT EXISTS (SELECT 1 FROM reviews r WHERE ${REVIEW_MATCHES_DETECTION})`
+		: "";
+	return `SELECT d.rowid rowId, d.Date date, d.Time time, d.Sci_Name sciName, d.Com_Name comName, d.Confidence confidence, d.File_Name fileName, lifetime.lifetime_count lifetimeCount FROM detections d JOIN (SELECT Sci_Name, Com_Name, COUNT(*) lifetime_count FROM detections GROUP BY Sci_Name, Com_Name) lifetime ON lifetime.Sci_Name = d.Sci_Name AND lifetime.Com_Name = d.Com_Name WHERE lifetime.lifetime_count < ${RARE_SPECIES_MAX} AND (d.Confidence IS NULL OR d.Confidence < ${CONFIDENT_MIN})${unreviewed}`;
+}
+
 type RawCandidate = {
 	rowId: number;
 	date: string;
@@ -66,29 +132,23 @@ export function loadReviewPage(
 	extractedRoot: string,
 	search: ReviewSearch,
 ): ReviewPage {
-	const eligible = "Confidence IS NULL OR Confidence < 1.0";
-	const rareTotal = Number(
-		database
-			.prepare(
-				`SELECT COUNT(*) AS n FROM (SELECT 1 FROM detections WHERE ${eligible} GROUP BY Sci_Name, Com_Name)`,
-			)
-			.get()?.n ?? 0,
-	);
-	const lowConfidenceTotal = Number(
-		database
-			.prepare(`SELECT COUNT(*) AS n FROM detections WHERE ${eligible}`)
-			.get()?.n ?? 0,
-	);
-	const rareSql = `WITH lifetime AS (SELECT Sci_Name, Com_Name, COUNT(*) lifetime_count FROM detections GROUP BY Sci_Name, Com_Name), ranked AS (SELECT d.rowid rowId, d.Date date, d.Time time, d.Sci_Name sciName, d.Com_Name comName, d.Confidence confidence, d.File_Name fileName, lifetime.lifetime_count lifetimeCount, ROW_NUMBER() OVER (PARTITION BY d.Sci_Name, d.Com_Name ORDER BY d.Confidence IS NOT NULL, d.Confidence ASC, d.Date DESC, d.Time DESC) candidate_rank FROM detections d JOIN lifetime ON lifetime.Sci_Name=d.Sci_Name AND lifetime.Com_Name=d.Com_Name WHERE d.Confidence IS NULL OR d.Confidence < 1.0) SELECT rowId,date,time,sciName,comName,confidence,fileName,lifetimeCount FROM ranked WHERE candidate_rank=1 ORDER BY lifetimeCount ASC, comName ASC LIMIT ?`;
-	const lowSql = `SELECT d.rowid rowId,d.Date date,d.Time time,d.Sci_Name sciName,d.Com_Name comName,d.Confidence confidence,d.File_Name fileName,(SELECT COUNT(*) FROM detections x WHERE x.Sci_Name=d.Sci_Name AND x.Com_Name=d.Com_Name) lifetimeCount FROM detections d WHERE ${eligible} ORDER BY d.Confidence IS NOT NULL, d.Confidence ASC, d.Date DESC, d.Time DESC LIMIT ?`;
+	const queue = rareAndUnsure(reviewsTableExists(database));
+	const totals = database
+		.prepare(
+			`SELECT COUNT(*) AS n, COUNT(DISTINCT comName) AS species FROM (${queue})`,
+		)
+		.get();
+	// Rarest species first, then weakest recording: the bird you have heard once
+	// is the one where a mistake matters most.
 	const rows = database
-		.prepare(search.queue === "rare" ? rareSql : lowSql)
+		.prepare(
+			`${queue} ORDER BY lifetimeCount ASC, comName ASC, confidence IS NOT NULL, confidence ASC, date DESC, time DESC LIMIT ?`,
+		)
 		.all(search.limit) as RawCandidate[];
 	return {
-		queue: search.queue,
 		limit: search.limit,
-		rareTotal,
-		lowConfidenceTotal,
+		total: Number(totals?.n ?? 0),
+		speciesTotal: Number(totals?.species ?? 0),
 		candidates: rows.map((row) => {
 			const clip = {
 				date: row.date,
@@ -101,8 +161,34 @@ export function loadReviewPage(
 				audioUrl: audioUrlFor(row.date, row.comName, row.fileName),
 				audioAvailable: filePath !== null && existsSync(filePath),
 				ebirdUrl: ebirdUrlFor(row.sciName, row.comName),
+				imageUrl: illustrationUrlFor(row.sciName),
 			};
 		}),
+	};
+}
+
+/**
+ * Fills in a Wikipedia thumbnail for the candidates the bundled illustration set
+ * doesn't cover -- which is most of them here, since the review queues surface
+ * the rarest species first. Kept out of `loadReviewPage` so the query itself
+ * stays synchronous; `getSpeciesInfo` memoizes, so a queue costs at most one
+ * network call per species per server lifetime.
+ */
+export async function attachSpeciesImages(
+	page: ReviewPage,
+): Promise<ReviewPage> {
+	return {
+		...page,
+		candidates: await Promise.all(
+			page.candidates.map(async (candidate) =>
+				candidate.imageUrl
+					? candidate
+					: {
+							...candidate,
+							imageUrl: (await getSpeciesInfo(candidate.comName)).imageUrl,
+						},
+			),
+		),
 	};
 }
 
@@ -150,12 +236,54 @@ function target(database: DatabaseSync, rowId: number) {
 	};
 }
 
+type ReviewedRow = {
+	date: string;
+	time: string;
+	comName: string;
+	confidence: number | null;
+	fileName: string;
+};
+
+/**
+ * Signs a detection off. `INSERT OR REPLACE` rather than a plain insert so
+ * confirming something twice -- two tabs, a double click -- is not an error.
+ * `confidence` is BirdNET's own score, recorded as it stood at review time;
+ * nothing writes back to `detections.Confidence`, which is the point of the
+ * whole table.
+ */
+function recordReview(
+	database: DatabaseSync,
+	row: ReviewedRow,
+	action: "confirmed" | "recategorized",
+) {
+	ensureReviewsTable(database);
+	database
+		.prepare(
+			"INSERT OR REPLACE INTO reviews (Date, Time, Com_Name, File_Name, action, confidence, reviewed_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		)
+		.run(
+			row.date,
+			row.time,
+			row.comName,
+			row.fileName,
+			action,
+			row.confidence,
+			new Date().toISOString(),
+		);
+}
+
+/** Drops any sign-off for a detection that no longer exists under that identity. */
+function forgetReview(database: DatabaseSync, row: ReviewedRow) {
+	if (!reviewsTableExists(database)) return;
+	database
+		.prepare(
+			"DELETE FROM reviews WHERE Date=? AND Time=? AND Com_Name=? AND File_Name=?",
+		)
+		.run(row.date, row.time, row.comName, row.fileName);
+}
+
 export function correctDetection(database: DatabaseSync, rowId: number) {
-	target(database, rowId);
-	const result = database
-		.prepare("UPDATE detections SET Confidence=1.0 WHERE rowid=?")
-		.run(rowId);
-	if (result.changes !== 1) throw new Error("Detection was not updated");
+	recordReview(database, target(database, rowId), "confirmed");
 }
 
 export async function recategorizeDetection(
@@ -218,10 +346,18 @@ export async function recategorizeDetection(
 		}
 		const result = database
 			.prepare(
-				"UPDATE detections SET Sci_Name=?, Com_Name=?, File_Name=?, Confidence=1.0 WHERE rowid=?",
+				"UPDATE detections SET Sci_Name=?, Com_Name=?, File_Name=? WHERE rowid=?",
 			)
 			.run(species.sciName, species.comName, fileName, rowId);
 		if (result.changes !== 1) throw new Error("Detection was not updated");
+		// Signed off under the identity it now has, and any sign-off filed under
+		// the old name dropped, so re-identifying twice leaves one record.
+		forgetReview(database, row);
+		recordReview(
+			database,
+			{ ...row, comName: species.comName, fileName },
+			"recategorized",
+		);
 	} catch (error) {
 		const rollbackErrors: unknown[] = [];
 		if (imagePlaced)
@@ -256,6 +392,9 @@ export async function deleteDetectionDirectly(
 	const result = database
 		.prepare("DELETE FROM detections WHERE rowid=?")
 		.run(rowId);
+	// Otherwise the sign-off outlives the detection, and a future recording that
+	// lands on the same date, time, species and filename inherits it.
+	forgetReview(database, row);
 	const references = Number(
 		database
 			.prepare(

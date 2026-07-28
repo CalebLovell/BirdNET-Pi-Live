@@ -86,7 +86,11 @@ function Figure({
 				<dt className="island-kicker" title={hint} aria-description={hint}>
 					{label}
 				</dt>
-				<div className="mt-2 flex min-w-0 items-baseline gap-2">
+				{/* Floored at the numeric line box (text-3xl/none) so a figure that
+				    falls back to a string -- an em dash on an empty period, say --
+				    doesn't shorten the masthead and shift the page's controls up
+				    under the cursor. */}
+				<div className="mt-2 flex min-h-[1.875rem] min-w-0 items-baseline gap-2">
 					<dd
 						className={
 							typeof value === "number"

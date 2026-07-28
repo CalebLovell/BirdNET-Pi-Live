@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { openWritableDetectionsDb, sqlite } from "~/db/index.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
 import {
+	attachSpeciesImages,
 	correctDetection,
 	deleteDetectionDirectly,
 	loadReviewPage,
@@ -15,7 +16,9 @@ import {
 
 export const getReviewPage = createServerFn({ method: "GET" })
 	.validator((input: Record<string, unknown>) => normalizeReviewSearch(input))
-	.handler(({ data }) => loadReviewPage(sqlite, extractedDir(), data));
+	.handler(({ data }) =>
+		attachSpeciesImages(loadReviewPage(sqlite, extractedDir(), data)),
+	);
 export const getReviewSpecies = createServerFn({ method: "GET" }).handler(() =>
 	loadSpeciesCatalog(),
 );

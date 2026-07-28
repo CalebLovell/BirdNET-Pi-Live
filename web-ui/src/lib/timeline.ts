@@ -1,29 +1,29 @@
 import { createServerFn } from "@tanstack/react-start";
-import { sql } from "drizzle-orm";
+import { and, lt, sql } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
+import {
+	anchorForDay,
+	type TimelineAnchor,
+	type TimelineWindow,
+	windowFor,
+} from "~/lib/timeline-window.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
-// Rolling windows (not calendar-day boundaries), same pattern as
-// trend.ts's periodFilter -- kept separate because this page needs
-// sub-day granularity that StatsPeriod doesn't offer.
-const PERIOD_HOURS: Record<TimelinePeriod, number | null> = {
-	day: 24,
-	week: 24 * 7,
-	month: 24 * 30,
-	year: 24 * 365,
-	all: null,
+/**
+ * Calendar windows, not rolling ones: "Weekly" means a specific Mon-Sun week
+ * the picker names, so the page can be stepped through history rather than
+ * only ever showing the trailing N hours.
+ */
+export type TimelineRequest = {
+	period: TimelinePeriod;
+	/** Ignored when the period is "all". See {@link TimelineAnchor}. */
+	anchor: TimelineAnchor;
 };
-
-function periodFilter(period: TimelinePeriod) {
-	const hours = PERIOD_HOURS[period];
-	if (hours === null) return sql`1=1`;
-	return sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', ${`-${hours} hours`}, 'localtime')`;
-}
 
 export type TimelineRow = {
 	comName: string;
@@ -32,36 +32,109 @@ export type TimelineRow = {
 	ebirdUrl: string;
 	totalDetections: number;
 	hourCounts: number[];
+	/**
+	 * The station had never recorded this species before the window opened, so
+	 * this window is where it first arrived. Always false on "all time", where
+	 * every species is trivially first heard inside the window.
+	 */
+	isNew: boolean;
 };
 
 export type TimelineData = {
 	rows: TimelineRow[];
+	/** The resolved window, or null on "all time". */
+	window: TimelineWindow | null;
+	/**
+	 * Anchors for the nearest neighbouring windows that actually hold
+	 * detections, so the step arrows always land on something. Null when there
+	 * is nothing further in that direction, which is what disables the arrow --
+	 * this skips over silent stretches instead of walking the user through them.
+	 */
+	prevAnchor: TimelineAnchor | null;
+	nextAnchor: TimelineAnchor | null;
+	/**
+	 * The day a period switch re-anchors on: the latest one inside this window
+	 * that holds detections, or the nearest one outside it when the window is
+	 * empty. Anchoring on the window's own start instead would drop Annually onto
+	 * January 1st -- a dead month for most stations -- so the switch follows the
+	 * data. Null only when the station has never recorded anything.
+	 */
+	lastActiveDay: string | null;
+	/**
+	 * First and last day the station ever recorded, used to bound the picker.
+	 * Null when it has never recorded anything.
+	 */
+	stationRange: { first: string; last: string } | null;
 	/**
 	 * Whether the station has ever recorded anything, regardless of the selected
-	 * period. An empty period is not the same as an empty station -- the page
-	 * needs the difference so it only hides the period switcher when there is
-	 * genuinely nothing to switch to.
+	 * window. An empty window is not the same as an empty station -- the page
+	 * needs the difference so it only hides the switcher when there is genuinely
+	 * nothing to switch to.
 	 */
 	hasAnyDetections: boolean;
 };
 
 export const getTimelineData = createServerFn({ method: "GET" })
-	.validator((period: TimelinePeriod) => period)
-	.handler(async ({ data: period }): Promise<TimelineData> => {
-		const rows = await db
-			.select({
-				comName: detections.Com_Name,
-				sciName: detections.Sci_Name,
-				hour: sql<string>`strftime('%H', ${detections.Time})`,
-				count: sql<number>`count(*)`,
-			})
-			.from(detections)
-			.where(periodFilter(period))
-			.groupBy(
-				detections.Com_Name,
-				detections.Sci_Name,
-				sql`strftime('%H', ${detections.Time})`,
-			);
+	.validator((request: TimelineRequest) => request)
+	.handler(async ({ data: { period, anchor } }): Promise<TimelineData> => {
+		const window = windowFor(period, anchor);
+		const inWindow = window
+			? and(
+					sql`${detections.Date} >= ${window.start}`,
+					sql`${detections.Date} <= ${window.end}`,
+				)
+			: undefined;
+
+		const [rows, previouslySeenRows, [neighbours], [stationBounds]] =
+			await Promise.all([
+				db
+					.select({
+						comName: detections.Com_Name,
+						sciName: detections.Sci_Name,
+						hour: sql<string>`strftime('%H', ${detections.Time})`,
+						count: sql<number>`count(*)`,
+					})
+					.from(detections)
+					.where(inWindow)
+					.groupBy(
+						detections.Com_Name,
+						detections.Sci_Name,
+						sql`strftime('%H', ${detections.Time})`,
+					),
+				// Everything the station knew before this window opened; a species
+				// missing from it is one the window introduced. "All time" has no
+				// "before" to compare against and skips the probe.
+				window
+					? db
+							.selectDistinct({ comName: detections.Com_Name })
+							.from(detections)
+							.where(lt(detections.Date, window.start))
+					: Promise.resolve([]),
+				// The nearest recorded day on either side of the window (what the step
+				// arrows snap to) and the latest one inside it (what a period switch
+				// re-anchors on), in a single pass over the dates.
+				window
+					? db
+							.select({
+								prev: sql<
+									string | null
+								>`max(case when ${detections.Date} < ${window.start} then ${detections.Date} end)`,
+								next: sql<
+									string | null
+								>`min(case when ${detections.Date} > ${window.end} then ${detections.Date} end)`,
+								inside: sql<
+									string | null
+								>`max(case when ${detections.Date} between ${window.start} and ${window.end} then ${detections.Date} end)`,
+							})
+							.from(detections)
+					: Promise.resolve([{ prev: null, next: null, inside: null }]),
+				db
+					.select({
+						first: sql<string | null>`min(${detections.Date})`,
+						last: sql<string | null>`max(${detections.Date})`,
+					})
+					.from(detections),
+			]);
 
 		const bySpecies = new Map<
 			string,
@@ -80,6 +153,10 @@ export const getTimelineData = createServerFn({ method: "GET" })
 			entry.hourCounts[Number(row.hour)] = row.count;
 		}
 
+		const previouslySeen = new Set(
+			previouslySeenRows.map((row) => row.comName),
+		);
+
 		const withImages = await Promise.all(
 			Array.from(bySpecies.values()).map(async (entry) => {
 				const { imageUrl: wikiImageUrl } = await getSpeciesInfo(entry.comName);
@@ -91,19 +168,31 @@ export const getTimelineData = createServerFn({ method: "GET" })
 					ebirdUrl: ebirdUrlFor(entry.sciName, entry.comName),
 					totalDetections,
 					hourCounts: entry.hourCounts,
+					isNew: window !== null && !previouslySeen.has(entry.comName),
 				};
 			}),
 		);
 
-		// Anything in this period is proof enough; only an empty period pays for
-		// the extra probe.
-		const hasAnyDetections =
-			withImages.length > 0 ||
-			(await db.select({ one: sql<number>`1` }).from(detections).limit(1))
-				.length > 0;
-
 		return {
 			rows: withImages.sort((a, b) => b.totalDetections - a.totalDetections),
-			hasAnyDetections,
+			window,
+			prevAnchor: neighbours.prev
+				? anchorForDay(period, neighbours.prev)
+				: null,
+			nextAnchor: neighbours.next
+				? anchorForDay(period, neighbours.next)
+				: null,
+			// Preferring what's inside the window keeps the switch where the user is
+			// looking; the neighbours only stand in for an empty window, so changing
+			// granularity can't strand them somewhere with nothing to show. "All
+			// time" spans everything, making the station's last day its own.
+			lastActiveDay: window
+				? (neighbours.inside ?? neighbours.next ?? neighbours.prev)
+				: stationBounds.last,
+			stationRange:
+				stationBounds.first && stationBounds.last
+					? { first: stationBounds.first, last: stationBounds.last }
+					: null,
+			hasAnyDetections: stationBounds.first !== null,
 		};
 	});

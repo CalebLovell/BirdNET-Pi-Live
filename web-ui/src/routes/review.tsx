@@ -1,10 +1,10 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CircleAlert, ListChecks, ShieldCheck } from "lucide-react";
+import { CircleAlert, Feather, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
-import { Button } from "~/components/ui/button.tsx";
+import { CONFIDENT_MIN, formatConfidence } from "~/lib/confidence.ts";
 import {
 	confirmReviewDetection,
 	deleteReviewDetection,
@@ -14,6 +14,7 @@ import {
 } from "~/lib/review.ts";
 import {
 	normalizeReviewSearch,
+	RARE_SPECIES_MAX,
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
 
@@ -55,36 +56,20 @@ function Review() {
 		<div className="page-wrap space-y-4 py-4">
 			<PageHeaderCard
 				title="Review detections"
-				description="Listen closely, compare the call, then correct the station’s record."
+				description={`Species the station has heard fewer than ${RARE_SPECIES_MAX} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}
 				stats={[
-					{ label: "Rare species", value: page.rareTotal, icon: ListChecks },
 					{
-						label: "Low confidence",
-						value: page.lowConfidenceTotal,
-						icon: ShieldCheck,
+						label: "Recordings to review",
+						value: page.total,
+						icon: ListChecks,
+					},
+					{
+						label: "Species",
+						value: page.speciesTotal,
+						icon: Feather,
 					},
 				]}
 			/>
-			<div className="flex gap-2" role="tablist" aria-label="Review queue">
-				<Button
-					role="tab"
-					aria-selected={search.queue === "rare"}
-					variant={search.queue === "rare" ? "default" : "outline"}
-					onClick={() => navigate({ search: { queue: "rare", limit: 20 } })}
-				>
-					Rare species
-				</Button>
-				<Button
-					role="tab"
-					aria-selected={search.queue === "low-confidence"}
-					variant={search.queue === "low-confidence" ? "default" : "outline"}
-					onClick={() =>
-						navigate({ search: { queue: "low-confidence", limit: 20 } })
-					}
-				>
-					Low confidence
-				</Button>
-			</div>
 			{error ? (
 				<p className="flex items-center gap-2 text-destructive text-sm">
 					<CircleAlert className="size-4" />

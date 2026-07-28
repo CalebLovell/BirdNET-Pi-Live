@@ -1,16 +1,19 @@
 import { commonNameSafe } from "~/lib/audio.ts";
 
-export const REVIEW_QUEUES = ["rare", "low-confidence"] as const;
-export type ReviewQueue = (typeof REVIEW_QUEUES)[number];
-export type ReviewSearch = { queue: ReviewQueue; limit: number };
+/**
+ * A species with fewer lifetime detections than this is worth a second listen;
+ * anything the station hears routinely is not. An absolute count rather than a
+ * share of the station's traffic, so the queue means the same thing on day one
+ * as it does after five years of recording.
+ */
+export const RARE_SPECIES_MAX = 10;
+
+export type ReviewSearch = { limit: number };
 export type SpeciesOption = { sciName: string; comName: string };
 
 export function normalizeReviewSearch(
 	input: Record<string, unknown>,
 ): ReviewSearch {
-	const queue = REVIEW_QUEUES.includes(input.queue as ReviewQueue)
-		? (input.queue as ReviewQueue)
-		: "rare";
 	const limit =
 		typeof input.limit === "number" &&
 		Number.isSafeInteger(input.limit) &&
@@ -18,7 +21,7 @@ export function normalizeReviewSearch(
 		input.limit % 20 === 0
 			? input.limit
 			: 20;
-	return { queue, limit };
+	return { limit };
 }
 
 export function parseSpeciesCatalog(text: string): SpeciesOption[] {

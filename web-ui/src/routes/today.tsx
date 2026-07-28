@@ -8,6 +8,7 @@ import { SpeciesList } from "~/components/species-list.tsx";
 import { usePublishLiveStatus } from "~/lib/live-status.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
+import { useFavicon } from "~/lib/use-favicon.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
 
 const POLL_INTERVAL_MS = 10_000;
@@ -57,6 +58,12 @@ function Today() {
 	// that actually polls is what tells it when the last snapshot landed.
 	usePublishLiveStatus(snapshot.generatedAt);
 	const freshKeys = useFreshKeys(snapshot.recent.map((row) => row.key));
+	// Follows the poll rather than the loader, so the tab keeps pace with the hero
+	// card as new birds arrive. It reuses the hero's own image, whatever that
+	// turned out to be, so the two never disagree and the browser fetches once.
+	// A null here means nothing has ever been heard, and the nest is what the
+	// hero card is showing too.
+	useFavicon(snapshot.current?.imageUrl ?? null);
 
 	// Whenever anything has been heard inside the window, the hero bird is also
 	// the newest row in the log, so its arrival is already tracked and needs no
