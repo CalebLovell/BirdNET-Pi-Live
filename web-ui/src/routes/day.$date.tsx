@@ -41,6 +41,7 @@ import {
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { formatShareCard } from "~/lib/share-card.ts";
 import { rankingBarPercent } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -260,7 +261,7 @@ function DaySummaryStrip({ day }: { day: DayReview }) {
 	const share = useShareCard({
 		label: "Share this day",
 		subject: day.date,
-		load: () => getDayShareCard({ data: day.date }),
+		load: () => getDayShareCard({ data: day.date }).then(formatShareCard),
 	});
 
 	return (

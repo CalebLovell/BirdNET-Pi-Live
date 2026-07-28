@@ -1,5 +1,6 @@
 import { useShareCard } from "~/components/use-share-card.tsx";
 import type { NowSummary } from "~/lib/now.ts";
+import { formatShareCard } from "~/lib/share-card.ts";
 import { getShareCard } from "~/lib/share-card-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
@@ -8,7 +9,7 @@ export function SummaryStrip({ summary }: { summary: NowSummary }) {
 	// not to a button standing on its own beneath it.
 	const share = useShareCard({
 		label: "Share today",
-		load: () => getShareCard(),
+		load: () => getShareCard().then(formatShareCard),
 	});
 
 	// Nothing in the window means there is nothing to summarise: three zeros beside

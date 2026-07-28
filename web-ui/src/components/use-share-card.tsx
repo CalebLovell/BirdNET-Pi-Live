@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
-import { formatShareCard, type ShareCard } from "~/lib/share-card.ts";
 
 const COPIED_FEEDBACK_MS = 2_000;
 
@@ -40,8 +39,9 @@ async function copyText(text: string): Promise<boolean> {
  * `summary` that unfolds beneath its contents. Every page that shares does it
  * from its own summary card rather than from a control floating beside one.
  *
- * Shared by the Today page's rolling window and the day page's calendar day --
- * only the label, the subject and the query differ.
+ * Shared by the Today page's rolling window, the day page's calendar day and
+ * the Timeline's selected period -- only the label, the subject and the text
+ * they build differ.
  */
 export function useShareCard({
 	label,
@@ -57,7 +57,11 @@ export function useShareCard({
 	 * notice the page moved on and fetch again.
 	 */
 	subject?: string;
-	load: () => Promise<ShareCard>;
+	/**
+	 * The finished, pasteable text. Async because most callers fetch it; a page
+	 * that already holds the figures can resolve immediately.
+	 */
+	load: () => Promise<string>;
 }): { trigger: ReactNode; summary: ReactNode } {
 	const [card, setCard] = useState<{ subject: string; text: string } | null>(
 		null,
@@ -93,7 +97,7 @@ export function useShareCard({
 		loadRef
 			.current()
 			.then((fetched) => {
-				if (!cancelled) setCard({ subject, text: formatShareCard(fetched) });
+				if (!cancelled) setCard({ subject, text: fetched });
 			})
 			.catch(() => {
 				if (!cancelled) {

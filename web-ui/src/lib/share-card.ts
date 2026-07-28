@@ -100,7 +100,7 @@ const MEDALS = ["🥇", "🥈", "🥉"] as const;
 
 export function formatShareCard(card: ShareCard): string {
 	const window = card.window ?? "rolling";
-	const header = `🐦 BirdNET · ${dateLabel(card.date)}`;
+	const header = `🐦 Birdbook · ${dateLabel(card.date)}`;
 
 	if (card.detections === 0) {
 		const quiet =

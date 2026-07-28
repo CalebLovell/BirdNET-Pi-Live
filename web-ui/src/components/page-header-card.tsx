@@ -27,18 +27,32 @@ export function PageHeaderCard({
 	title,
 	description,
 	stats = [],
+	action,
+	children,
 }: {
 	title: string;
 	description: string;
 	/** Omit for a title-only masthead; otherwise up to four figures. */
 	stats?: PageHeaderStat[];
+	/** A control for the page as a whole, set against the title. */
+	action?: ReactNode;
+	/** Unfolds beneath the figures -- what `action` opens, if anything. */
+	children?: ReactNode;
 }) {
 	return (
 		<section aria-label={title} className="feature-card rounded-md p-4">
-			<h1 className="display-title font-bold text-xl leading-tight">{title}</h1>
-			<p className="mt-1 text-muted-foreground text-sm">{description}</p>
+			<div className="flex items-start justify-between gap-3">
+				<div className="min-w-0">
+					<h1 className="display-title font-bold text-xl leading-tight">
+						{title}
+					</h1>
+					<p className="mt-1 text-muted-foreground text-sm">{description}</p>
+				</div>
+				{action}
+			</div>
 
 			{stats.length > 0 && <PageHeaderStats stats={stats} />}
+			{children}
 		</section>
 	);
 }

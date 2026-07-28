@@ -46,7 +46,7 @@ test("spans the full range between the quietest and busiest hour", () => {
 test("heads the card with the date and the day's totals", () => {
 	const lines = formatShareCard(cardWith()).split("\n");
 
-	assert.equal(lines[0], "🐦 BirdNET · Jul 25");
+	assert.equal(lines[0], "🐦 Birdbook · Jul 25");
 	assert.equal(lines[1], "23 species · 412 detections · 96 visits");
 });
 
@@ -172,7 +172,7 @@ test("collapses a silent window to a single quiet line", () => {
 
 	assert.equal(
 		text,
-		"🐦 BirdNET · Jul 25\n🤫 Nothing heard in the last 24 hours.",
+		"🐦 Birdbook · Jul 25\n🤫 Nothing heard in the last 24 hours.",
 	);
 });
 
@@ -209,7 +209,7 @@ test("says a whole day was silent rather than the last 24 hours", () => {
 		}),
 	);
 
-	assert.equal(text, "🐦 BirdNET · Jul 25\n🤫 Nothing heard all day.");
+	assert.equal(text, "🐦 Birdbook · Jul 25\n🤫 Nothing heard all day.");
 });
 
 test("leaves no trailing blank line to paste", () => {

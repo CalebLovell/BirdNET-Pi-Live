@@ -292,8 +292,10 @@ a {
   /* Single source of truth for keyboard focus across links, buttons, inputs,
      selects, sort headers and filters: a thin dark-green outline held slightly
      off the element so it reads as a separate marker, not a thicker border.
-     Components must NOT set `outline-none` -- to vary it, override just the
-     colour (e.g. `focus-visible:outline-destructive`). */
+     To vary it, override just the colour (e.g.
+     `focus-visible:outline-destructive`) rather than reaching for
+     `outline-none`; the sole opt-out is Input, which signals focus with its
+     border instead. */
   :focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;

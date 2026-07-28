@@ -5,7 +5,7 @@ export function Header() {
 		<header style={{ background: "var(--header-bg)" }}>
 			<div className="page-wrap flex h-16 items-center justify-between border-b">
 				<Link to="/" className="display-title font-semibold text-xl">
-					BirdNET-Pi Live
+					Birdbook Pi
 				</Link>
 				<nav className="flex items-center gap-4">
 					<Link

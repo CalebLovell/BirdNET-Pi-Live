@@ -32,6 +32,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
+import { useShareCard } from "~/components/use-share-card.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
@@ -41,6 +42,7 @@ import {
 	TIMELINE_PERIODS,
 	type TimelinePeriod,
 } from "~/lib/timeline-periods.ts";
+import { formatTimelineShareCard } from "~/lib/timeline-share.ts";
 import {
 	anchorForDay,
 	currentAnchor,
@@ -234,13 +236,35 @@ function Timeline() {
 		] satisfies PageHeaderStat[];
 	}, [rows]);
 
+	// Everything the card says is already on this page, so the summary is built
+	// from the loader's rows rather than fetched -- no round trip, and it can
+	// never disagree with the figures above it.
+	const share = useShareCard({
+		label: "Share",
+		// Named by what's showing, so switching period or stepping to another week
+		// rebuilds the card instead of leaving the last one behind the button.
+		subject: `${period}:${anchor}`,
+		load: async () =>
+			formatTimelineShareCard({
+				period,
+				windowLabel: activeWindow?.label ?? null,
+				rows,
+			}),
+	});
+
 	return (
 		<div className="page-wrap space-y-4 py-4">
 			<PageHeaderCard
 				title="Timeline"
 				description="When each species is active across the day, hour by hour."
 				stats={stats}
-			/>
+				// Kept on screen for empty windows too -- the card says so in a line,
+				// and a control that vanished as you stepped through quiet weeks would
+				// shift the masthead under the cursor.
+				action={hasAnyDetections ? share.trigger : undefined}
+			>
+				{share.summary}
+			</PageHeaderCard>
 
 			{/* Gated on the station rather than the window: an empty week still
 			    needs the switcher to reach a window that has something in it. */}

@@ -1,4 +1,4 @@
-const SITE_NAME = "BirdNET-Pi Live";
+const SITE_NAME = "Birdbook Pi";
 
 /**
  * Document title for a route. The site name leads so a row of pinned tabs
