@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DetectionsRouteImport } from './routes/detections'
 import { Route as LearnRouteImport } from './routes/learn'
+import { Route as ReviewRouteImport } from './routes/review'
 import { Route as SpeciesRouteImport } from './routes/species'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as TimelineRouteImport } from './routes/timeline'
@@ -34,6 +35,11 @@ const DetectionsRoute = DetectionsRouteImport.update({
 const LearnRoute = LearnRouteImport.update({
   id: '/learn',
   path: '/learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReviewRoute = ReviewRouteImport.update({
+  id: '/review',
+  path: '/review',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SpeciesRoute = SpeciesRouteImport.update({
@@ -82,6 +88,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
+  '/review': typeof ReviewRoute
   '/species': typeof SpeciesRouteWithChildren
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
+  '/review': typeof ReviewRoute
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
+  '/review': typeof ReviewRoute
   '/species': typeof SpeciesRouteWithChildren
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
@@ -123,6 +132,7 @@ export interface FileRouteTypes {
     | '/'
     | '/detections'
     | '/learn'
+    | '/review'
     | '/species'
     | '/stats'
     | '/timeline'
@@ -136,6 +146,7 @@ export interface FileRouteTypes {
     | '/'
     | '/detections'
     | '/learn'
+    | '/review'
     | '/stats'
     | '/timeline'
     | '/today'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '/'
     | '/detections'
     | '/learn'
+    | '/review'
     | '/species'
     | '/stats'
     | '/timeline'
@@ -162,6 +174,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DetectionsRoute: typeof DetectionsRoute
   LearnRoute: typeof LearnRoute
+  ReviewRoute: typeof ReviewRoute
   SpeciesRoute: typeof SpeciesRouteWithChildren
   StatsRoute: typeof StatsRoute
   TimelineRoute: typeof TimelineRoute
@@ -191,6 +204,13 @@ declare module '@tanstack/react-router' {
       path: '/learn'
       fullPath: '/learn'
       preLoaderRoute: typeof LearnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/review': {
+      id: '/review'
+      path: '/review'
+      fullPath: '/review'
+      preLoaderRoute: typeof ReviewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/species': {
@@ -269,6 +289,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DetectionsRoute: DetectionsRoute,
   LearnRoute: LearnRoute,
+  ReviewRoute: ReviewRoute,
   SpeciesRoute: SpeciesRouteWithChildren,
   StatsRoute: StatsRoute,
   TimelineRoute: TimelineRoute,
