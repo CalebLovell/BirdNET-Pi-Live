@@ -9,6 +9,7 @@ import { z } from "zod";
 
 import { LearnGame } from "~/components/learn/learn-game.tsx";
 import {
+	LEARN_POOL_ICONS,
 	LearnPoolSelector,
 	LearnRoundShell,
 } from "~/components/learn/learn-layout.tsx";
@@ -17,8 +18,8 @@ import { getLearnRound } from "~/lib/learn.ts";
 import {
 	LEARN_POOL_DESCRIPTIONS,
 	LEARN_POOL_LABELS,
-	type LearnPool,
 	LEARN_POOLS,
+	type LearnPool,
 } from "~/lib/learn-pools.ts";
 import {
 	CHOICES_PER_QUESTION,
@@ -79,7 +80,7 @@ function Learn() {
 									label: "Drawing from",
 									value: LEARN_POOL_LABELS[pool],
 									detail: LEARN_POOL_DESCRIPTIONS[pool],
-									icon: POOL_ICONS[pool],
+									icon: LEARN_POOL_ICONS[pool],
 								},
 							]
 						: []

@@ -128,23 +128,17 @@ export function LearnGame({
 			/>
 
 			<div className="mt-4 grid gap-4 lg:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)] lg:items-center">
-				<div
-					role="group"
-					aria-label="Listening prompt"
-					className="flex flex-col items-center gap-2 lg:border-[var(--line)] lg:border-r lg:pr-4"
-				>
+				<fieldset className="flex flex-col items-center gap-2 lg:border-[var(--line)] lg:border-r lg:pr-4">
+					<legend className="sr-only">Listening prompt</legend>
 					<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
 					<div className="tabular-data text-muted-foreground text-xs">
 						Recorded {formatClockTime(question.detectedAt)} ·{" "}
 						{question.detectedAt.slice(0, 10)}
 					</div>
-				</div>
+				</fieldset>
 
-				<div
-					role="group"
-					aria-label="Bird choices"
-					className="grid gap-2 sm:grid-cols-2"
-				>
+				<fieldset className="grid min-w-0 gap-2 sm:grid-cols-2">
+					<legend className="sr-only">Bird choices</legend>
 					{question.choices.map((choice, choiceIndex) => (
 						<ChoiceButton
 							key={choice.sciName}
@@ -162,7 +156,7 @@ export function LearnGame({
 							onSelect={() => guess(choice)}
 						/>
 					))}
-				</div>
+				</fieldset>
 			</div>
 
 			<div className="mt-4 min-h-16 border-[var(--line)] border-t pt-4">

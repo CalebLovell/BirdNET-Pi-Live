@@ -6,17 +6,14 @@ import {
 } from "lucide-react";
 import type { ComponentType, PropsWithChildren } from "react";
 
-import {
-	ToggleGroup,
-	ToggleGroupItem,
-} from "~/components/ui/toggle-group.tsx";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
 	LEARN_POOL_LABELS,
 	LEARN_POOLS,
 	type LearnPool,
 } from "~/lib/learn-pools.ts";
 
-const POOL_ICONS: Record<
+export const LEARN_POOL_ICONS: Record<
 	LearnPool,
 	ComponentType<{ className?: string }>
 > = {
@@ -44,7 +41,7 @@ export function LearnPoolSelector({
 				}}
 			>
 				{LEARN_POOLS.map((option) => {
-					const Icon = POOL_ICONS[option];
+					const Icon = LEARN_POOL_ICONS[option];
 					return (
 						<ToggleGroupItem key={option} value={option}>
 							<Icon className="size-4" />

@@ -54,10 +54,10 @@ test("uses a listening rail beside the choices on wide screens", () => {
 		/>,
 	);
 
+	assert.match(markup, /lg:grid-cols-\[minmax\(12rem,1fr\)_minmax\(0,2fr\)\]/);
 	assert.match(
 		markup,
-		/lg:grid-cols-\[minmax\(12rem,1fr\)_minmax\(0,2fr\)\]/,
+		/<fieldset[^>]*><legend[^>]*>Listening prompt<\/legend>/,
 	);
-	assert.match(markup, /role="group" aria-label="Listening prompt"/);
-	assert.match(markup, /role="group" aria-label="Bird choices"/);
+	assert.match(markup, /<fieldset[^>]*><legend[^>]*>Bird choices<\/legend>/);
 });
