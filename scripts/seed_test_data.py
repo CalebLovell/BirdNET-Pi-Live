@@ -286,6 +286,11 @@ def main():
     """)
 
     if not args.append:
+        reviews_table_exists = cur.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'reviews'"
+        ).fetchone()
+        if reviews_table_exists:
+            cur.execute('DELETE FROM reviews')
         cur.execute('DELETE FROM detections')
 
     rows = generate_rows(args.days)

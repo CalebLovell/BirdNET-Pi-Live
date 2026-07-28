@@ -12,6 +12,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
+    "db:reset": "python ../scripts/seed_test_data.py",
     "db:studio": "drizzle-kit studio",
     "format": "biome format --write",
     "lint": "biome lint --write --unsafe",
