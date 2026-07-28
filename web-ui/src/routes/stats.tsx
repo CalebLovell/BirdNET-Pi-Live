@@ -66,18 +66,11 @@ function Stats() {
 			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<DetectionsByHourCard activity={stats.hourActivity} />
 				<DetectionsOverTimeCard trend={stats.detectionTrend} />
-				{/* The min-height keeps the two ranked lists the same size next to each
-				    other; with nothing in them it would just be a tall empty box. */}
-				<SpeciesList
-					title="Top species"
-					species={stats.topSpeciesList}
-					className={isEmpty ? "" : "min-h-112"}
-				/>
-				<SpeciesList
-					title="Rarest species"
-					species={stats.rarestSpeciesList}
-					className={isEmpty ? "" : "min-h-112"}
-				/>
+				{/* No min-height: the two lists sit in the same grid row, so they
+				    already stretch to match each other. Reserving height instead only
+				    padded them with dead space until the lists were long enough. */}
+				<SpeciesList title="Top species" species={stats.topSpeciesList} />
+				<SpeciesList title="Rarest species" species={stats.rarestSpeciesList} />
 			</div>
 		</div>
 	);
