@@ -60,8 +60,8 @@ function Today() {
 
 	// Whenever anything has been heard inside the window, the hero bird is also
 	// the newest row in the log, so its arrival is already tracked and needs no
-	// second freshness mechanism. Outside the window the log is empty and the
-	// hero sits in its quiet state, where there is nothing to flash.
+	// second mechanism. Outside the window the log is empty, and the hero is
+	// showing an older detection that did not just arrive -- nothing to flash.
 	const newestKey = snapshot.recent[0]?.key;
 	const heroIsNew = newestKey !== undefined && freshKeys.has(newestKey);
 
@@ -69,7 +69,6 @@ function Today() {
 		<div className="page-wrap py-4">
 			<CurrentBirdCard
 				current={snapshot.current}
-				summary={snapshot.summary}
 				offsetMs={offsetMs}
 				flash={heroIsNew}
 			/>
@@ -81,7 +80,7 @@ function Today() {
 					title="Top detections"
 					ariaLabel="Top detections in the last 24 hours"
 					species={snapshot.topSpecies}
-					emptyMessage="Nothing detected in the last 24 hours."
+					emptyMessage="No detections recorded in the last 24 hours."
 				/>
 				<RecentLogCard
 					recent={snapshot.recent}

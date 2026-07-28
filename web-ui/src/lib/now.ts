@@ -109,14 +109,22 @@ async function buildCurrentBird(
 		db
 			.select({
 				countLast24h: count(),
-				averageConfidence: avg(detections.Confidence),
 				firstHeard: sql<
 					string | null
 				>`min(datetime(${detections.Date} || ' ' || ${detections.Time}))`,
 			})
 			.from(detections)
 			.where(and(isLast24h, isSameSpecies)),
-		db.select({ allTimeCount: count() }).from(detections).where(isSameSpecies),
+		// Confidence is averaged over the species' whole history, not the 24-hour
+		// window: the hero shows the most recent detection however old it is, and
+		// a window-scoped average reads as "--" for anything heard before it.
+		db
+			.select({
+				allTimeCount: count(),
+				averageConfidence: avg(detections.Confidence),
+			})
+			.from(detections)
+			.where(isSameSpecies),
 		db
 			.select({ timestamp: detectedAt })
 			.from(detections)
@@ -136,8 +144,8 @@ async function buildCurrentBird(
 		countLast24h: totals.countLast24h,
 		visitsLast24h: countVisits(moments.map((moment) => moment.timestamp)),
 		averageConfidence:
-			totals.averageConfidence != null
-				? Number(totals.averageConfidence)
+			allTime.averageConfidence != null
+				? Number(allTime.averageConfidence)
 				: null,
 		firstHeardLast24h: totals.firstHeard,
 		allTimeCount: allTime.allTimeCount,
@@ -160,8 +168,8 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 			topRows,
 			recentRows,
 		] = await Promise.all([
-			// The one query deliberately NOT bounded to 24 hours: the hero card's
-			// quiet state still has to name what was last heard, even if that was
+			// The one query deliberately NOT bounded to 24 hours: the hero card
+			// names the most recent detection whatever its age, even if that was
 			// days ago. Every other figure on the page respects the window.
 			db
 				.select({

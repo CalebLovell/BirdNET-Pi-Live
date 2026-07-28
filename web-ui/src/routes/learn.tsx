@@ -56,7 +56,7 @@ const POOL_ICONS: Record<
 };
 
 function Learn() {
-	const round = Route.useLoaderData();
+	const { round, hasAnyDetections } = Route.useLoaderData();
 	const { pool } = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();
@@ -70,58 +70,74 @@ function Learn() {
 			<PageHeaderCard
 				title="Learn the calls"
 				description="Ear training on the recordings your own station captured."
-				stats={[
-					{
-						label: "Recordings",
-						value: QUESTIONS_PER_ROUND,
-						detail: "per round",
-						icon: Headphones,
-					},
-					{
-						label: "Choices",
-						value: CHOICES_PER_QUESTION,
-						detail: "per question",
-						icon: ListChecks,
-					},
-					{
-						label: "Drawing from",
-						value: LEARN_POOL_LABELS[pool],
-						detail: LEARN_POOL_DESCRIPTIONS[pool],
-						icon: POOL_ICONS[pool],
-					},
-				]}
+				// The shape of a round is only worth describing when there is one to
+				// play; with nothing recorded these promise a game that cannot start.
+				stats={
+					hasAnyDetections
+						? [
+								{
+									label: "Recordings",
+									value: QUESTIONS_PER_ROUND,
+									detail: "per round",
+									icon: Headphones,
+								},
+								{
+									label: "Choices",
+									value: CHOICES_PER_QUESTION,
+									detail: "per question",
+									icon: ListChecks,
+								},
+								{
+									label: "Drawing from",
+									value: LEARN_POOL_LABELS[pool],
+									detail: LEARN_POOL_DESCRIPTIONS[pool],
+									icon: POOL_ICONS[pool],
+								},
+							]
+						: []
+				}
 			/>
 
 			{/* Filters sit bare between the header card and the round, the way the
-			    species page keeps its search and sort row. */}
-			<div className="mt-4 flex justify-end">
-				<ToggleGroup
-					type="single"
-					variant="outline"
-					value={pool}
-					onValueChange={(value) => {
-						if (!value) return;
-						navigate({
-							search: (previous) => ({ ...previous, pool: value as LearnPool }),
-							replace: true,
-						});
-					}}
-				>
-					{LEARN_POOLS.map((option) => {
-						const Icon = POOL_ICONS[option];
-						return (
-							<ToggleGroupItem key={option} value={option}>
-								<Icon className="size-4" />
-								{LEARN_POOL_LABELS[option]}
-							</ToggleGroupItem>
-						);
-					})}
-				</ToggleGroup>
-			</div>
+			    species page keeps its search and sort row. Gated on the station, not
+			    the pool: an empty pool still needs the switcher to reach a fuller
+			    one, which is exactly what the empty card advises. */}
+			{hasAnyDetections && (
+				<div className="mt-4 flex justify-end">
+					<ToggleGroup
+						type="single"
+						variant="outline"
+						value={pool}
+						onValueChange={(value) => {
+							if (!value) return;
+							navigate({
+								search: (previous) => ({
+									...previous,
+									pool: value as LearnPool,
+								}),
+								replace: true,
+							});
+						}}
+					>
+						{LEARN_POOLS.map((option) => {
+							const Icon = POOL_ICONS[option];
+							return (
+								<ToggleGroupItem key={option} value={option}>
+									<Icon className="size-4" />
+									{LEARN_POOL_LABELS[option]}
+								</ToggleGroupItem>
+							);
+						})}
+					</ToggleGroup>
+				</div>
+			)}
 
 			<div className="mx-auto mt-4 max-w-3xl">
 				{round.questions.length === 0 ? (
-					<EmptyPool speciesInPool={round.speciesInPool} />
+					<EmptyPool
+						speciesInPool={round.speciesInPool}
+						hasAnyDetections={hasAnyDetections}
+					/>
 				) : (
 					<LearnGame
 						key={round.id}
@@ -135,9 +151,29 @@ function Learn() {
 	);
 }
 
-function EmptyPool({ speciesInPool }: { speciesInPool: number }) {
+function EmptyPool({
+	speciesInPool,
+	hasAnyDetections,
+}: {
+	speciesInPool: number;
+	hasAnyDetections: boolean;
+}) {
+	// Pointing at a wider selection is only useful advice when a wider selection
+	// could hold something. With nothing recorded anywhere, it would just send
+	// someone around a loop of empty pools.
+	if (!hasAnyDetections) {
+		return (
+			<section className="feature-card rounded-md p-4">
+				<div className="island-kicker">Learn</div>
+				<p className="mt-4 text-muted-foreground text-sm">
+					No detections recorded yet.
+				</p>
+			</section>
+		);
+	}
+
 	return (
-		<section className="feature-card rounded-md p-4 text-center">
+		<section className="feature-card rounded-md p-4">
 			<div className="island-kicker">Not enough to go on</div>
 			<p className="mt-4 text-muted-foreground text-sm">
 				A round needs {CHOICES_PER_QUESTION} species with clear recordings still

@@ -228,9 +228,9 @@ function ordinal(value: number): string {
 
 function QuietDay({ day }: { day: DayReview }) {
 	return (
-		<section className="feature-card mt-4 flex flex-col items-center gap-2 rounded-md p-10 text-center">
+		<section className="feature-card mt-4 flex flex-col items-start gap-2 rounded-md p-4">
 			<Bird className="size-8 text-muted-foreground" />
-			<p className="font-semibold">Nothing was heard on this day.</p>
+			<p className="font-semibold">No detections recorded on this day.</p>
 			<p className="text-muted-foreground text-sm">
 				{day.previousDate
 					? "Step back to the last day with detections."
@@ -253,7 +253,7 @@ function DaySummaryStrip({ day }: { day: DayReview }) {
 	return (
 		<section
 			aria-label="Day totals"
-			className="feature-card mt-4 rounded-md p-4 sm:p-6"
+			className="feature-card mt-4 rounded-md p-4"
 		>
 			<div className="flex items-center justify-between gap-3">
 				<div className="island-kicker">The day in numbers</div>
@@ -344,7 +344,7 @@ function SpeciesHeardCard({ species }: { species: DaySpeciesRow[] }) {
 	return (
 		<section
 			aria-label="Species heard"
-			className="feature-card flex flex-col rounded-md p-4 sm:p-6"
+			className="feature-card flex flex-col rounded-md p-4"
 		>
 			<div className="flex items-baseline justify-between gap-2">
 				<div className="island-kicker">Species heard</div>
@@ -654,7 +654,7 @@ function BestRecordingsCard({
 	return (
 		<section
 			aria-label="Best recordings"
-			className="feature-card mt-4 rounded-md p-4 sm:p-6"
+			className="feature-card mt-4 rounded-md p-4"
 		>
 			<div className="island-kicker">Best recordings</div>
 

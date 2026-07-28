@@ -34,9 +34,20 @@ export type TimelineRow = {
 	hourCounts: number[];
 };
 
+export type TimelineData = {
+	rows: TimelineRow[];
+	/**
+	 * Whether the station has ever recorded anything, regardless of the selected
+	 * period. An empty period is not the same as an empty station -- the page
+	 * needs the difference so it only hides the period switcher when there is
+	 * genuinely nothing to switch to.
+	 */
+	hasAnyDetections: boolean;
+};
+
 export const getTimelineData = createServerFn({ method: "GET" })
 	.validator((period: TimelinePeriod) => period)
-	.handler(async ({ data: period }): Promise<TimelineRow[]> => {
+	.handler(async ({ data: period }): Promise<TimelineData> => {
 		const rows = await db
 			.select({
 				comName: detections.Com_Name,
@@ -84,5 +95,15 @@ export const getTimelineData = createServerFn({ method: "GET" })
 			}),
 		);
 
-		return withImages.sort((a, b) => b.totalDetections - a.totalDetections);
+		// Anything in this period is proof enough; only an empty period pays for
+		// the extra probe.
+		const hasAnyDetections =
+			withImages.length > 0 ||
+			(await db.select({ one: sql<number>`1` }).from(detections).limit(1))
+				.length > 0;
+
+		return {
+			rows: withImages.sort((a, b) => b.totalDetections - a.totalDetections),
+			hasAnyDetections,
+		};
 	});

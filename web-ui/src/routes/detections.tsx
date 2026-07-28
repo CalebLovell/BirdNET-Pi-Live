@@ -19,7 +19,10 @@ import {
 	type PageHeaderStat,
 } from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import { normalizeDetectionWorkspaceSearch } from "~/lib/detection-workspace.ts";
+import {
+	hasActiveFilters,
+	normalizeDetectionWorkspaceSearch,
+} from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
 
 type Feedback = {
@@ -48,10 +51,20 @@ function Detections() {
 		.filter(([, isSelected]) => isSelected)
 		.map(([rowId]) => Number(rowId));
 	const selectedCount = selectedRowIds.length;
+	const isFiltered = hasActiveFilters(search);
+	const isEmpty = page.total === 0;
+	// Only a station that has never recorded anything drops its filters. An empty
+	// filter result keeps them, or there would be no way to clear the filter that
+	// emptied it.
+	const stationEmpty = isEmpty && !isFiltered;
 
 	// `page.total` already honours the active filters; the species figure can
 	// only speak for the loaded page, so its label says so.
-	const stats = useMemo(() => {
+	const stats = useMemo<PageHeaderStat[]>(() => {
+		// Nothing matched, so every figure would be a 0 or a "1 of 1" describing
+		// nothing. The row comes off rather than reading as broken.
+		if (page.total === 0) return [];
+
 		const species = new Set(page.rows.map((row) => row.Com_Name)).size;
 		const pageCount = Math.max(1, Math.ceil(page.total / search.pageSize));
 
@@ -113,13 +126,15 @@ function Detections() {
 					stats={stats}
 				/>
 
-				<DetectionsFilters
-					search={search}
-					onSearchChange={(nextSearch) => {
-						setRowSelection({});
-						navigate({ search: nextSearch, replace: true });
-					}}
-				/>
+				{!stationEmpty && (
+					<DetectionsFilters
+						search={search}
+						onSearchChange={(nextSearch) => {
+							setRowSelection({});
+							navigate({ search: nextSearch, replace: true });
+						}}
+					/>
+				)}
 
 				{feedback ? (
 					<p
@@ -138,29 +153,43 @@ function Detections() {
 
 				<section
 					aria-label="Detections"
-					className="feature-card rounded-md p-3"
+					className="feature-card rounded-md p-4"
 				>
-					<div className="mb-3 flex items-center justify-between gap-2">
+					<div
+						className={`flex items-center justify-between gap-2 ${isEmpty ? "" : "mb-3"}`}
+					>
 						<div className="island-kicker">All detections</div>
-						<Button
-							disabled={selectedCount === 0}
-							size="xs"
-							variant={selectedCount > 0 ? "destructive" : "outline"}
-							onClick={() => setDeleteOpen(true)}
-						>
-							<Trash2 />
-							{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
-						</Button>
+						{/* With no rows there is nothing selectable, so the button would
+						    only ever sit disabled. */}
+						{!isEmpty && (
+							<Button
+								disabled={selectedCount === 0}
+								size="xs"
+								variant={selectedCount > 0 ? "destructive" : "outline"}
+								onClick={() => setDeleteOpen(true)}
+							>
+								<Trash2 />
+								{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
+							</Button>
+						)}
 					</div>
-					<DetectionsTable
-						page={page}
-						search={search}
-						onSearchChange={(nextSearch) =>
-							navigate({ search: nextSearch, replace: true })
-						}
-						rowSelection={rowSelection}
-						onRowSelectionChange={setRowSelection}
-					/>
+					{isEmpty ? (
+						<p className="mt-4 text-muted-foreground text-sm">
+							{isFiltered
+								? "No detections match these filters."
+								: "No detections recorded yet."}
+						</p>
+					) : (
+						<DetectionsTable
+							page={page}
+							search={search}
+							onSearchChange={(nextSearch) =>
+								navigate({ search: nextSearch, replace: true })
+							}
+							rowSelection={rowSelection}
+							onRowSelectionChange={setRowSelection}
+						/>
+					)}
 				</section>
 
 				{deleteOpen ? (

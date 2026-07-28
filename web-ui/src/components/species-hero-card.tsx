@@ -1,0 +1,151 @@
+import { Link } from "@tanstack/react-router";
+import { Bird } from "lucide-react";
+import type { CSSProperties, ReactNode } from "react";
+
+import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import {
+	type PageHeaderStat,
+	PageHeaderStats,
+} from "~/components/page-header-card.tsx";
+import { RecordingButton } from "~/components/recording-button.tsx";
+
+/**
+ * The one masthead shape shared by the Today page's hero and the species
+ * profile: portrait on the left, and a content column that always reads name,
+ * scientific name, how long ago, when and how confidently, then the figures.
+ * Only the data differs between the two pages -- never the shape.
+ */
+export const HERO_CARD_SHELL =
+	"feature-card grid items-center gap-4 rounded-md p-4 sm:grid-cols-[11rem_minmax(0,1fr)]";
+
+export function HeroCardShell({
+	label,
+	portrait,
+	className = HERO_CARD_SHELL,
+	style,
+	children,
+}: {
+	label: string;
+	portrait: ReactNode;
+	className?: string;
+	style?: CSSProperties;
+	children: ReactNode;
+}) {
+	return (
+		<section aria-label={label} className={className} style={style}>
+			{portrait}
+
+			<div className="flex min-w-0 flex-col gap-2.5">{children}</div>
+		</section>
+	);
+}
+
+export function HeroPortrait({
+	imageUrl,
+	comName,
+}: {
+	imageUrl: string | null;
+	comName: string;
+}) {
+	return (
+		// Centred, not left-aligned: the illustrations range from 0.81 to 1.49 in
+		// aspect, so object-contain leaves up to 37px of slack in the column. Left
+		// alignment pools all of it into the gutter before the text; centring
+		// splits it. Sizing the column to the bird instead would move the text's
+		// left edge per species, which the Today hero would jump through on every
+		// poll.
+		<div className="flex h-40 w-full shrink-0 items-center justify-center overflow-hidden sm:h-44">
+			{imageUrl ? (
+				<img
+					src={imageUrl}
+					alt={comName}
+					className="max-h-full max-w-full object-contain"
+				/>
+			) : (
+				<Bird className="size-16 text-muted-foreground" />
+			)}
+		</div>
+	);
+}
+
+export function SpeciesHeroCard({
+	label,
+	comName,
+	sciName,
+	speciesSlug,
+	imageUrl,
+	relativeTime,
+	clockTime,
+	confidence,
+	audioUrl,
+	stats,
+	actions,
+	className,
+	style,
+}: {
+	label: string;
+	comName: string;
+	sciName: string;
+	/** Links the title to the species page. Omit on the species page itself. */
+	speciesSlug?: string;
+	imageUrl: string | null;
+	/** The moss line: "5 minutes ago". */
+	relativeTime: string;
+	/** The wall-clock time that reading is of, e.g. "4:13 PM". */
+	clockTime: string;
+	confidence: number | null;
+	audioUrl: string | null;
+	stats: PageHeaderStat[];
+	/** Top-right controls, e.g. the species page's eBird link. */
+	actions?: ReactNode;
+	className?: string;
+	style?: CSSProperties;
+}) {
+	return (
+		<HeroCardShell
+			label={label}
+			portrait={<HeroPortrait imageUrl={imageUrl} comName={comName} />}
+			className={className}
+			style={style}
+		>
+			{/* Title and actions share a line, so the column starts level with the
+			    top of the portrait. */}
+			<div className="flex flex-wrap items-start justify-between gap-3">
+				<div className="min-w-0">
+					{/* Moss set on the heading, not inherited from the anchor: the title
+					    reads the same whether or not it links anywhere. */}
+					<h1 className="display-title font-bold text-2xl text-[var(--moss)] sm:text-3xl">
+						{speciesSlug ? (
+							<Link
+								to="/species/$comName"
+								params={{ comName: speciesSlug }}
+								className="no-underline hover:underline"
+							>
+								{comName}
+							</Link>
+						) : (
+							comName
+						)}
+					</h1>
+					<p className="text-[var(--bark)] text-xs italic">{sciName}</p>
+				</div>
+				{actions}
+			</div>
+
+			<div>
+				<p className="font-semibold text-[var(--moss)] text-lg">
+					{relativeTime}
+				</p>
+				<div className="tabular-data mt-1 flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
+					{/* Phrased identically on both pages: the card always describes the
+					    most recent detection, whether or not the page is polling. */}
+					<span>last heard at {clockTime}</span>
+					<ConfidencePill confidence={confidence} />
+					<RecordingButton audioUrl={audioUrl} />
+				</div>
+			</div>
+
+			<PageHeaderStats stats={stats} />
+		</HeroCardShell>
+	);
+}

@@ -18,13 +18,13 @@ export function RecentLogCard({
 	return (
 		<section
 			aria-label="Recent detections"
-			className="feature-card flex flex-col rounded-md p-4 sm:p-6"
+			className="feature-card flex flex-col rounded-md p-4"
 		>
 			<div className="island-kicker">Recent activity</div>
 
 			{recent.length === 0 ? (
 				<p className="mt-4 text-muted-foreground text-sm">
-					Nothing detected in the last 24 hours.
+					No detections recorded in the last 24 hours.
 				</p>
 			) : (
 				<ul className="mt-4 space-y-1">

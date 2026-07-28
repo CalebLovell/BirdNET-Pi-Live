@@ -1,6 +1,6 @@
-// Elapsed-time labels and the freshness thresholds that drive the Today page's
-// hero card. Pure and isomorphic: the caller supplies `now`, so nothing here
-// reads the clock on its own (see use-age-offset.ts for why that matters to SSR).
+// Elapsed-time labels for the Today page. Pure and isomorphic: the caller
+// supplies the elapsed time, so nothing here reads the clock on its own (see
+// use-age-offset.ts for why that matters to SSR).
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -9,19 +9,6 @@ const DAY = 24 * HOUR;
 // Nominal lengths: these labels are a sense of scale, not a calendar.
 const MONTH = 30 * DAY;
 const YEAR = 365 * DAY;
-
-/** Under this, a detection is treated as happening right now. */
-export const SINGING_NOW_MS = 5 * MINUTE;
-/** Under this, the bird is recently gone rather than absent. */
-export const RECENTLY_HEARD_MS = HOUR;
-
-export type Freshness = "singing" | "recent" | "quiet";
-
-export function freshnessFor(elapsedMs: number): Freshness {
-	if (elapsedMs < SINGING_NOW_MS) return "singing";
-	if (elapsedMs < RECENTLY_HEARD_MS) return "recent";
-	return "quiet";
-}
 
 function plural(value: number, unit: string): string {
 	return `${value} ${unit}${value === 1 ? "" : "s"} ago`;

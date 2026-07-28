@@ -30,6 +30,24 @@ export function DetectionsByHourCard({
 	// gradients from colliding.
 	const fillId = useId();
 
+	// buildHourActivity always returns all 24 hours, so an empty chart is one
+	// where every hour is zero rather than one with no points at all.
+	const isEmpty = activity.every((point) => point.count === 0);
+
+	if (isEmpty) {
+		return (
+			<section
+				aria-label="Detections by hour"
+				className={`feature-card flex flex-col rounded-md p-4 ${className}`}
+			>
+				<div className="island-kicker">Detections by hour</div>
+				<p className="mt-4 text-muted-foreground text-sm">
+					No detections recorded yet.
+				</p>
+			</section>
+		);
+	}
+
 	return (
 		<section
 			aria-label="Detections by hour"

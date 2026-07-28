@@ -28,18 +28,21 @@ export function DetectionsOverTimeCard({
 	// Two of these can share a page in principle; a scoped id keeps the
 	// gradients from colliding.
 	const fillId = useId();
+	const isEmpty = trend.length === 0;
 
 	return (
 		<section
 			aria-label="Detections over time"
-			className={`feature-card flex min-h-72 flex-col rounded-md p-4 ${className}`}
+			// The min-height reserves room for the chart; with only a line of text
+			// in the card it would just be empty space.
+			className={`feature-card flex flex-col rounded-md p-4 ${isEmpty ? "" : "min-h-72"} ${className}`}
 		>
 			<div className="island-kicker">Detections over time</div>
 
-			{trend.length === 0 ? (
-				<div className="mt-4 flex flex-1 items-center justify-center text-muted-foreground text-sm">
+			{isEmpty ? (
+				<p className="mt-4 text-muted-foreground text-sm">
 					No detections recorded yet.
-				</div>
+				</p>
 			) : (
 				<div className="mt-4 min-h-0 flex-1">
 					<ResponsiveContainer width="100%" height="100%">

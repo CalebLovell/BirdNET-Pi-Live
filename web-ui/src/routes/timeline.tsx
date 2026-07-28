@@ -90,15 +90,43 @@ function hourLabel(hour: number): string {
 	return `${hour - 12} PM`;
 }
 
+// Lowercased tails of TIMELINE_PERIOD_LABELS, so the empty state names the same
+// window the toggle does instead of the vague "this period".
+const EMPTY_PERIOD_PHRASES: Record<TimelinePeriod, string> = {
+	day: "No detections recorded in the last 24 hours.",
+	week: "No detections recorded in the last 7 days.",
+	month: "No detections recorded in the last 30 days.",
+	year: "No detections recorded in the last year.",
+	all: "No detections recorded yet.",
+};
+
+function EmptyNote({ children }: { children: React.ReactNode }) {
+	return <p className="mt-4 text-muted-foreground text-sm">{children}</p>;
+}
+
 function Timeline() {
-	const rows = Route.useLoaderData();
+	const { rows, hasAnyDetections } = Route.useLoaderData();
 	const { period } = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 1);
+	const isEmpty = rows.length === 0;
+	// Naming a period only makes sense while the switcher is on screen to
+	// explain it; a station with nothing recorded just says so.
+	const emptyMessage = hasAnyDetections
+		? EMPTY_PERIOD_PHRASES[period]
+		: "No detections recorded yet.";
+	// The chart bodies need the kicker's bottom margin; the empty note brings its
+	// own top margin, so keeping both would double the gap.
+	const kickerClass = isEmpty ? "island-kicker" : "island-kicker mb-4";
 
 	// Every figure is derived from the already period-scoped rows, so the
 	// header moves with the period toggle without a second round trip.
-	const stats = useMemo(() => {
+	const stats = useMemo<PageHeaderStat[]>(() => {
+		// With nothing detected, every figure is a 0 or an em dash -- scaffolding
+		// that reads as broken rather than empty. PageHeaderCard drops the row for
+		// an empty array, leaving the title and description to carry the masthead.
+		if (rows.length === 0) return [];
+
 		const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
 
 		const hourTotals = HOURS.map((hour) =>
@@ -150,43 +178,48 @@ function Timeline() {
 				stats={stats}
 			/>
 
-			<div className="flex justify-end">
-				<ToggleGroup
-					type="single"
-					variant="outline"
-					value={period}
-					onValueChange={(value) => {
-						if (!value) return;
-						navigate({
-							search: (prev) => ({ ...prev, period: value as TimelinePeriod }),
-							replace: true,
-						});
-					}}
-				>
-					{TIMELINE_PERIODS.map((p) => {
-						const Icon = PERIOD_ICONS[p];
-						return (
-							<ToggleGroupItem key={p} value={p}>
-								<Icon className="size-4" />
-								{TIMELINE_PERIOD_LABELS[p]}
-							</ToggleGroupItem>
-						);
-					})}
-				</ToggleGroup>
-			</div>
+			{/* Gated on the station rather than the period: an empty week still
+			    needs the switcher to reach a period that has something in it. */}
+			{hasAnyDetections && (
+				<div className="flex justify-end">
+					<ToggleGroup
+						type="single"
+						variant="outline"
+						value={period}
+						onValueChange={(value) => {
+							if (!value) return;
+							navigate({
+								search: (prev) => ({
+									...prev,
+									period: value as TimelinePeriod,
+								}),
+								replace: true,
+							});
+						}}
+					>
+						{TIMELINE_PERIODS.map((p) => {
+							const Icon = PERIOD_ICONS[p];
+							return (
+								<ToggleGroupItem key={p} value={p}>
+									<Icon className="size-4" />
+									{TIMELINE_PERIOD_LABELS[p]}
+								</ToggleGroupItem>
+							);
+						})}
+					</ToggleGroup>
+				</div>
+			)}
 
-			{rows.length === 0 ? (
-				<p className="text-muted-foreground">
-					No detections in this period yet.
-				</p>
-			) : (
-				<TooltipProvider>
-					<div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-						<section
-							aria-label="Detections by hour"
-							className="feature-card min-w-0 rounded-md p-4"
-						>
-							<div className="island-kicker mb-4">Detections by hour</div>
+			<TooltipProvider>
+				<div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+					<section
+						aria-label="Detections by hour"
+						className={`feature-card min-w-0 rounded-md p-4 ${isEmpty ? "flex-1" : ""}`}
+					>
+						<div className={kickerClass}>Detections by hour</div>
+						{isEmpty ? (
+							<EmptyNote>{emptyMessage}</EmptyNote>
+						) : (
 							<div className="overflow-x-auto">
 								<div className="w-max min-w-full">
 									<div
@@ -217,21 +250,27 @@ function Timeline() {
 									))}
 								</div>
 							</div>
-						</section>
+						)}
+					</section>
 
-						<section
-							aria-label="Total detections"
-							className="feature-card min-w-0 flex-1 rounded-md p-4"
-						>
-							<div className="island-kicker mb-4">Total detections</div>
-							<div className={HEADER_HEIGHT} />
-							{rows.map((row) => (
-								<BarRow key={row.comName} row={row} maxTotal={maxTotal} />
-							))}
-						</section>
-					</div>
-				</TooltipProvider>
-			)}
+					<section
+						aria-label="Total detections"
+						className="feature-card min-w-0 flex-1 rounded-md p-4"
+					>
+						<div className={kickerClass}>Total detections</div>
+						{isEmpty ? (
+							<EmptyNote>{emptyMessage}</EmptyNote>
+						) : (
+							<>
+								<div className={HEADER_HEIGHT} />
+								{rows.map((row) => (
+									<BarRow key={row.comName} row={row} maxTotal={maxTotal} />
+								))}
+							</>
+						)}
+					</section>
+				</div>
+			</TooltipProvider>
 		</div>
 	);
 }

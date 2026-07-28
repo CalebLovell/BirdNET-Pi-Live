@@ -4,7 +4,6 @@ import {
 	stripSearchParams,
 } from "@tanstack/react-router";
 import {
-	Bird,
 	CalendarDays,
 	ChartNoAxesColumnIncreasing,
 	ChevronLeft,
@@ -18,12 +17,13 @@ import { z } from "zod";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
-import {
-	type PageHeaderStat,
-	PageHeaderStats,
-} from "~/components/page-header-card.tsx";
+import type { PageHeaderStat } from "~/components/page-header-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
+import {
+	HERO_CARD_SHELL,
+	SpeciesHeroCard,
+} from "~/components/species-hero-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
 	Tooltip,
@@ -140,7 +140,7 @@ function BirdPage() {
 		return (
 			<div className="page-wrap pt-4">
 				<p className="mt-4 text-muted-foreground">
-					No detections found for this species.
+					No detections recorded for this species.
 				</p>
 			</div>
 		);
@@ -161,10 +161,10 @@ function BirdPage() {
 			<div className="page-wrap">
 				<SummaryCard detail={detail} offsetMs={offsetMs} />
 
-				<div className="mt-4 grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_11rem]">
+				<div className="mt-4">
 					<section
 						aria-label="Detection history"
-						className="feature-card w-full overflow-hidden rounded-md p-3"
+						className="feature-card w-full overflow-hidden rounded-md p-4"
 					>
 						<div className="flex flex-wrap items-center justify-between gap-4">
 							<div className="island-kicker">Detection history</div>
@@ -262,8 +262,6 @@ function BirdPage() {
 							<span>More</span>
 						</div>
 					</section>
-
-					<BestRecordingCard recording={detail.bestRecording} />
 				</div>
 
 				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -340,10 +338,9 @@ function HeatMapDay({
 }
 
 /**
- * Deliberately built on the Today page's hero card: same portrait column, the
- * same top-right actions slot, the same moss "how long ago" line over a metadata
- * row, and the same four-up stat grid. Only the data points differ -- this
- * card's clock runs from the species' last visit rather than from a live poll.
+ * The Today page's hero card with this species' figures in it -- same shell,
+ * same portrait column, same lines. Only the data differs: this card's clock
+ * runs from the species' last visit rather than from a live poll.
  */
 function SummaryCard({
 	detail,
@@ -353,8 +350,8 @@ function SummaryCard({
 	offsetMs: number;
 }) {
 	// The most recent visit is the same detection as `lastDetected`, and it is the
-	// only one carrying a server-measured age, so the relative label agrees with
-	// the visit log instead of drifting against it.
+	// only one carrying a server-measured age and a clip, so the relative label
+	// and the recording both agree with the visit log instead of drifting.
 	const lastVisit = detail.recentVisits[0];
 
 	const stats = [
@@ -381,54 +378,25 @@ function SummaryCard({
 	] satisfies PageHeaderStat[];
 
 	return (
-		<section
-			aria-label="Species profile"
-			className="feature-card mt-4 grid items-center gap-4 rounded-md p-4 sm:grid-cols-[12rem_minmax(0,1fr)]"
-		>
-			<div className="flex h-32 w-full shrink-0 items-center justify-center overflow-hidden sm:h-44">
-				{detail.imageUrl ? (
-					<img
-						src={detail.imageUrl}
-						alt={detail.comName}
-						className="max-h-full max-w-44 object-contain"
-					/>
-				) : (
-					<Bird className="size-16 text-muted-foreground" />
-				)}
-			</div>
-
-			<div className="flex min-w-0 flex-col gap-2.5">
-				{/* Title and actions share a line now that the kicker is gone, so the
-				    column starts level with the top of the portrait. */}
-				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div className="min-w-0">
-						<h1 className="display-title font-bold text-2xl">
-							{detail.comName}
-						</h1>
-						<p className="text-[var(--bark)] text-xs italic">
-							{detail.sciName}
-						</p>
-					</div>
-					<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
-				</div>
-
-				<div>
-					<p className="font-semibold text-[var(--moss)] text-base">
-						{lastVisit
-							? formatTimeAgo(lastVisit.ageMs + offsetMs)
-							: formatHeardDate(detail.lastDetected.date)}
-					</p>
-					<div className="tabular-data mt-0.5 flex flex-wrap items-center gap-2 text-muted-foreground text-sm">
-						<span>
-							last heard at {formatVisitTime(detail.lastDetected.time)}
-						</span>
-						<ConfidencePill confidence={detail.lastDetected.confidence} />
-					</div>
-				</div>
-
-				<PageHeaderStats stats={stats} />
-			</div>
-		</section>
+		<SpeciesHeroCard
+			label="Species profile"
+			comName={detail.comName}
+			sciName={detail.sciName}
+			imageUrl={detail.imageUrl}
+			relativeTime={
+				lastVisit
+					? formatTimeAgo(lastVisit.ageMs + offsetMs)
+					: formatHeardDate(detail.lastDetected.date)
+			}
+			clockTime={formatVisitTime(detail.lastDetected.time)}
+			confidence={detail.lastDetected.confidence}
+			audioUrl={lastVisit?.audioUrl ?? null}
+			stats={stats}
+			actions={
+				<SpeciesActions ebirdUrl={detail.ebirdUrl} comName={detail.comName} />
+			}
+			className={`${HERO_CARD_SHELL} mt-4`}
+		/>
 	);
 }
 
@@ -440,31 +408,6 @@ function formatHeardDate(date: string): string {
 		day: "numeric",
 		year: "numeric",
 	});
-}
-
-/**
- * The species' clearest clip: a kicker and the play control, nothing else. It
- * rides alongside the heat map rather than in the profile card, so the label can
- * stay a plain island heading like every other section's.
- */
-function BestRecordingCard({
-	recording,
-}: {
-	recording: SpeciesDetail["bestRecording"];
-}) {
-	if (!recording) {
-		return null;
-	}
-
-	return (
-		<section
-			aria-label="Best recording"
-			className="feature-card flex flex-wrap items-center justify-between gap-3 rounded-md p-3 lg:flex-col lg:items-start"
-		>
-			<div className="island-kicker">Best recording</div>
-			<RecordingButton audioUrl={recording.audioUrl} />
-		</section>
-	);
 }
 
 function formatVisitTime(time: string): string {

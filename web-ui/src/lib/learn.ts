@@ -160,9 +160,26 @@ async function addMissingImages(round: LearnRound): Promise<LearnRound> {
 	};
 }
 
+export type LearnRoundData = {
+	round: LearnRound;
+	/**
+	 * Whether the station has recorded anything at all. An empty pool is not the
+	 * same as an empty station, and only the latter should drop the pool
+	 * switcher -- switching pools is the fix for the former.
+	 */
+	hasAnyDetections: boolean;
+};
+
 export const getLearnRound = createServerFn({ method: "GET" })
 	.validator((pool: LearnPool) => pool)
-	.handler(async ({ data: pool }): Promise<LearnRound> => {
+	.handler(async ({ data: pool }): Promise<LearnRoundData> => {
 		const rows = recentClipsPerSpecies(pool).filter(clipFileExists);
-		return addMissingImages(buildRound(groupIntoSpecies(rows)));
+		const round = await addMissingImages(buildRound(groupIntoSpecies(rows)));
+
+		// A playable round is proof enough; only an empty one pays for the probe.
+		const hasAnyDetections =
+			round.questions.length > 0 ||
+			sqlite.prepare("SELECT 1 FROM detections LIMIT 1").get() !== undefined;
+
+		return { round, hasAnyDetections };
 	});

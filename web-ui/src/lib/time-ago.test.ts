@@ -1,13 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {
-	formatTimeAgo,
-	freshnessFor,
-	hourLabel,
-	RECENTLY_HEARD_MS,
-	SINGING_NOW_MS,
-} from "./time-ago.ts";
+import { formatTimeAgo, hourLabel } from "./time-ago.ts";
 
 const SECOND = 1_000;
 const MINUTE = 60 * SECOND;
@@ -55,15 +49,6 @@ test("switches unit exactly at each boundary", () => {
 	assert.equal(formatTimeAgo(DAY - SECOND), "23 hours ago");
 	assert.equal(formatTimeAgo(MONTH - SECOND), "29 days ago");
 	assert.equal(formatTimeAgo(YEAR - SECOND), "12 months ago");
-});
-
-test("classifies freshness by the hero card's thresholds", () => {
-	assert.equal(freshnessFor(0), "singing");
-	assert.equal(freshnessFor(SINGING_NOW_MS - SECOND), "singing");
-	assert.equal(freshnessFor(SINGING_NOW_MS), "recent");
-	assert.equal(freshnessFor(RECENTLY_HEARD_MS - SECOND), "recent");
-	assert.equal(freshnessFor(RECENTLY_HEARD_MS), "quiet");
-	assert.equal(freshnessFor(5 * DAY), "quiet");
 });
 
 test("labels hours in twelve-hour time", () => {

@@ -11,37 +11,51 @@ export function SummaryStrip({ summary }: { summary: NowSummary }) {
 		load: () => getShareCard(),
 	});
 
+	// Nothing in the window means there is nothing to summarise: three zeros beside
+	// a dash reads as a broken card rather than a quiet night. The share control
+	// goes with them, since the card it would produce would be empty too.
+	const isEmpty = summary.detections === 0;
+
 	return (
 		<section
 			aria-label="Last 24 hours"
-			className="feature-card mt-4 rounded-md p-4 sm:p-6"
+			className="feature-card mt-4 rounded-md p-4"
 		>
 			<div className="flex items-center justify-between gap-3">
 				<div className="island-kicker">Last 24 hours</div>
-				{share.trigger}
+				{isEmpty ? null : share.trigger}
 			</div>
-			<dl className="mt-4 grid grid-cols-2 gap-y-6 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-[var(--line)]">
-				<Figure value={summary.species} label="Species" />
-				<Figure value={summary.detections} label="Detections" />
-				<Figure
-					value={summary.visits}
-					label="Visits"
-					hint="Detection runs separated by 15+ minutes of silence"
-				/>
-				<Figure
-					value={
-						summary.busiestHour ? hourLabel(summary.busiestHour.hour) : "—"
-					}
-					label="Busiest hour"
-					detail={
-						summary.busiestHour
-							? `${summary.busiestHour.count.toLocaleString()} detections`
-							: undefined
-					}
-				/>
-			</dl>
 
-			{share.summary}
+			{isEmpty ? (
+				<p className="mt-4 text-muted-foreground text-sm">
+					No detections recorded in the last 24 hours.
+				</p>
+			) : (
+				<>
+					<dl className="mt-4 grid grid-cols-2 gap-y-6 sm:grid-cols-4 sm:gap-y-0 sm:divide-x sm:divide-[var(--line)]">
+						<Figure value={summary.species} label="Species" />
+						<Figure value={summary.detections} label="Detections" />
+						<Figure
+							value={summary.visits}
+							label="Visits"
+							hint="Detection runs separated by 15+ minutes of silence"
+						/>
+						<Figure
+							value={
+								summary.busiestHour ? hourLabel(summary.busiestHour.hour) : "—"
+							}
+							label="Busiest hour"
+							detail={
+								summary.busiestHour
+									? `${summary.busiestHour.count.toLocaleString()} detections`
+									: undefined
+							}
+						/>
+					</dl>
+
+					{share.summary}
+				</>
+			)}
 		</section>
 	);
 }

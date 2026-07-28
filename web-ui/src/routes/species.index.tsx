@@ -136,7 +136,11 @@ function Species() {
 
 	// Derived from `filtered` rather than the page slice, so the figures
 	// describe the whole search result, not just the 24 cards on screen.
-	const stats = useMemo(() => {
+	const stats = useMemo<PageHeaderStat[]>(() => {
+		// Nothing to describe means every figure would be a 0 or an em dash, so
+		// the row comes off entirely rather than reading as broken.
+		if (filtered.length === 0) return [];
+
 		const isSearching = search.trim().length > 0;
 		const recordings = filtered.reduce(
 			(sum, card) => sum + card.allTimeCount,
@@ -183,97 +187,111 @@ function Species() {
 				stats={stats}
 			/>
 
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-				<SearchInput
-					aria-label="Filter by species"
-					placeholder="Search species..."
-					value={queryInput}
-					onChange={(e) => {
-						const value = e.target.value;
-						setQueryInput(value);
-						debouncedSetQuery(value);
-					}}
-					onClear={() => {
-						setQueryInput("");
-						debouncedSetQuery.cancel();
-						navigate({
-							search: (prev) => ({ ...prev, q: "", page: 1 }),
-							replace: true,
-						});
-					}}
-				/>
-				<div className="flex shrink-0 items-center gap-2">
-					<ToggleGroup
-						type="single"
-						variant="outline"
-						value={sort}
-						onValueChange={(value) => {
-							if (!value) {
+			{/* Gated on the life list rather than the current result, so a search
+			    that matches nothing keeps the box you need to clear it. */}
+			{cards.length > 0 && (
+				<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+					<SearchInput
+						aria-label="Filter by species"
+						placeholder="Search species..."
+						value={queryInput}
+						onChange={(e) => {
+							const value = e.target.value;
+							setQueryInput(value);
+							debouncedSetQuery(value);
+						}}
+						onClear={() => {
+							setQueryInput("");
+							debouncedSetQuery.cancel();
+							navigate({
+								search: (prev) => ({ ...prev, q: "", page: 1 }),
+								replace: true,
+							});
+						}}
+					/>
+					<div className="flex shrink-0 items-center gap-2">
+						<ToggleGroup
+							type="single"
+							variant="outline"
+							value={sort}
+							onValueChange={(value) => {
+								if (!value) {
+									navigate({
+										search: (prev) => ({
+											...prev,
+											reverse: !prev.reverse,
+											page: 1,
+										}),
+										replace: true,
+									});
+									return;
+								}
 								navigate({
 									search: (prev) => ({
 										...prev,
-										reverse: !prev.reverse,
+										sort: value as SortKey,
+										reverse: false,
 										page: 1,
 									}),
 									replace: true,
 								});
-								return;
-							}
-							navigate({
-								search: (prev) => ({
-									...prev,
-									sort: value as SortKey,
-									reverse: false,
-									page: 1,
-								}),
-								replace: true,
-							});
-						}}
-					>
-						<ToggleGroupItem
-							value="count"
-							aria-label={`Total sort (${sort === "count" && reverse ? "ascending" : "descending"})`}
+							}}
 						>
-							<BarChart3 className="size-4" />
-							Total
-							{sort === "count" && reverse ? (
-								<ChevronUp className="size-3" aria-hidden="true" />
-							) : (
-								<ChevronDown className="size-3" aria-hidden="true" />
-							)}
-						</ToggleGroupItem>
-						<ToggleGroupItem
-							value="recent"
-							aria-label={`Recent sort (${sort === "recent" && reverse ? "ascending" : "descending"})`}
-						>
-							<Clock className="size-4" />
-							Recent
-							{sort === "recent" && reverse ? (
-								<ChevronUp className="size-3" aria-hidden="true" />
-							) : (
-								<ChevronDown className="size-3" aria-hidden="true" />
-							)}
-						</ToggleGroupItem>
-						<ToggleGroupItem
-							value="alpha"
-							aria-label={`Alphabetical sort (${sort === "alpha" && reverse ? "ascending" : "descending"})`}
-						>
-							<ArrowDownAZ className="size-4" />
-							Alphabetical
-							{sort === "alpha" && reverse ? (
-								<ChevronUp className="size-3" aria-hidden="true" />
-							) : (
-								<ChevronDown className="size-3" aria-hidden="true" />
-							)}
-						</ToggleGroupItem>
-					</ToggleGroup>
+							<ToggleGroupItem
+								value="count"
+								aria-label={`Total sort (${sort === "count" && reverse ? "ascending" : "descending"})`}
+							>
+								<BarChart3 className="size-4" />
+								Total
+								{sort === "count" && reverse ? (
+									<ChevronUp className="size-3" aria-hidden="true" />
+								) : (
+									<ChevronDown className="size-3" aria-hidden="true" />
+								)}
+							</ToggleGroupItem>
+							<ToggleGroupItem
+								value="recent"
+								aria-label={`Recent sort (${sort === "recent" && reverse ? "ascending" : "descending"})`}
+							>
+								<Clock className="size-4" />
+								Recent
+								{sort === "recent" && reverse ? (
+									<ChevronUp className="size-3" aria-hidden="true" />
+								) : (
+									<ChevronDown className="size-3" aria-hidden="true" />
+								)}
+							</ToggleGroupItem>
+							<ToggleGroupItem
+								value="alpha"
+								aria-label={`Alphabetical sort (${sort === "alpha" && reverse ? "ascending" : "descending"})`}
+							>
+								<ArrowDownAZ className="size-4" />
+								Alphabetical
+								{sort === "alpha" && reverse ? (
+									<ChevronUp className="size-3" aria-hidden="true" />
+								) : (
+									<ChevronDown className="size-3" aria-hidden="true" />
+								)}
+							</ToggleGroupItem>
+						</ToggleGroup>
+					</div>
 				</div>
-			</div>
+			)}
 
 			{pageItems.length === 0 ? (
-				<p className="text-muted-foreground">
-					No species match &ldquo;{search}&rdquo;
-				</p>
+				<section
+					aria-label="Species recorded"
+					className="feature-card rounded-md p-4"
+				>
+					<div className="island-kicker">Species recorded</div>
+					<p className="mt-4 text-muted-foreground text-sm">
+						{cards.length === 0 ? (
+							"No species recorded yet."
+						) : (
+							<>No species match &ldquo;{search}&rdquo;.</>
+						)}
+					</p>
+				</section>
 			) : (
 				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
 					{pageItems.map((card) => (
@@ -360,7 +378,7 @@ function SpeciesCard({ card }: { card: LifeListCard }) {
 		: card.lastDetected || "—";
 
 	return (
-		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-3">
+		<div className="feature-card feature-card-link relative flex flex-col gap-3 overflow-hidden rounded-md p-4">
 			<Link
 				to="/species/$comName"
 				params={{ comName: comNameToSlug(card.comName) }}

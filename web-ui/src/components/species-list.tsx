@@ -40,14 +40,12 @@ export function SpeciesList({
 	return (
 		<section
 			aria-label={ariaLabel}
-			className={`feature-card flex flex-col rounded-md p-4 sm:p-6 ${className}`}
+			className={`feature-card flex flex-col rounded-md p-4 ${className}`}
 		>
 			<div className="island-kicker">{title}</div>
 
 			{species.length === 0 ? (
-				<div className="mt-4 flex flex-1 items-center justify-center text-muted-foreground text-sm">
-					{emptyMessage}
-				</div>
+				<p className="mt-4 text-muted-foreground text-sm">{emptyMessage}</p>
 			) : (
 				<ol className="mt-4 space-y-1">
 					{species.map((item) => (

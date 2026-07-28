@@ -36,7 +36,6 @@ import {
 	type DetectionWorkspaceSearch,
 	type DetectionWorkspaceSort,
 	detectionRowKey,
-	hasActiveFilters,
 } from "~/lib/detection-workspace.ts";
 import type { DetectionPage, DetectionTableRow } from "~/lib/detections.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
@@ -425,35 +424,24 @@ export function DetectionsTable({
 						</TableRow>
 					))}
 				</TableHeader>
+				{/* No empty row here: the page renders its own empty card instead of
+				    this table, so the header, footer and pager come off with it. */}
 				<TableBody>
-					{page.rows.length === 0 ? (
-						<TableRow>
-							<TableCell
-								className="py-12 text-center text-muted-foreground"
-								colSpan={table.getVisibleLeafColumns().length}
-							>
-								{hasActiveFilters(search)
-									? "No detections match these filters."
-									: "No detections have been recorded yet."}
-							</TableCell>
+					{table.getRowModel().rows.map((row) => (
+						<TableRow
+							key={row.id}
+							data-state={row.getIsSelected() && "selected"}
+						>
+							{row.getVisibleCells().map((cell) => (
+								<TableCell
+									key={cell.id}
+									className={cell.column.id === "audio" ? "pr-0" : undefined}
+								>
+									{flexRender(cell.column.columnDef.cell, cell.getContext())}
+								</TableCell>
+							))}
 						</TableRow>
-					) : (
-						table.getRowModel().rows.map((row) => (
-							<TableRow
-								key={row.id}
-								data-state={row.getIsSelected() && "selected"}
-							>
-								{row.getVisibleCells().map((cell) => (
-									<TableCell
-										key={cell.id}
-										className={cell.column.id === "audio" ? "pr-0" : undefined}
-									>
-										{flexRender(cell.column.columnDef.cell, cell.getContext())}
-									</TableCell>
-								))}
-							</TableRow>
-						))
-					)}
+					))}
 				</TableBody>
 			</Table>
 
