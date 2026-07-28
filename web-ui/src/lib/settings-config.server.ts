@@ -83,11 +83,7 @@ export async function readSettingsPageValues(
 			recordingDevice: values.REC_CARD ?? "default",
 			channels: integerValue(values, "CHANNELS", 2),
 			rtspStreams: streams,
-			livestreamIndex: integerValue(
-				values,
-				"RTSP_STREAM_TO_LIVESTREAM",
-				0,
-			),
+			livestreamIndex: integerValue(values, "RTSP_STREAM_TO_LIVESTREAM", 0),
 		}),
 		recording: parseSettingsCard("recording", {
 			recordingLength: integerValue(values, "RECORDING_LENGTH", 15),
@@ -191,7 +187,8 @@ function replaceAssignments(
 	let updated = text;
 	for (const [key, value] of Object.entries(assignments)) {
 		const expression = new RegExp(`^${key}=.*$`, "m");
-		if (expression.test(updated)) updated = updated.replace(expression, `${key}=${value}`);
+		if (expression.test(updated))
+			updated = updated.replace(expression, `${key}=${value}`);
 		else if (allowAppend && key === "REVIEW_RARE_SPECIES_MAX") {
 			if (updated.length > 0 && !updated.endsWith("\n")) updated += "\n";
 			updated += `${key}=${value}\n`;

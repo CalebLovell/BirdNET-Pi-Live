@@ -1,6 +1,6 @@
 import "@tanstack/react-start/server-only";
 
-import { readFile, readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import {
@@ -10,11 +10,10 @@ import {
 	writeSettingsCard,
 } from "./settings-config.server.ts";
 import {
-	parseSettingsCard,
-	SUPPORTED_MODELS,
 	type AudioSettings,
 	type DetectionSettings,
 	type PrivacySettings,
+	parseSettingsCard,
 	type RecordingSettings,
 	type ReviewSettings,
 	type SettingsByKind,
@@ -23,6 +22,7 @@ import {
 	type SettingsSaveResult,
 	type StationSettings,
 	type StorageSettings,
+	SUPPORTED_MODELS,
 } from "./settings-data.ts";
 import {
 	runCardSystemActions,
@@ -50,7 +50,10 @@ async function currentTimezone() {
 	return Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
-async function installedModels(modelDirectory: string, configuredModel: string) {
+async function installedModels(
+	modelDirectory: string,
+	configuredModel: string,
+) {
 	let names: string[] = [];
 	try {
 		names = await readdir(modelDirectory);
@@ -141,16 +144,13 @@ async function saveSettings<K extends SettingsCardKind>(
 			: {
 					status: "saved",
 					values,
-					message: action.attempted
-						? "Saved and applied."
-						: "Saved.",
+					message: action.attempted ? "Saved and applied." : "Saved.",
 				};
 	} catch {
 		return {
 			status: "saved-action-failed",
 			values,
-			message:
-				"Saved, but the affected system services could not be updated.",
+			message: "Saved, but the affected system services could not be updated.",
 		};
 	}
 }

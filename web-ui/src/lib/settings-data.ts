@@ -38,13 +38,17 @@ export const SUPPORTED_MODELS: readonly SupportedModel[] = [
 	},
 ];
 
-const noControlCharacters = /^[^\u0000-\u001f\u007f]*$/;
+const hasNoControlCharacters = (value: string) =>
+	[...value].every((character) => {
+		const code = character.charCodeAt(0);
+		return code > 31 && code !== 127;
+	});
 const safeText = (maximum: number) =>
 	z
 		.string()
 		.trim()
 		.max(maximum)
-		.regex(noControlCharacters, "Control characters are not allowed");
+		.refine(hasNoControlCharacters, "Control characters are not allowed");
 
 const supportedTimezones = new Set(Intl.supportedValuesOf("timeZone"));
 

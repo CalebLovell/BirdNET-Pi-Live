@@ -738,8 +738,9 @@ function ReviewCard({
 				/>
 			</Field>
 			<p className="rounded-md bg-muted p-3 text-muted-foreground text-xs leading-relaxed">
-				For example, a threshold of 10 includes species heard 9 times or fewer.
-				The Review page reads this value on every load.
+				For example, a threshold of {form.values.rareSpeciesMax} includes
+				species heard {form.values.rareSpeciesMax - 1} times or fewer. The
+				Review page reads this value on every load.
 			</p>
 		</SettingsCard>
 	);
