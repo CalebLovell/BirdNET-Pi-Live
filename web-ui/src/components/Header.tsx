@@ -47,6 +47,15 @@ export function Header() {
 						Detections
 					</Link>
 					<Link
+						to="/review"
+						search={{ queue: "rare", limit: 20 }}
+						className="nav-link"
+						activeOptions={{ includeSearch: false }}
+						activeProps={{ className: "nav-link is-active" }}
+					>
+						Review
+					</Link>
+					<Link
 						to="/learn"
 						className="nav-link"
 						activeProps={{ className: "nav-link is-active" }}

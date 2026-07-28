@@ -6,14 +6,15 @@ const statsRouteSource = await readFile(
 	new URL("./stats.tsx", import.meta.url),
 	"utf8",
 );
+const hourlyCardSource = await readFile(
+	new URL("../components/detections-by-hour-card.tsx", import.meta.url),
+	"utf8",
+);
 
 test("uses the requested stats page labels", () => {
-	assert.match(statsRouteSource, /label="Unique species"/);
-	assert.match(statsRouteSource, /aria-label="Detections by hour"/);
-	assert.match(
-		statsRouteSource,
-		/<div className="island-kicker">Detections by hour<\/div>/,
-	);
+	assert.match(statsRouteSource, /label: "Unique species"/);
+	assert.match(hourlyCardSource, /aria-label="Detections by hour"/);
+	assert.match(hourlyCardSource, />Detections by hour</);
 	assert.doesNotMatch(statsRouteSource, /Species detected/);
-	assert.doesNotMatch(statsRouteSource, /Activity by hour of day/);
+	assert.doesNotMatch(hourlyCardSource, /Activity by hour of day/);
 });
