@@ -12,11 +12,11 @@ import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import {
 	parseSpeciesCatalog,
-	RARE_SPECIES_MAX,
 	type ReviewSearch,
 	recategorizedFileName,
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
+import { DEFAULT_REVIEW_RARE_SPECIES_MAX } from "~/lib/settings-data.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type ReviewCandidate = {
@@ -36,6 +36,8 @@ export type ReviewCandidate = {
 };
 export type ReviewPage = {
 	limit: number;
+	/** Strict lifetime-count cutoff applied to this queue. */
+	rareSpeciesMax: number;
 	/** Recordings meeting the review criteria, of which `candidates` is a page. */
 	total: number;
 	/** How many distinct species those recordings span. */
@@ -113,7 +115,7 @@ function rareAndUnsure(reviewed: boolean): string {
 	const unreviewed = reviewed
 		? ` AND NOT EXISTS (SELECT 1 FROM reviews r WHERE ${REVIEW_MATCHES_DETECTION})`
 		: "";
-	return `SELECT d.rowid rowId, d.Date date, d.Time time, d.Sci_Name sciName, d.Com_Name comName, d.Confidence confidence, d.File_Name fileName, lifetime.lifetime_count lifetimeCount FROM detections d JOIN (SELECT Sci_Name, Com_Name, COUNT(*) lifetime_count FROM detections GROUP BY Sci_Name, Com_Name) lifetime ON lifetime.Sci_Name = d.Sci_Name AND lifetime.Com_Name = d.Com_Name WHERE lifetime.lifetime_count < ${RARE_SPECIES_MAX} AND (d.Confidence IS NULL OR d.Confidence < ${CONFIDENT_MIN})${unreviewed}`;
+	return `SELECT d.rowid rowId, d.Date date, d.Time time, d.Sci_Name sciName, d.Com_Name comName, d.Confidence confidence, d.File_Name fileName, lifetime.lifetime_count lifetimeCount FROM detections d JOIN (SELECT Sci_Name, Com_Name, COUNT(*) lifetime_count FROM detections GROUP BY Sci_Name, Com_Name) lifetime ON lifetime.Sci_Name = d.Sci_Name AND lifetime.Com_Name = d.Com_Name WHERE lifetime.lifetime_count < ? AND (d.Confidence IS NULL OR d.Confidence < ${CONFIDENT_MIN})${unreviewed}`;
 }
 
 type RawCandidate = {
@@ -131,22 +133,24 @@ export function loadReviewPage(
 	database: DatabaseSync,
 	extractedRoot: string,
 	search: ReviewSearch,
+	rareSpeciesMax = DEFAULT_REVIEW_RARE_SPECIES_MAX,
 ): ReviewPage {
 	const queue = rareAndUnsure(reviewsTableExists(database));
 	const totals = database
 		.prepare(
 			`SELECT COUNT(*) AS n, COUNT(DISTINCT comName) AS species FROM (${queue})`,
 		)
-		.get();
+		.get(rareSpeciesMax);
 	// Rarest species first, then weakest recording: the bird you have heard once
 	// is the one where a mistake matters most.
 	const rows = database
 		.prepare(
 			`${queue} ORDER BY lifetimeCount ASC, comName ASC, confidence IS NOT NULL, confidence ASC, date DESC, time DESC LIMIT ?`,
 		)
-		.all(search.limit) as RawCandidate[];
+		.all(rareSpeciesMax, search.limit) as RawCandidate[];
 	return {
 		limit: search.limit,
+		rareSpeciesMax,
 		total: Number(totals?.n ?? 0),
 		speciesTotal: Number(totals?.species ?? 0),
 		candidates: rows.map((row) => {

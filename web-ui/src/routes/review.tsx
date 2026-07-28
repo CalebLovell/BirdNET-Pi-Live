@@ -14,7 +14,6 @@ import {
 } from "~/lib/review.ts";
 import {
 	normalizeReviewSearch,
-	RARE_SPECIES_MAX,
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
 
@@ -56,7 +55,7 @@ function Review() {
 		<div className="page-wrap space-y-4 py-4">
 			<PageHeaderCard
 				title="Review detections"
-				description={`Species the station has heard fewer than ${RARE_SPECIES_MAX} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}
+				description={`Species the station has heard fewer than ${page.rareSpeciesMax} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}
 				stats={[
 					{
 						label: "Recordings to review",
