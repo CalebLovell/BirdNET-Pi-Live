@@ -58,6 +58,6 @@ test("uses a listening rail beside the choices on wide screens", () => {
 		markup,
 		/lg:grid-cols-\[minmax\(12rem,1fr\)_minmax\(0,2fr\)\]/,
 	);
-	assert.match(markup, /data-learn-prompt="true"/);
-	assert.match(markup, /data-learn-choices="true"/);
+	assert.match(markup, /role="group" aria-label="Listening prompt"/);
+	assert.match(markup, /role="group" aria-label="Bird choices"/);
 });

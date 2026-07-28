@@ -129,7 +129,8 @@ export function LearnGame({
 
 			<div className="mt-4 grid gap-4 lg:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)] lg:items-center">
 				<div
-					data-learn-prompt
+					role="group"
+					aria-label="Listening prompt"
 					className="flex flex-col items-center gap-2 lg:border-[var(--line)] lg:border-r lg:pr-4"
 				>
 					<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
@@ -139,7 +140,11 @@ export function LearnGame({
 					</div>
 				</div>
 
-				<div data-learn-choices className="grid gap-2 sm:grid-cols-2">
+				<div
+					role="group"
+					aria-label="Bird choices"
+					className="grid gap-2 sm:grid-cols-2"
+				>
 					{question.choices.map((choice, choiceIndex) => (
 						<ChoiceButton
 							key={choice.sciName}
