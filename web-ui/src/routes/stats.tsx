@@ -24,10 +24,12 @@ import {
 	RESIDENT_MIN_DAYS,
 	shortDateLabel,
 } from "~/lib/migration-data.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 import { getStats } from "~/lib/stats.ts";
 import { dayLabel, hourLabel } from "~/lib/stats-data.ts";
 
 export const Route = createFileRoute("/stats")({
+	head: () => ({ meta: [{ title: pageTitle("Stats") }] }),
 	loader: () => getStats(),
 	component: Stats,
 });

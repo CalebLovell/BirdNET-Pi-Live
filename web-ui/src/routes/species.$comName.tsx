@@ -34,6 +34,7 @@ import {
 import { formatConfidence } from "~/lib/confidence.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 import {
 	getSpeciesDetail,
 	type RecentVisit,
@@ -68,6 +69,11 @@ export const Route = createFileRoute("/species/$comName")({
 		getSpeciesDetail({
 			data: { comNameSlug: params.comName, year: deps.year },
 		}),
+	// The bird's own name, once the loader has resolved the slug. Until then --
+	// and for a slug that matches nothing -- the section name stands in.
+	head: ({ loaderData }) => ({
+		meta: [{ title: pageTitle(loaderData?.comName ?? "Species") }],
+	}),
 	component: BirdPage,
 });
 

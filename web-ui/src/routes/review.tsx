@@ -5,6 +5,7 @@ import { useState } from "react";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
 import { CONFIDENT_MIN, formatConfidence } from "~/lib/confidence.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 import {
 	confirmReviewDetection,
 	deleteReviewDetection,
@@ -19,6 +20,7 @@ import {
 } from "~/lib/review-data.ts";
 
 export const Route = createFileRoute("/review")({
+	head: () => ({ meta: [{ title: pageTitle("Review") }] }),
 	validateSearch: normalizeReviewSearch,
 	loaderDeps: ({ search }) => search,
 	loader: async ({ deps }) => ({

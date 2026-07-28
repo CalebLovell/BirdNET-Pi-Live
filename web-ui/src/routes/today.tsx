@@ -7,6 +7,7 @@ import { SummaryStrip } from "~/components/now/summary-strip.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
 import { usePublishLiveStatus } from "~/lib/live-status.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { useFavicon } from "~/lib/use-favicon.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
@@ -15,6 +16,7 @@ const POLL_INTERVAL_MS = 10_000;
 const FLASH_DURATION_MS = 2_400;
 
 export const Route = createFileRoute("/today")({
+	head: () => ({ meta: [{ title: pageTitle("Today") }] }),
 	component: Today,
 	loader: () => getNowSnapshot(),
 });

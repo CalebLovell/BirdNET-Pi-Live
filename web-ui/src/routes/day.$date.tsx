@@ -40,12 +40,25 @@ import {
 } from "~/lib/day.ts";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 import { rankingBarPercent } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
 export const Route = createFileRoute("/day/$date")({
 	loader: ({ params }) =>
 		isDayId(params.date) ? getDayReview({ data: params.date }) : null,
+	// Reads off the param rather than the loader so the tab is right before the
+	// day's data lands; a junk date falls back to the section name, matching the
+	// message the page itself shows.
+	head: ({ params }) => ({
+		meta: [
+			{
+				title: pageTitle(
+					isDayId(params.date) ? formatDayTitle(params.date) : "Day",
+				),
+			},
+		],
+	}),
 	component: DayPage,
 });
 

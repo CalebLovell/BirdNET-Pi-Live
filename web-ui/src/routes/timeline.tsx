@@ -33,6 +33,7 @@ import {
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { getTimelineData, type TimelineRow } from "~/lib/timeline.ts";
 import {
@@ -75,6 +76,7 @@ function resolveAnchor(period: TimelinePeriod, date: string | undefined) {
 }
 
 export const Route = createFileRoute("/timeline")({
+	head: () => ({ meta: [{ title: pageTitle("Timeline") }] }),
 	validateSearch: timelineSearchSchema,
 	search: {
 		middlewares: [stripSearchParams({ period: DEFAULT_PERIOD })],

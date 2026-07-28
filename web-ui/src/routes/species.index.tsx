@@ -34,6 +34,7 @@ import {
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
@@ -67,6 +68,7 @@ const speciesSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/species/")({
+	head: () => ({ meta: [{ title: pageTitle("Species") }] }),
 	validateSearch: speciesSearchSchema,
 	search: {
 		middlewares: [stripSearchParams(DEFAULT_SEARCH)],

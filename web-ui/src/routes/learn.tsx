@@ -28,6 +28,7 @@ import {
 	CHOICES_PER_QUESTION,
 	QUESTIONS_PER_ROUND,
 } from "~/lib/learn-round.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 
 const DEFAULT_POOL: LearnPool = "today";
 
@@ -36,6 +37,7 @@ const learnSearchSchema = z.object({
 });
 
 export const Route = createFileRoute("/learn")({
+	head: () => ({ meta: [{ title: pageTitle("Learn") }] }),
 	validateSearch: learnSearchSchema,
 	search: {
 		middlewares: [stripSearchParams({ pool: DEFAULT_POOL })],

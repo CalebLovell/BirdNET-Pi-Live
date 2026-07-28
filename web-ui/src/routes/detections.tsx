@@ -24,6 +24,7 @@ import {
 	normalizeDetectionWorkspaceSearch,
 } from "~/lib/detection-workspace.ts";
 import { deleteDetections, getDetectionsPage } from "~/lib/detections.ts";
+import { pageTitle } from "~/lib/page-title.ts";
 
 type Feedback = {
 	message: string;
@@ -31,6 +32,7 @@ type Feedback = {
 };
 
 export const Route = createFileRoute("/detections")({
+	head: () => ({ meta: [{ title: pageTitle("Detections") }] }),
 	validateSearch: (search) => normalizeDetectionWorkspaceSearch(search),
 	loaderDeps: ({ search }) => search,
 	loader: ({ deps }) => getDetectionsPage({ data: deps }),

@@ -3,6 +3,7 @@ import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { Footer } from "~/components/Footer.tsx";
 import { Header } from "~/components/Header.tsx";
+import { pageTitle } from "~/lib/page-title.ts";
 import { DEFAULT_FAVICON } from "~/lib/use-favicon.ts";
 import appCss from "../styles.css?url";
 
@@ -17,7 +18,7 @@ export const Route = createRootRoute({
 				content: "width=device-width, initial-scale=1",
 			},
 			{
-				title: "BirdNET-Pi Live",
+				title: pageTitle(),
 			},
 		],
 		links: [
