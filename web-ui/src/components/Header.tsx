@@ -69,6 +69,13 @@ export function Header() {
 					>
 						Stats
 					</Link>
+					<Link
+						to="/settings"
+						className="nav-link"
+						activeProps={{ className: "nav-link is-active" }}
+					>
+						Settings
+					</Link>
 				</nav>
 			</div>
 		</header>

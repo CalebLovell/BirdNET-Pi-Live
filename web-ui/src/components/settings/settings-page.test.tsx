@@ -1,0 +1,92 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { renderToStaticMarkup } from "react-dom/server";
+
+import type { SettingsPageData } from "~/lib/settings-data.ts";
+import { SettingsPage } from "./settings-page.tsx";
+
+const data: SettingsPageData = {
+	station: {
+		siteName: "Backyard station",
+		latitude: 41.88,
+		longitude: -87.63,
+		timezone: "America/Chicago",
+	},
+	detection: {
+		model: "BirdNET_GLOBAL_6K_V2.4_Model_FP16",
+		dataModelVersion: 2,
+		speciesFrequencyThreshold: 0.03,
+		confidence: 0.7,
+		sensitivity: 1,
+		overlap: 0,
+	},
+	privacy: { privacyThreshold: 0 },
+	audio: {
+		mode: "microphone",
+		recordingDevice: "default",
+		channels: 1,
+		rtspStreams: [],
+		livestreamIndex: 0,
+	},
+	recording: {
+		recordingLength: 15,
+		extractionLength: null,
+		audioFormat: "mp3",
+	},
+	storage: {
+		fullDiskAction: "purge",
+		purgeThreshold: 90,
+		maxFilesPerSpecies: 0,
+	},
+	review: { rareSpeciesMax: 10 },
+	supportedModels: [
+		{
+			id: "BirdNET_GLOBAL_6K_V2.4_Model_FP16",
+			label: "BirdNET Global 6K v2.4",
+			supportsRangeModel: true,
+		},
+	],
+	supportedTimezones: ["America/Chicago", "UTC"],
+};
+
+test("renders every settings card in order with independent save controls", () => {
+	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
+	const headings = [
+		"Station",
+		"Detection",
+		"Privacy",
+		"Audio input",
+		"Recording",
+		"Storage",
+		"Review queue",
+	];
+	let priorIndex = -1;
+	for (const heading of headings) {
+		const index = markup.indexOf(`>${heading}<`);
+		assert.ok(
+			index > priorIndex,
+			`${heading} should follow the preceding card`,
+		);
+		priorIndex = index;
+	}
+	assert.equal((markup.match(/<form/g) ?? []).length, 7);
+	assert.equal((markup.match(/>Save</g) ?? []).length, 7);
+});
+
+test("explains consequential storage and Review settings beside their controls", () => {
+	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
+	assert.match(markup, /removes the oldest recordings/i);
+	assert.match(markup, /stops core services/i);
+	assert.match(markup, /strictly fewer lifetime detections/i);
+	for (const label of [
+		"Station name",
+		"Minimum confidence",
+		"Privacy threshold",
+		"Input mode",
+		"Recording length",
+		"Disk-full action",
+		"Rare species threshold",
+	]) {
+		assert.match(markup, new RegExp(`>${label}<`));
+	}
+});

@@ -1,14 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-
-import {
-	audioSettingsSchema,
-	detectionSettingsSchema,
-	privacySettingsSchema,
-	recordingSettingsSchema,
-	reviewSettingsSchema,
-	stationSettingsSchema,
-	storageSettingsSchema,
-} from "./settings-data.ts";
 import {
 	loadSettingsPageData,
 	saveAudioSettings,
@@ -19,6 +9,15 @@ import {
 	saveStationSettings,
 	saveStorageSettings,
 } from "./settings.server.ts";
+import {
+	audioSettingsSchema,
+	detectionSettingsSchema,
+	privacySettingsSchema,
+	recordingSettingsSchema,
+	reviewSettingsSchema,
+	stationSettingsSchema,
+	storageSettingsSchema,
+} from "./settings-data.ts";
 
 export const getSettingsPage = createServerFn({ method: "GET" }).handler(() =>
 	loadSettingsPageData(),
