@@ -13,11 +13,19 @@ import {
 	normalizeReviewSearch,
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
+import { readReviewRareSpeciesMax } from "~/lib/settings.server.ts";
 
 export const getReviewPage = createServerFn({ method: "GET" })
 	.validator((input: Record<string, unknown>) => normalizeReviewSearch(input))
-	.handler(({ data }) =>
-		attachSpeciesImages(loadReviewPage(sqlite, extractedDir(), data)),
+	.handler(async ({ data }) =>
+		attachSpeciesImages(
+			loadReviewPage(
+				sqlite,
+				extractedDir(),
+				data,
+				await readReviewRareSpeciesMax(),
+			),
+		),
 	);
 export const getReviewSpecies = createServerFn({ method: "GET" }).handler(() =>
 	loadSpeciesCatalog(),

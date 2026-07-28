@@ -276,6 +276,9 @@ CUSTOM_IMAGE_TITLE=""
 ## RARE_SPECIES_THRESHOLD defines after how many days a species is considered as rare and highlighted on overview page
 RARE_SPECIES_THRESHOLD=30
 
+## Species with fewer lifetime detections than this appear in Review.
+REVIEW_RARE_SPECIES_MAX=10
+
 ## These are just for debugging
 LAST_RUN=
 THIS_RUN=

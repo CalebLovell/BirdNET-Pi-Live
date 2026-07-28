@@ -102,6 +102,21 @@ test("the queue holds only rarely heard species, rarest first", async () => {
 	database.close();
 });
 
+test("configured rarity changes the queue at a strict boundary", async () => {
+	const database = bandedFixture();
+	const root = await mkdtemp(
+		path.join(tmpdir(), "birdnet-review-configured-"),
+	);
+	const underThree = loadReviewPage(database, root, { limit: 50 }, 3);
+	assert.deepEqual(
+		[...new Set(underThree.candidates.map((row) => row.comName))],
+		["Cedar Waxwing", "Common Loon"],
+	);
+	assert.equal(underThree.rareSpeciesMax, 3);
+	assert.equal(loadReviewPage(database, root, { limit: 50 }, 11).speciesTotal, 4);
+	database.close();
+});
+
 test("a recording BirdNET was already sure about stays out of the queue", async () => {
 	const database = bandedFixture();
 	// Raised in place rather than inserted: an extra row would change the Loon's

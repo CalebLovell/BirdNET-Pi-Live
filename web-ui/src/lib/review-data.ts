@@ -1,13 +1,5 @@
 import { commonNameSafe } from "~/lib/audio.ts";
 
-/**
- * A species with fewer lifetime detections than this is worth a second listen;
- * anything the station hears routinely is not. An absolute count rather than a
- * share of the station's traffic, so the queue means the same thing on day one
- * as it does after five years of recording.
- */
-export const RARE_SPECIES_MAX = 10;
-
 export type ReviewSearch = { limit: number };
 export type SpeciesOption = { sciName: string; comName: string };
 
