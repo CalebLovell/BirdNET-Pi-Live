@@ -3,11 +3,11 @@ import { Link } from "@tanstack/react-router";
 export function Header() {
 	return (
 		<header style={{ background: "var(--header-bg)" }}>
-			<div className="page-wrap flex h-16 items-center justify-between border-b">
-				<Link to="/" className="display-title font-semibold text-xl">
+			<div className="page-wrap flex h-16 items-center gap-4 border-b">
+				<Link to="/" className="display-title shrink-0 font-semibold text-xl">
 					Birdbook Pi
 				</Link>
-				<nav className="flex items-center gap-4">
+				<nav className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto py-2 sm:justify-end [&_.nav-link]:shrink-0">
 					<Link
 						to="/today"
 						className="nav-link"
@@ -28,6 +28,13 @@ export function Header() {
 						activeProps={{ className: "nav-link is-active" }}
 					>
 						Species
+					</Link>
+					<Link
+						to="/species-control"
+						className="nav-link"
+						activeProps={{ className: "nav-link is-active" }}
+					>
+						Control
 					</Link>
 					<Link
 						to="/detections"

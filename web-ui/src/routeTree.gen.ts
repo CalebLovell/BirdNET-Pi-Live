@@ -15,6 +15,7 @@ import { Route as LearnRouteImport } from './routes/learn'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SpeciesRouteImport } from './routes/species'
+import { Route as SpeciesControlRouteImport } from './routes/species-control'
 import { Route as StatsRouteImport } from './routes/stats'
 import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as TodayRouteImport } from './routes/today'
@@ -51,6 +52,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const SpeciesRoute = SpeciesRouteImport.update({
   id: '/species',
   path: '/species',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpeciesControlRoute = SpeciesControlRouteImport.update({
+  id: '/species-control',
+  path: '/species-control',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StatsRoute = StatsRouteImport.update({
@@ -97,6 +103,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
   '/species': typeof SpeciesRouteWithChildren
+  '/species-control': typeof SpeciesControlRoute
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
@@ -111,6 +118,7 @@ export interface FileRoutesByTo {
   '/learn': typeof LearnRoute
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
+  '/species-control': typeof SpeciesControlRoute
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
@@ -127,6 +135,7 @@ export interface FileRoutesById {
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
   '/species': typeof SpeciesRouteWithChildren
+  '/species-control': typeof SpeciesControlRoute
   '/stats': typeof StatsRoute
   '/timeline': typeof TimelineRoute
   '/today': typeof TodayRoute
@@ -144,6 +153,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/settings'
     | '/species'
+    | '/species-control'
     | '/stats'
     | '/timeline'
     | '/today'
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/learn'
     | '/review'
     | '/settings'
+    | '/species-control'
     | '/stats'
     | '/timeline'
     | '/today'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/review'
     | '/settings'
     | '/species'
+    | '/species-control'
     | '/stats'
     | '/timeline'
     | '/today'
@@ -189,6 +201,7 @@ export interface RootRouteChildren {
   ReviewRoute: typeof ReviewRoute
   SettingsRoute: typeof SettingsRoute
   SpeciesRoute: typeof SpeciesRouteWithChildren
+  SpeciesControlRoute: typeof SpeciesControlRoute
   StatsRoute: typeof StatsRoute
   TimelineRoute: typeof TimelineRoute
   TodayRoute: typeof TodayRoute
@@ -238,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/species'
       fullPath: '/species'
       preLoaderRoute: typeof SpeciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/species-control': {
+      id: '/species-control'
+      path: '/species-control'
+      fullPath: '/species-control'
+      preLoaderRoute: typeof SpeciesControlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stats': {
@@ -312,6 +332,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewRoute: ReviewRoute,
   SettingsRoute: SettingsRoute,
   SpeciesRoute: SpeciesRouteWithChildren,
+  SpeciesControlRoute: SpeciesControlRoute,
   StatsRoute: StatsRoute,
   TimelineRoute: TimelineRoute,
   TodayRoute: TodayRoute,
