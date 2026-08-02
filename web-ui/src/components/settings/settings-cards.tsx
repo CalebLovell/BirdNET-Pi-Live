@@ -15,15 +15,18 @@ import type {
 	DetectionSettings,
 	PrivacySettings,
 	RecordingSettings,
+	SettingsCardKind,
 	SettingsPageData,
 	SettingsSaveResult,
 	StationSettings,
 	StorageSettings,
 } from "~/lib/settings-data.ts";
+import { RestartButton } from "./restart-button.tsx";
 import { type CardSaveState, SettingsCard } from "./settings-card.tsx";
 import { StationLocation } from "./station-location.tsx";
 
 type Saver<T> = (values: T) => Promise<SettingsSaveResult<T>>;
+type CardRestarter = () => Promise<{ message: string }>;
 
 export type SettingsSavers = {
 	station?: Saver<StationSettings>;
@@ -34,10 +37,40 @@ export type SettingsSavers = {
 	storage?: Saver<StorageSettings>;
 };
 
-function useCardSave<T>(initial: T, save?: Saver<T>) {
+/**
+ * Bounces the services behind one card, retrying what its save could not do.
+ * Omit the card to bring the whole set back at once, which is what a reset --
+ * having rewritten every card -- needs.
+ */
+export type SettingsRestarter = (
+	card?: SettingsCardKind,
+) => Promise<{ message: string }>;
+
+/**
+ * Compared by value, not by identity: every keystroke rebuilds the values
+ * object, so a reference check would call a card dirty for typing a character
+ * and deleting it again. These are flat objects of primitives and one string
+ * array, always rebuilt by spreading the previous one, so key order is stable
+ * and serializing them is a sound equality test.
+ */
+function unchanged<T>(a: T, b: T) {
+	return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function useCardSave<T>(initial: T, save?: Saver<T>, restart?: CardRestarter) {
 	const [values, setValues] = useState(initial);
+	// What the station currently holds, as far as this card knows: the values it
+	// loaded with, or the ones it last saved. Save has nothing to do until the
+	// form differs from this.
+	const [saved, setSaved] = useState(initial);
 	const [state, setState] = useState<CardSaveState>("idle");
 	const [message, setMessage] = useState<string>();
+	// The card's values are on disk but BirdNET is still running the old ones.
+	// Both save outcomes that mean this -- the restart was refused, or the
+	// environment declined to try -- are the same situation to the reader, and
+	// the same button fixes them.
+	const [needsRestart, setNeedsRestart] = useState(false);
+
 	async function submit() {
 		if (!save) return;
 		setState("saving");
@@ -45,7 +78,15 @@ function useCardSave<T>(initial: T, save?: Saver<T>) {
 		try {
 			const result = await save(values);
 			setValues(result.values);
-			setState(result.status === "saved-action-failed" ? "warning" : "saved");
+			// The station now holds what it just accepted -- which is the parsed
+			// form of what was sent, so trimmed text and coerced numbers count as
+			// saved rather than leaving the card looking dirty straight after.
+			setSaved(result.values);
+			const pending =
+				result.status === "saved-action-failed" ||
+				result.status === "saved-restart-skipped";
+			setNeedsRestart(pending);
+			setState(pending ? "warning" : "saved");
 			setMessage(result.message);
 		} catch (error) {
 			setState("error");
@@ -56,7 +97,48 @@ function useCardSave<T>(initial: T, save?: Saver<T>) {
 			);
 		}
 	}
-	return { values, setValues, state, message, submit };
+
+	async function applyNow() {
+		if (!restart) return;
+		setState("saving");
+		setMessage("Restarting BirdNET…");
+		try {
+			const result = await restart();
+			setNeedsRestart(false);
+			setState("saved");
+			setMessage(result.message);
+		} catch (error) {
+			// The values are still saved -- only the restart failed -- so the card
+			// keeps offering the button rather than dropping back to a clean state.
+			setState("warning");
+			setMessage(
+				error instanceof Error
+					? error.message
+					: "BirdNET could not be restarted.",
+			);
+		}
+	}
+
+	const dirty = !unchanged(values, saved);
+	return {
+		values,
+		setValues,
+		state,
+		message,
+		submit,
+		dirty,
+		// A failed save leaves the card dirty, so the button stays live to retry.
+		saveDisabled: state === "saving" || !dirty,
+		needsRestart: needsRestart && restart !== undefined,
+		applyNow,
+	};
+}
+
+/** Renders the footer's restart control, or nothing when nothing is pending. */
+function restartControl(form: { needsRestart: boolean; applyNow: () => void }) {
+	return form.needsRestart ? (
+		<RestartButton onRestart={async () => form.applyNow()} />
+	) : undefined;
 }
 
 const controlClass =
@@ -105,10 +187,14 @@ function numberOr(event: ChangeEvent<HTMLInputElement>, fallback: number) {
 export function SettingsCards({
 	data,
 	savers,
+	restarter,
 }: {
 	data: SettingsPageData;
 	savers: SettingsSavers;
+	restarter?: SettingsRestarter;
 }) {
+	const restartFor = (card: SettingsCardKind): CardRestarter | undefined =>
+		restarter ? () => restarter(card) : undefined;
 	return (
 		// One card per row, always. Side by side, cards of unequal height left
 		// ragged gaps and no reliable reading order down the page.
@@ -117,16 +203,34 @@ export function SettingsCards({
 				initial={data.station}
 				timezones={data.supportedTimezones}
 				save={savers.station}
+				restart={restartFor("station")}
 			/>
 			<DetectionCard
 				initial={data.detection}
 				models={data.supportedModels}
 				save={savers.detection}
+				restart={restartFor("detection")}
 			/>
-			<PrivacyCard initial={data.privacy} save={savers.privacy} />
-			<AudioCard initial={data.audio} save={savers.audio} />
-			<RecordingCard initial={data.recording} save={savers.recording} />
-			<StorageCard initial={data.storage} save={savers.storage} />
+			<PrivacyCard
+				initial={data.privacy}
+				save={savers.privacy}
+				restart={restartFor("privacy")}
+			/>
+			<AudioCard
+				initial={data.audio}
+				save={savers.audio}
+				restart={restartFor("audio")}
+			/>
+			<RecordingCard
+				initial={data.recording}
+				save={savers.recording}
+				restart={restartFor("recording")}
+			/>
+			<StorageCard
+				initial={data.storage}
+				save={savers.storage}
+				restart={restartFor("storage")}
+			/>
 		</div>
 	);
 }
@@ -135,12 +239,14 @@ function StationCard({
 	initial,
 	timezones,
 	save,
+	restart,
 }: {
 	initial: StationSettings;
 	timezones: string[];
 	save?: Saver<StationSettings>;
+	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save);
+	const form = useCardSave(initial, save, restart);
 	return (
 		<SettingsCard
 			title="Station"
@@ -152,6 +258,8 @@ function StationCard({
 				event.preventDefault();
 				void form.submit();
 			}}
+			restart={restartControl(form)}
+			saveDisabled={form.saveDisabled}
 			action={
 				<StationLocation
 					current={{
@@ -233,12 +341,14 @@ function DetectionCard({
 	initial,
 	models,
 	save,
+	restart,
 }: {
 	initial: DetectionSettings;
 	models: SettingsPageData["supportedModels"];
 	save?: Saver<DetectionSettings>;
+	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save);
+	const form = useCardSave(initial, save, restart);
 	const selectedModel = models.find((model) => model.id === form.values.model);
 	return (
 		<SettingsCard
@@ -251,6 +361,8 @@ function DetectionCard({
 				event.preventDefault();
 				void form.submit();
 			}}
+			restart={restartControl(form)}
+			saveDisabled={form.saveDisabled}
 		>
 			<Field label="Analysis model">
 				<select
@@ -381,11 +493,13 @@ function DetectionCard({
 function PrivacyCard({
 	initial,
 	save,
+	restart,
 }: {
 	initial: PrivacySettings;
 	save?: Saver<PrivacySettings>;
+	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save);
+	const form = useCardSave(initial, save, restart);
 	return (
 		<SettingsCard
 			title="Privacy"
@@ -397,6 +511,8 @@ function PrivacyCard({
 				event.preventDefault();
 				void form.submit();
 			}}
+			restart={restartControl(form)}
+			saveDisabled={form.saveDisabled}
 		>
 			<Field
 				label="Privacy threshold"
@@ -416,7 +532,7 @@ function PrivacyCard({
 					}
 				/>
 			</Field>
-			<p className="rounded-md bg-muted p-3 text-muted-foreground text-xs leading-relaxed">
+			<p className="rounded-md bg-muted p-4 text-muted-foreground text-xs leading-relaxed">
 				Matching chunks and their neighbors are suppressed. This reduces
 				incidental speech capture, but it cannot guarantee that speech is never
 				recorded.
@@ -428,11 +544,13 @@ function PrivacyCard({
 function AudioCard({
 	initial,
 	save,
+	restart,
 }: {
 	initial: AudioSettings;
 	save?: Saver<AudioSettings>;
+	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save);
+	const form = useCardSave(initial, save, restart);
 	return (
 		<SettingsCard
 			title="Audio input"
@@ -444,6 +562,8 @@ function AudioCard({
 				event.preventDefault();
 				void form.submit();
 			}}
+			restart={restartControl(form)}
+			saveDisabled={form.saveDisabled}
 		>
 			<Field label="Input mode">
 				<select
@@ -553,11 +673,13 @@ function AudioCard({
 function RecordingCard({
 	initial,
 	save,
+	restart,
 }: {
 	initial: RecordingSettings;
 	save?: Saver<RecordingSettings>;
+	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save);
+	const form = useCardSave(initial, save, restart);
 	return (
 		<SettingsCard
 			title="Recording"
@@ -569,6 +691,8 @@ function RecordingCard({
 				event.preventDefault();
 				void form.submit();
 			}}
+			restart={restartControl(form)}
+			saveDisabled={form.saveDisabled}
 		>
 			{twoColumns(
 				<>
@@ -639,11 +763,13 @@ function RecordingCard({
 function StorageCard({
 	initial,
 	save,
+	restart,
 }: {
 	initial: StorageSettings;
 	save?: Saver<StorageSettings>;
+	restart?: CardRestarter;
 }) {
-	const form = useCardSave(initial, save);
+	const form = useCardSave(initial, save, restart);
 	return (
 		<SettingsCard
 			title="Storage"
@@ -655,10 +781,12 @@ function StorageCard({
 				event.preventDefault();
 				void form.submit();
 			}}
+			restart={restartControl(form)}
+			saveDisabled={form.saveDisabled}
 		>
 			<fieldset className="space-y-2">
 				<legend className="mb-1.5 font-medium text-sm">Disk-full action</legend>
-				<label className="flex cursor-pointer gap-3 rounded-md border p-3">
+				<label className="flex cursor-pointer gap-3 rounded-md border p-4">
 					<input
 						type="radio"
 						name="full-disk-action"
@@ -676,7 +804,7 @@ function StorageCard({
 						</span>
 					</span>
 				</label>
-				<label className="flex cursor-pointer gap-3 rounded-md border p-3">
+				<label className="flex cursor-pointer gap-3 rounded-md border p-4">
 					<input
 						type="radio"
 						name="full-disk-action"

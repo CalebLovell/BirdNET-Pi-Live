@@ -3,10 +3,12 @@ import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert } from "lucide-react";
 
 import { SettingsPage } from "~/components/settings/settings-page.tsx";
+import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
 	getSettingsPage,
 	resetSettingsFn,
+	restartStationFn,
 	saveAudioSettingsFn,
 	saveDetectionSettingsFn,
 	savePrivacySettingsFn,
@@ -14,16 +16,36 @@ import {
 	saveStationSettingsFn,
 	saveStorageSettingsFn,
 } from "~/lib/settings.ts";
+import { usePolledData } from "~/lib/use-polled-data.ts";
+
+/**
+ * Refreshed every half minute so "Last detection" keeps aging while the page
+ * is open. A statfs, a stat and one indexed row -- cheap enough not to think
+ * about, and none of these figures move faster than that anyway.
+ */
+const HEALTH_INTERVAL_MS = 30_000;
 
 export const Route = createFileRoute("/settings")({
 	head: () => ({ meta: [{ title: pageTitle("Settings") }] }),
-	loader: () => getSettingsPage(),
+	// Settled together so the masthead paints with the cards rather than
+	// snapping in a moment later. `getStationHealth` does not throw, so it
+	// cannot be what sends this route to its error component.
+	loader: async () => ({
+		data: await getSettingsPage(),
+		health: await getStationHealth(),
+	}),
 	component: SettingsRoute,
 	errorComponent: SettingsUnavailable,
 });
 
 function SettingsRoute() {
-	const data = Route.useLoaderData();
+	const loaded = Route.useLoaderData();
+	const data = loaded.data;
+	const { data: health } = usePolledData(
+		getStationHealth,
+		loaded.health,
+		HEALTH_INTERVAL_MS,
+	);
 	const saveStation = useServerFn(saveStationSettingsFn);
 	const saveDetection = useServerFn(saveDetectionSettingsFn);
 	const savePrivacy = useServerFn(savePrivacySettingsFn);
@@ -31,17 +53,23 @@ function SettingsRoute() {
 	const saveRecording = useServerFn(saveRecordingSettingsFn);
 	const saveStorage = useServerFn(saveStorageSettingsFn);
 	const reset = useServerFn(resetSettingsFn);
+	const restart = useServerFn(restartStationFn);
 	const router = useRouter();
 
 	return (
 		<SettingsPage
 			data={data}
+			health={health}
+			onRestart={(card) => restart({ data: { card } })}
 			onReset={async () => {
 				const result = await reset({});
 				// The cards remount against this reload, so it has to land before
 				// the page reports the reset as done.
 				await router.invalidate();
-				return result.message;
+				return {
+					message: result.message,
+					needsRestart: result.status !== "reset",
+				};
 			}}
 			savers={{
 				station: (values) => saveStation({ data: values }),

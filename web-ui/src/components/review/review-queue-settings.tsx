@@ -95,13 +95,13 @@ export function ReviewQueueSettings({
 								}
 							/>
 						</label>
-						<p className="mt-3 rounded-md bg-muted p-3 text-muted-foreground text-xs leading-relaxed">
+						<p className="mt-4 rounded-md bg-muted p-4 text-muted-foreground text-xs leading-relaxed">
 							The queue includes species with strictly fewer lifetime detections
 							than this number — a threshold of {value} covers species heard{" "}
 							{value - 1} {value - 1 === 1 ? "time" : "times"} or fewer.
 						</p>
 						{error ? (
-							<p className="mt-3 text-destructive text-sm">{error}</p>
+							<p className="mt-4 text-destructive text-sm">{error}</p>
 						) : null}
 						<div className="mt-4 flex justify-end gap-2">
 							<Button

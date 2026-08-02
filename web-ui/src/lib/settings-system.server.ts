@@ -51,6 +51,43 @@ const defaultRunner: SettingsCommandRunner = (executable, args, stdin) =>
 		if (stdin !== undefined) child.stdin?.end(stdin);
 	});
 
+/**
+ * The services that have to be bounced before a card's values are the ones
+ * BirdNET is actually running. Omit the card for the whole set at once -- what
+ * a reset needs, and one restart rather than bouncing birdnet_analysis four
+ * times over as each card is written.
+ */
+export function servicesFor(card?: SettingsCardKind): string[] {
+	return card
+		? [...SERVICES[card]]
+		: [...new Set(RESETTABLE_CARDS.flatMap((kind) => SERVICES[kind]))];
+}
+
+function skipRequested(context: SettingsSystemContext) {
+	return (
+		context.skipSystemActions === true ||
+		process.env.BIRDNET_SKIP_SYSTEM_ACTIONS === "1"
+	);
+}
+
+/**
+ * Restarts a card's services, or every resettable card's between them. This is
+ * both the tail of a save and the whole of the Restart control the UI offers
+ * when that tail failed -- retrying is the same command, so it is the same
+ * code path rather than a second one that could drift from it.
+ */
+export async function restartServices(
+	card?: SettingsCardKind,
+	context: SettingsSystemContext = {},
+	runner: SettingsCommandRunner = defaultRunner,
+) {
+	const services = servicesFor(card);
+	if (services.length === 0) return { attempted: false, skipped: false };
+	if (skipRequested(context)) return { attempted: false, skipped: true };
+	await runner("sudo", ["systemctl", "restart", ...services]);
+	return { attempted: true, skipped: false };
+}
+
 export async function runCardSystemActions(
 	kind: SettingsCardKind,
 	context: SettingsSystemContext = {},
@@ -60,13 +97,8 @@ export async function runCardSystemActions(
 		kind === "station" &&
 		context.timezone !== undefined &&
 		context.timezone !== context.previousTimezone;
-	const services = SERVICES[kind];
-	const hasActions = timezoneChanges || services.length > 0;
-	if (
-		context.skipSystemActions ||
-		process.env.BIRDNET_SKIP_SYSTEM_ACTIONS === "1"
-	)
-		return { attempted: false, skipped: hasActions };
+	const hasActions = timezoneChanges || servicesFor(kind).length > 0;
+	if (skipRequested(context)) return { attempted: false, skipped: hasActions };
 
 	let attempted = false;
 	if (timezoneChanges) {
@@ -83,31 +115,6 @@ export async function runCardSystemActions(
 				`${context.timezone as string}\n`,
 			);
 	}
-	if (services.length > 0) {
-		attempted = true;
-		await runner("sudo", ["systemctl", "restart", ...services]);
-	}
-	return { attempted, skipped: false };
-}
-
-/**
- * A reset rewrites every card at once, so the services they share are restarted
- * once between them -- card by card, birdnet_analysis would be bounced four
- * times over, and a station mid-analysis pays for each one.
- */
-export async function runResetSystemActions(
-	context: SettingsSystemContext = {},
-	runner: SettingsCommandRunner = defaultRunner,
-) {
-	const services = [
-		...new Set(RESETTABLE_CARDS.flatMap((kind) => SERVICES[kind])),
-	];
-	if (
-		context.skipSystemActions ||
-		process.env.BIRDNET_SKIP_SYSTEM_ACTIONS === "1"
-	)
-		return { attempted: false, skipped: services.length > 0 };
-	if (services.length === 0) return { attempted: false, skipped: false };
-	await runner("sudo", ["systemctl", "restart", ...services]);
-	return { attempted: true, skipped: false };
+	const restart = await restartServices(kind, context, runner);
+	return { attempted: attempted || restart.attempted, skipped: false };
 }

@@ -30,7 +30,6 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<string> }) {
 		<>
 			<Button
 				variant="outline"
-				size="sm"
 				onClick={() => {
 					setError(null);
 					setOpen(true);
@@ -56,16 +55,16 @@ export function SettingsReset({ onReset }: { onReset: () => Promise<string> }) {
 							writes. Any RTSP streams you have configured are cleared and the
 							station returns to microphone input. This cannot be undone.
 						</p>
-						<p className="mt-3 rounded-md bg-muted p-3 text-muted-foreground text-xs leading-relaxed">
+						<p className="mt-4 rounded-md bg-muted p-4 text-muted-foreground text-xs leading-relaxed">
 							Your Station card is left as it is. Its name, coordinates, and
 							timezone have no default to return to, and blanking them would put
 							the station at 0,0 and break geographic species filtering.
 						</p>
-						<p className="mt-3 text-muted-foreground text-xs leading-relaxed">
+						<p className="mt-4 text-muted-foreground text-xs leading-relaxed">
 							Your detections and recordings are not touched.
 						</p>
 						{error ? (
-							<p className="mt-3 text-destructive text-sm">{error}</p>
+							<p className="mt-4 text-destructive text-sm">{error}</p>
 						) : null}
 						<div className="mt-4 flex justify-end gap-2">
 							<Button

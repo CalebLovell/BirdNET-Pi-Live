@@ -1,22 +1,38 @@
-import { CheckCircle2, SlidersHorizontal } from "lucide-react";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import type { StationHealth } from "~/lib/health-data.ts";
 import type { SettingsPageData } from "~/lib/settings-data.ts";
-import { SettingsCards, type SettingsSavers } from "./settings-cards.tsx";
+import { RestartButton } from "./restart-button.tsx";
+import {
+	SettingsCards,
+	type SettingsRestarter,
+	type SettingsSavers,
+} from "./settings-cards.tsx";
 import { SettingsReset } from "./settings-reset.tsx";
+import { healthStats } from "./station-health.tsx";
+
+/** A reset that stored its values without getting BirdNET onto them. */
+type ResetOutcome = { message: string; needsRestart: boolean };
 
 export function SettingsPage({
 	data,
 	savers = {},
 	onReset,
+	onRestart,
+	health,
 }: {
 	data: SettingsPageData;
 	savers?: SettingsSavers;
-	/** Resolves with the message to report. Omit to hide the reset control. */
-	onReset?: () => Promise<string>;
+	/** Omit to render the masthead without its figures. */
+	health?: StationHealth;
+	/** Resolves with what to report. Omit to hide the reset control. */
+	onReset?: () => Promise<ResetOutcome>;
+	/** Bounces a card's services. Omit to hide every restart control. */
+	onRestart?: SettingsRestarter;
 }) {
-	const [resetMessage, setResetMessage] = useState<string | null>(null);
+	const [reset, setReset] = useState<ResetOutcome | null>(null);
 
 	// Each card seeds its own state from `data` once, so a reset that only
 	// refetched would leave six forms showing the values it just discarded.
@@ -37,36 +53,65 @@ export function SettingsPage({
 			<PageHeaderCard
 				title="Settings"
 				description="Configure this station without editing birdnet.conf. Each card validates and saves independently."
-				stats={[
-					{
-						label: "Control surface",
-						value: "6 independent sections",
-						icon: SlidersHorizontal,
-					},
-				]}
+				stats={health ? healthStats(health) : []}
 				action={
 					onReset ? (
 						<SettingsReset
 							onReset={async () => {
-								const message = await onReset();
-								setResetMessage(message);
-								return message;
+								const outcome = await onReset();
+								setReset(outcome);
+								return outcome.message;
 							}}
 						/>
 					) : undefined
 				}
 			>
-				{resetMessage ? (
-					<p
-						aria-live="polite"
-						className="mt-4 flex items-center gap-2 border-[var(--line)] border-t pt-4 text-muted-foreground text-xs"
-					>
-						<CheckCircle2 aria-hidden="true" className="size-3.5" />
-						{resetMessage}
-					</p>
+				{reset ? (
+					<div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-[var(--line)] border-t pt-4">
+						<p
+							aria-live="polite"
+							className={`flex items-center gap-2 text-xs ${
+								reset.needsRestart
+									? "text-[var(--bark)]"
+									: "text-muted-foreground"
+							}`}
+						>
+							{reset.needsRestart ? (
+								<AlertTriangle aria-hidden="true" className="size-3.5" />
+							) : (
+								<CheckCircle2 aria-hidden="true" className="size-3.5" />
+							)}
+							{reset.message}
+						</p>
+						{reset.needsRestart && onRestart ? (
+							<RestartButton
+								onRestart={async () => {
+									try {
+										// No card: a reset touched every one of them, so the
+										// whole set comes back together.
+										const result = await onRestart(undefined);
+										setReset({ message: result.message, needsRestart: false });
+									} catch (error) {
+										setReset({
+											message:
+												error instanceof Error
+													? error.message
+													: "BirdNET could not be restarted.",
+											needsRestart: true,
+										});
+									}
+								}}
+							/>
+						) : null}
+					</div>
 				) : null}
 			</PageHeaderCard>
-			<SettingsCards key={loadedValues} data={data} savers={savers} />
+			<SettingsCards
+				key={loadedValues}
+				data={data}
+				savers={savers}
+				restarter={onRestart}
+			/>
 		</main>
 	);
 }

@@ -27,8 +27,8 @@ import {
 	SUPPORTED_MODELS,
 } from "./settings-data.ts";
 import {
+	restartServices,
 	runCardSystemActions,
-	runResetSystemActions,
 	type SettingsCommandRunner,
 } from "./settings-system.server.ts";
 
@@ -105,6 +105,17 @@ export async function loadSettingsPageData(
 	}
 }
 
+/**
+ * The one thing the reader needs to know, in the words they would use for it:
+ * the value is stored, BirdNET has not picked it up yet, and a restart is what
+ * does. Whether the restart was declined by the environment or attempted and
+ * refused is a distinction only this file cares about -- both leave the station
+ * running the old value, and both are fixed by the same button.
+ */
+const SAVED_NEEDS_RESTART = "Saved. Restart BirdNET for this to take effect.";
+const RESET_NEEDS_RESTART =
+	"Reset to defaults. Restart BirdNET for this to take effect.";
+
 async function saveSettings<K extends SettingsCardKind>(
 	kind: K,
 	input: SettingsByKind[K],
@@ -142,18 +153,18 @@ async function saveSettings<K extends SettingsCardKind>(
 			? {
 					status: "saved-restart-skipped",
 					values,
-					message: "Saved. System actions were skipped in this environment.",
+					message: SAVED_NEEDS_RESTART,
 				}
 			: {
 					status: "saved",
 					values,
-					message: action.attempted ? "Saved and applied." : "Saved.",
+					message: action.attempted ? "Saved and now in effect." : "Saved.",
 				};
 	} catch {
 		return {
 			status: "saved-action-failed",
 			values,
-			message: "Saved, but the affected system services could not be updated.",
+			message: SAVED_NEEDS_RESTART,
 		};
 	}
 }
@@ -235,27 +246,67 @@ export async function resetSettings(
 		}
 	}
 	try {
-		const action = await runResetSystemActions(
+		const action = await restartServices(
+			undefined,
 			{ skipSystemActions: dependencies.skipSystemActions },
 			dependencies.runner,
 		);
 		return action.skipped
-			? {
-					status: "reset-restart-skipped",
-					message:
-						"Reset to defaults. System actions were skipped in this environment.",
-				}
+			? { status: "reset-restart-skipped", message: RESET_NEEDS_RESTART }
 			: {
 					status: "reset",
 					message: action.attempted
-						? "Reset to defaults and applied."
+						? "Reset to defaults and now in effect."
 						: "Reset to defaults.",
 				};
 	} catch {
-		return {
-			status: "reset-action-failed",
-			message:
-				"Reset to defaults, but the affected system services could not be restarted.",
-		};
+		return { status: "reset-action-failed", message: RESET_NEEDS_RESTART };
+	}
+}
+
+export type RestartResult = {
+	status: "restarted" | "nothing-to-restart" | "restart-skipped";
+	message: string;
+};
+
+/**
+ * Retries the restart a save could not finish. Named for what the reader asked
+ * for rather than for systemd: from the page it is "the new settings are not
+ * live yet, make them live", and the services involved are this file's problem.
+ */
+export async function restartStation(
+	card?: SettingsCardKind,
+	dependencies: SettingsServerDependencies = {},
+): Promise<RestartResult> {
+	try {
+		const action = await restartServices(
+			card,
+			{ skipSystemActions: dependencies.skipSystemActions },
+			dependencies.runner,
+		);
+		if (action.attempted)
+			return {
+				status: "restarted",
+				message: "Restarted. Your settings are live.",
+			};
+		// Two different nothings, and saying the wrong one is a lie: a card with
+		// no services really is live already, but a restart the environment
+		// declined has left the station on its old values.
+		return action.skipped
+			? {
+					status: "restart-skipped",
+					message:
+						"Restarting is disabled in this environment. Your settings apply the next time BirdNET starts.",
+				}
+			: {
+					status: "nothing-to-restart",
+					message: "Nothing needed restarting — this setting was already live.",
+				};
+	} catch {
+		// Deliberately no systemctl output: it can carry paths and unit detail,
+		// and this reaches a browser.
+		throw new Error(
+			"BirdNET could not be restarted. Your settings are saved and will apply the next time it starts.",
+		);
 	}
 }

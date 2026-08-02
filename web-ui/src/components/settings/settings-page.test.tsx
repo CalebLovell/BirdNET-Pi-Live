@@ -72,12 +72,41 @@ test("renders every settings card in order with independent save controls", () =
 	assert.equal((markup.match(/>Save</g) ?? []).length, 6);
 });
 
+test("a freshly loaded card has nothing to save", () => {
+	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
+	// Every Save starts disabled: the form matches the station exactly, so the
+	// button would write back the values it was just given. Matched on the
+	// attribute, not the string "disabled", which also appears in every
+	// button's `disabled:opacity-50` class.
+	assert.equal((markup.match(/disabled=""/g) ?? []).length, 6);
+	for (const submit of markup.match(/<button[^>]*type="submit"[^>]*>/g) ?? []) {
+		assert.match(submit, /disabled=""/);
+	}
+	// The header's own control is not a save and stays live.
+	assert.match(markup, />Use my location</);
+});
+
+test("says nothing in a card footer until there is something to say", () => {
+	const markup = renderToStaticMarkup(<SettingsPage data={data} />);
+	// The old standing note explained the page's save model on every card,
+	// forever. It is a property of the page, not news about this card.
+	assert.doesNotMatch(markup, /save separately/i);
+	// The live region survives, empty, so a save result still announces.
+	assert.match(markup, /aria-live="polite"/);
+});
+
 test("offers reset only when the page can perform one, and asks first", () => {
 	const withoutReset = renderToStaticMarkup(<SettingsPage data={data} />);
 	assert.doesNotMatch(withoutReset, />Reset to defaults</);
 
 	const withReset = renderToStaticMarkup(
-		<SettingsPage data={data} onReset={async () => "Reset to defaults."} />,
+		<SettingsPage
+			data={data}
+			onReset={async () => ({
+				message: "Reset to defaults.",
+				needsRestart: false,
+			})}
+		/>,
 	);
 	assert.match(withReset, />Reset to defaults</);
 	// Destructive, so nothing happens until the dialog is opened and confirmed.

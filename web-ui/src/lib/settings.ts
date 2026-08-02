@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
 import {
 	loadSettingsPageData,
 	resetSettings,
+	restartStation,
 	saveAudioSettings,
 	saveDetectionSettings,
 	savePrivacySettings,
@@ -55,3 +57,26 @@ export const saveReviewSettingsFn = createServerFn({ method: "POST" })
 export const resetSettingsFn = createServerFn({ method: "POST" }).handler(() =>
 	resetSettings(),
 );
+
+/**
+ * The card names the services to bounce, so a stale Detection card does not
+ * take the recorder down with it. Validated against the known cards rather
+ * than trusted: this ends in an argument list to `systemctl restart`.
+ */
+export const restartStationFn = createServerFn({ method: "POST" })
+	.validator(
+		z.object({
+			card: z
+				.enum([
+					"station",
+					"detection",
+					"privacy",
+					"audio",
+					"recording",
+					"storage",
+					"review",
+				])
+				.optional(),
+		}),
+	)
+	.handler(({ data }) => restartStation(data.card));

@@ -7,6 +7,7 @@ import test from "node:test";
 import {
 	loadSettingsPageData,
 	resetSettings,
+	restartStation,
 	savePrivacySettings,
 	saveStorageSettings,
 } from "./settings.server.ts";
@@ -226,6 +227,118 @@ test("a failed restart still reports the reset that landed", async () => {
 	assert.equal(result.status, "reset-action-failed");
 	assert.doesNotMatch(result.message, /systemctl exposed output/);
 	assert.match(await readFile(file, "utf8"), /^PRIVACY_THRESHOLD=0$/m);
+});
+
+test("a save that cannot restart says so in the reader's terms", async () => {
+	const { file } = await fixtureConfig("PRIVACY_THRESHOLD=0\n");
+	const refused = await savePrivacySettings(
+		{ privacyThreshold: 2 },
+		{
+			settingsPath: file,
+			runner: async () => {
+				throw new Error("boom");
+			},
+		},
+	);
+	const declined = await savePrivacySettings(
+		{ privacyThreshold: 2 },
+		{ settingsPath: file, skipSystemActions: true },
+	);
+	// A refused restart and a declined one leave the station in the same place,
+	// so they read identically -- the difference is ours, not the reader's.
+	assert.equal(
+		refused.message,
+		"Saved. Restart BirdNET for this to take effect.",
+	);
+	assert.equal(declined.message, refused.message);
+	for (const message of [refused.message, declined.message]) {
+		assert.doesNotMatch(message, /system action|systemctl|service/i);
+	}
+});
+
+test("a card with nothing to restart just saves", async () => {
+	const { file } = await fixtureConfig(
+		"FULL_DISK=purge\nPURGE_THRESHOLD=95\nMAX_FILES_SPECIES=0\n",
+	);
+	const saved = await saveStorageSettings(
+		{ fullDiskAction: "keep", purgeThreshold: 90, maxFilesPerSpecies: 0 },
+		{ settingsPath: file, skipSystemActions: true },
+	);
+	// Storage is read per operation, so it is live the moment it is written --
+	// offering a restart here would be asking for a pointless interruption.
+	assert.equal(saved.status, "saved");
+	assert.equal(saved.message, "Saved.");
+});
+
+test("restart bounces exactly the named card's services", async () => {
+	const commands: string[][] = [];
+	const result = await restartStation("audio", {
+		runner: async (executable, args) => {
+			commands.push([executable, ...args]);
+		},
+	});
+	assert.equal(result.status, "restarted");
+	assert.deepEqual(commands, [
+		[
+			"sudo",
+			"systemctl",
+			"restart",
+			"birdnet_recording.service",
+			"livestream.service",
+			"spectrogram_viewer.service",
+		],
+	]);
+});
+
+test("restart without a card brings back the whole set once", async () => {
+	const commands: string[][] = [];
+	await restartStation(undefined, {
+		runner: async (executable, args) => {
+			commands.push([executable, ...args]);
+		},
+	});
+	assert.equal(commands.length, 1);
+	const services = commands[0].slice(3);
+	assert.deepEqual(services, [...new Set(services)]);
+});
+
+test("restarting distinguishes nothing to do from a declined restart", async () => {
+	let commands = 0;
+	const runner = async () => {
+		commands++;
+	};
+	// Storage has no services, so it genuinely is already live.
+	const nothing = await restartStation("storage", { runner });
+	assert.equal(nothing.status, "nothing-to-restart");
+	assert.match(nothing.message, /already live/);
+
+	// Detection does, and a declined restart leaves it on the old values --
+	// reporting that as "nothing needed restarting" would be false.
+	const declined = await restartStation("detection", {
+		runner,
+		skipSystemActions: true,
+	});
+	assert.equal(declined.status, "restart-skipped");
+	assert.doesNotMatch(declined.message, /already live/);
+	assert.match(declined.message, /next time BirdNET starts/);
+
+	assert.equal(commands, 0);
+});
+
+test("a failed restart explains the consequence without exposing systemctl", async () => {
+	await assert.rejects(
+		restartStation("detection", {
+			runner: async () => {
+				throw new Error("systemctl exposed output");
+			},
+		}),
+		(error: Error) => {
+			assert.doesNotMatch(error.message, /systemctl exposed output/);
+			// The reader's real question after a failed restart: are my settings gone?
+			assert.match(error.message, /saved/i);
+			return true;
+		},
+	);
 });
 
 test("configuration access errors do not reveal paths", async () => {

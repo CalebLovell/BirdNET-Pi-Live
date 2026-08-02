@@ -92,7 +92,6 @@ export function StationLocation({
 			<Button
 				type="button"
 				variant="outline"
-				size="sm"
 				disabled={state.kind === "locating"}
 				onClick={locate}
 			>
@@ -114,7 +113,7 @@ export function StationLocation({
 						</h2>
 						{state.kind === "found" ? (
 							<>
-								<dl className="tabular-data mt-4 grid grid-cols-2 gap-4 rounded-md bg-muted p-3 text-sm">
+								<dl className="tabular-data mt-4 grid grid-cols-2 gap-4 rounded-md bg-muted p-4 text-sm">
 									<div>
 										<dt className="island-kicker">Latitude</dt>
 										<dd className="mt-1 font-semibold">
@@ -128,13 +127,13 @@ export function StationLocation({
 										</dd>
 									</div>
 								</dl>
-								<p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+								<p className="mt-4 text-muted-foreground text-sm leading-relaxed">
 									This replaces {current.latitude}, {current.longitude} in the
 									form. Nothing is written to the station until you save the
 									Station card.
 								</p>
 								{state.accuracy !== null ? (
-									<p className="mt-3 text-muted-foreground text-xs leading-relaxed">
+									<p className="mt-4 text-muted-foreground text-xs leading-relaxed">
 										Your browser puts this within about {state.accuracy} m. It
 										reports the location of the device you are reading this on,
 										which may not be where the microphone is.

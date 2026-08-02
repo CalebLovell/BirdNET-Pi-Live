@@ -1,5 +1,13 @@
 import type { ComponentType, ReactNode } from "react";
 
+/**
+ * How a figure is doing, for the few that describe a state rather than just
+ * count something. `ok` is deliberately identical to an untoned figure: a
+ * masthead where every healthy reading shouts in green is one nobody scans, so
+ * only the readings that want attention look different.
+ */
+export type StatTone = "ok" | "warn" | "problem" | "unknown";
+
 export type PageHeaderStat = {
 	label: string;
 	value: string | number;
@@ -8,6 +16,31 @@ export type PageHeaderStat = {
 	icon: ComponentType<{ className?: string }>;
 	/** Replaces the icon disc outright -- for a portrait or other artwork. */
 	artwork?: ReactNode;
+	/** Omit for a plain figure, which is what most of them are. */
+	tone?: StatTone;
+};
+
+const TONE_DISC: Record<StatTone, string> = {
+	ok: "bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))] text-[var(--moss)]",
+	warn: "bg-[color-mix(in_oklab,var(--sand)_35%,var(--paper-raised))] text-[var(--bark)]",
+	problem:
+		"bg-[color-mix(in_oklab,var(--clay)_25%,var(--paper-raised))] text-destructive",
+	unknown: "bg-muted text-muted-foreground",
+};
+
+const TONE_VALUE: Record<StatTone, string> = {
+	ok: "",
+	warn: "text-[var(--bark)]",
+	problem: "text-destructive",
+	unknown: "text-muted-foreground",
+};
+
+/** Spoken in place of the colour, which is the only other thing carrying it. */
+const TONE_SPOKEN: Record<StatTone, string> = {
+	ok: "healthy",
+	warn: "needs attention",
+	problem: "problem",
+	unknown: "unknown",
 };
 
 /** Literal strings so Tailwind keeps every column count it might be asked for. */
@@ -88,17 +121,22 @@ function Figure({
 	hint,
 	icon: Icon,
 	artwork,
+	tone,
 }: PageHeaderStat) {
 	return (
 		<div className="flex items-center gap-4 overflow-hidden">
 			{artwork ?? (
-				<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
-					<Icon aria-hidden="true" className="size-4 text-[var(--moss)]" />
+				<div
+					className={`flex size-8 shrink-0 items-center justify-center rounded-full ${TONE_DISC[tone ?? "ok"]}`}
+				>
+					<Icon aria-hidden="true" className="size-4" />
 				</div>
 			)}
 			<div className="min-w-0 flex-1">
 				<dt className="island-kicker" title={hint} aria-description={hint}>
 					{label}
+					{/* Colour is the only other thing saying this, so it is also said. */}
+					{tone ? <span className="sr-only">: {TONE_SPOKEN[tone]}</span> : null}
 				</dt>
 				{/* Floored at the numeric line box (text-3xl/none) so a figure that
 				    falls back to a string -- an em dash on an empty period, say --
@@ -106,11 +144,11 @@ function Figure({
 				    under the cursor. */}
 				<div className="mt-2 flex min-h-[1.875rem] min-w-0 items-baseline gap-2">
 					<dd
-						className={
+						className={`${
 							typeof value === "number"
 								? "tabular-data truncate font-semibold text-3xl leading-none"
 								: "display-title truncate font-semibold text-xl leading-tight"
-						}
+						} ${TONE_VALUE[tone ?? "ok"]}`}
 					>
 						{typeof value === "number" ? value.toLocaleString() : value}
 					</dd>

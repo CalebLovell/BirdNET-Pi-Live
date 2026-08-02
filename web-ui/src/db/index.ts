@@ -12,6 +12,11 @@ import * as schema from "./schema.ts";
 // sqlite-proxy driver, which just needs a callback that runs raw SQL.
 const dbPath = process.env.BIRDNET_DB_PATH ?? "../scripts/birds.db";
 
+/** Exported so the health check can size the file without re-deriving the path. */
+export function detectionsDbPath(): string {
+	return dbPath;
+}
+
 // Matches scripts/createdb.sh exactly, so a freshly-created fallback database
 // (see below) has the same shape as a real BirdNET-Pi install.
 const CREATE_DETECTIONS_TABLE = `
