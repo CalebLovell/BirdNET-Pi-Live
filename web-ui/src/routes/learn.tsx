@@ -11,7 +11,6 @@ import { LearnGame } from "~/components/learn/learn-game.tsx";
 import {
 	LEARN_POOL_ICONS,
 	LearnPoolSelector,
-	LearnRoundShell,
 } from "~/components/learn/learn-layout.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { getLearnRound } from "~/lib/learn.ts";
@@ -102,7 +101,7 @@ function Learn() {
 				/>
 			)}
 
-			<LearnRoundShell isEmpty={round.questions.length === 0}>
+			<div className="mt-4 w-full">
 				{round.questions.length === 0 ? (
 					<EmptyPool
 						speciesInPool={round.speciesInPool}
@@ -116,7 +115,7 @@ function Learn() {
 						isLoadingNextRound={isLoading}
 					/>
 				)}
-			</LearnRoundShell>
+			</div>
 		</div>
 	);
 }

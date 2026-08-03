@@ -4,7 +4,7 @@ import {
 	Infinity as InfinityIcon,
 	Repeat2,
 } from "lucide-react";
-import type { ComponentType, PropsWithChildren } from "react";
+import type { ComponentType } from "react";
 
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
@@ -50,17 +50,6 @@ export function LearnPoolSelector({
 					);
 				})}
 			</ToggleGroup>
-		</div>
-	);
-}
-
-export function LearnRoundShell({
-	isEmpty,
-	children,
-}: PropsWithChildren<{ isEmpty: boolean }>) {
-	return (
-		<div className={isEmpty ? "mx-auto mt-4 max-w-3xl" : "mt-4 w-full"}>
-			{children}
 		</div>
 	);
 }
