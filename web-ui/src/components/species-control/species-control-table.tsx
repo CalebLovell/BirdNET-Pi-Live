@@ -1,26 +1,73 @@
-import { ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "~/components/ui/button.tsx";
+import {
+	Table,
+	TableBody,
+	TableCell,
+	TableHead,
+	TableHeader,
+	TableRow,
+} from "~/components/ui/table.tsx";
 import type {
-	EffectiveSpeciesState,
 	SpeciesControlRow,
 	SpeciesPolicy,
 } from "~/lib/species-control-data.ts";
 
 export type SpeciesControlViewRow = SpeciesControlRow & {
 	policy: SpeciesPolicy;
-	effective: EffectiveSpeciesState;
 };
 
-function confidenceLabel(value: number | null) {
-	return value === null ? "—" : `${Math.round(value * 100)}%`;
-}
+export type SpeciesSortKey = "species" | "count" | "policy";
 
-function lastSeenLabel(value: string | null) {
-	if (!value) return "Never";
-	const date = new Date(value);
-	return Number.isNaN(date.valueOf())
-		? value.replace("T", " ")
-		: new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(date);
+/**
+ * Each column starts in the direction that is useful rather than in a uniform
+ * one: names read A-Z, but a count is being asked "which is highest?". Reverse
+ * flips whichever of those the column began with.
+ */
+const NATURAL_ASCENDING: Record<SpeciesSortKey, boolean> = {
+	species: true,
+	count: false,
+	policy: true,
+};
+
+function SortHeader({
+	label,
+	sortKey,
+	sort,
+	reverse,
+	onSortChange,
+	align = "left",
+	className = "",
+}: {
+	label: string;
+	sortKey: SpeciesSortKey;
+	sort: SpeciesSortKey;
+	reverse: boolean;
+	onSortChange: (key: SpeciesSortKey) => void;
+	align?: "left" | "right";
+	className?: string;
+}) {
+	const active = sort === sortKey;
+	const ascending = NATURAL_ASCENDING[sortKey] !== reverse;
+	const Icon = active && ascending ? ArrowUp : ArrowDown;
+	return (
+		<TableHead
+			aria-sort={active ? (ascending ? "ascending" : "descending") : "none"}
+			className={`${align === "right" ? "text-right" : ""} font-semibold ${className}`}
+		>
+			<button
+				type="button"
+				className="inline-flex items-center gap-1 hover:text-foreground"
+				onClick={() => onSortChange(sortKey)}
+			>
+				{label}
+				<Icon
+					className={active ? "size-3.5" : "size-3.5 opacity-35"}
+					aria-hidden="true"
+				/>
+			</button>
+		</TableHead>
+	);
 }
 
 export function SpeciesControlTable({
@@ -29,22 +76,29 @@ export function SpeciesControlTable({
 	pageCount,
 	total,
 	selected,
+	sort,
+	reverse,
+	onSortChange,
 	onSelectedChange,
 	onCustomChange,
 	onPolicyChange,
-	onHistory,
 	onPageChange,
+	showCustom,
 }: {
 	rows: SpeciesControlViewRow[];
 	page: number;
 	pageCount: number;
 	total: number;
 	selected: Set<string>;
+	sort: SpeciesSortKey;
+	reverse: boolean;
+	onSortChange: (key: SpeciesSortKey) => void;
 	onSelectedChange: (next: Set<string>) => void;
 	onCustomChange: (sciName: string, checked: boolean) => void;
 	onPolicyChange: (sciName: string, policy: SpeciesPolicy) => void;
-	onHistory: (row: SpeciesControlViewRow) => void;
 	onPageChange: (page: number) => void;
+	/** Custom membership only bites in Custom scope, so Normal scope hides it. */
+	showCustom: boolean;
 }) {
 	const allSelected =
 		rows.length > 0 && rows.every((row) => selected.has(row.sciName));
@@ -52,136 +106,133 @@ export function SpeciesControlTable({
 	const rangeEnd = Math.min(page * 50, total);
 	return (
 		<div className="space-y-3">
-			<div className="overflow-x-auto">
-				<table className="w-full min-w-[74rem] border-collapse text-sm">
-					<thead>
-						<tr className="border-[var(--line)] border-b text-left text-muted-foreground text-xs">
-							<th className="w-9 py-2 pr-2">
+			<Table className="min-w-[44rem] table-fixed">
+				<colgroup>
+					<col className="w-[6%]" />
+					<col className={showCustom ? "w-[25%]" : "w-[30%]"} />
+					<col className={showCustom ? "w-[27%]" : "w-[32%]"} />
+					<col className="w-[12%]" />
+					{showCustom ? <col className="w-[12%]" /> : null}
+					<col className={showCustom ? "w-[18%]" : "w-[20%]"} />
+				</colgroup>
+				<TableHeader>
+					<TableRow>
+						<TableHead className="text-center font-semibold">
+							<input
+								aria-label="Select all species on this page"
+								checked={allSelected}
+								className="mx-auto block size-3.5 accent-[var(--moss)]"
+								type="checkbox"
+								onChange={(event) => {
+									const next = new Set(selected);
+									for (const row of rows)
+										event.target.checked
+											? next.add(row.sciName)
+											: next.delete(row.sciName);
+									onSelectedChange(next);
+								}}
+							/>
+						</TableHead>
+						<SortHeader
+							label="Species"
+							sortKey="species"
+							sort={sort}
+							reverse={reverse}
+							onSortChange={onSortChange}
+						/>
+						<TableHead className="font-semibold">Scientific name</TableHead>
+						<SortHeader
+							label="Count"
+							sortKey="count"
+							sort={sort}
+							reverse={reverse}
+							onSortChange={onSortChange}
+							align="right"
+						/>
+						{showCustom ? (
+							<TableHead className="text-center font-semibold">
+								Custom
+							</TableHead>
+						) : null}
+						<SortHeader
+							label="Policy"
+							sortKey="policy"
+							sort={sort}
+							reverse={reverse}
+							onSortChange={onSortChange}
+							align="right"
+						/>
+					</TableRow>
+				</TableHeader>
+				<TableBody>
+					{rows.map((row) => (
+						<TableRow key={row.sciName}>
+							<TableCell className="text-center">
 								<input
-									aria-label="Select all species on this page"
-									checked={allSelected}
-									className="size-3.5 accent-[var(--moss)]"
+									aria-label={`Select ${row.comName}`}
+									checked={selected.has(row.sciName)}
+									className="mx-auto block size-3.5 accent-[var(--moss)]"
 									type="checkbox"
 									onChange={(event) => {
 										const next = new Set(selected);
-										for (const row of rows)
-											event.target.checked
-												? next.add(row.sciName)
-												: next.delete(row.sciName);
+										event.target.checked
+											? next.add(row.sciName)
+											: next.delete(row.sciName);
 										onSelectedChange(next);
 									}}
 								/>
-							</th>
-							<th className="py-2 pr-4">Species</th>
-							<th className="py-2 pr-4">History</th>
-							<th className="py-2 pr-4 text-center">Custom</th>
-							<th className="py-2 pr-4">Policy</th>
-							<th className="py-2 pr-4">Effective</th>
-							<th className="py-2 text-right">Manage</th>
-						</tr>
-					</thead>
-					<tbody>
-						{rows.map((row) => (
-							<tr
-								key={row.sciName}
-								className="border-[var(--line)] border-b last:border-b-0 hover:bg-accent/60"
+							</TableCell>
+							<TableCell>
+								<div className="font-medium">{row.comName}</div>
+							</TableCell>
+							<TableCell>
+								<em className="text-[var(--bark)]">{row.sciName}</em>
+							</TableCell>
+							{/* Most of a 6,000-row catalogue has never been heard, so a
+							    zero is muted rather than competing with real counts. */}
+							<TableCell
+								className={`tabular-data text-right ${row.history.detections ? "" : "text-muted-foreground"}`}
 							>
-								<td className="py-3 pr-2 align-top">
-									<input
-										aria-label={`Select ${row.comName}`}
-										checked={selected.has(row.sciName)}
-										className="size-3.5 accent-[var(--moss)]"
-										type="checkbox"
-										onChange={(event) => {
-											const next = new Set(selected);
-											event.target.checked
-												? next.add(row.sciName)
-												: next.delete(row.sciName);
-											onSelectedChange(next);
-										}}
-									/>
-								</td>
-								<td className="py-3 pr-4 align-top">
-									<div className="font-medium">{row.comName}</div>
-									<em className="mt-0.5 block text-[var(--bark)] text-xs">
-										{row.sciName}
-									</em>
-									{row.probability !== null ? (
-										<span className="tabular-data mt-1 block text-[11px] text-muted-foreground">
-											Range {Math.round(row.probability * 100)}%
-										</span>
-									) : null}
-								</td>
-								<td className="py-3 pr-4 align-top">
-									<div className="tabular-data">
-										{row.history.detections.toLocaleString()} calls ·{" "}
-										{row.history.recordings.toLocaleString()} clips
-									</div>
-									<div className="mt-1 text-muted-foreground text-xs">
-										Last {lastSeenLabel(row.history.lastSeen)} · max{" "}
-										{confidenceLabel(row.history.maxConfidence)}
-									</div>
-								</td>
-								<td className="py-3 pr-4 text-center align-top">
+								{row.history.detections.toLocaleString()}
+							</TableCell>
+							{showCustom ? (
+								<TableCell className="text-center">
 									<input
 										aria-label={`Include ${row.comName} in Custom list`}
 										checked={row.custom}
 										disabled={row.policy === "never"}
-										className="size-4 accent-[var(--moss)] disabled:opacity-40"
+										className="mx-auto block size-4 accent-[var(--moss)] disabled:opacity-40"
 										type="checkbox"
 										onChange={(event) =>
 											onCustomChange(row.sciName, event.target.checked)
 										}
 									/>
-								</td>
-								<td className="py-3 pr-4 align-top">
-									<select
-										aria-label={`${row.comName} policy`}
-										className="h-8 rounded-md border border-input bg-card px-2 text-sm"
-										value={row.policy}
-										onChange={(event) =>
-											onPolicyChange(
-												row.sciName,
-												event.target.value as SpeciesPolicy,
-											)
-										}
-									>
-										<option value="automatic">Automatic</option>
-										<option value="always">Always detect</option>
-										<option value="never">Never detect</option>
-									</select>
-								</td>
-								<td className="py-3 pr-4 align-top">
-									<span
-										className={`inline-flex rounded-full px-2 py-1 text-xs ${row.effective.outcome === "blocked" ? "bg-[color-mix(in_oklab,var(--clay)_13%,white)] text-[var(--clay)]" : row.effective.outcome === "detectable" ? "bg-[color-mix(in_oklab,var(--sage)_35%,white)] text-[var(--moss)]" : "bg-muted text-muted-foreground"}`}
-									>
-										{row.effective.reason}
-									</span>
-								</td>
-								<td className="py-3 text-right align-top">
-									{row.history.detections > 0 ? (
-										<Button
-											size="xs"
-											variant="outline"
-											onClick={() => onHistory(row)}
-										>
-											<Trash2 />
-											Delete history
-										</Button>
-									) : (
-										<span className="text-muted-foreground text-xs">
-											No history
-										</span>
-									)}
-								</td>
-							</tr>
-						))}
-					</tbody>
-				</table>
-			</div>
+								</TableCell>
+							) : null}
+							<TableCell className="text-right">
+								<select
+									aria-label={`${row.comName} policy`}
+									className="h-8 rounded-md border border-input bg-card px-2 text-sm"
+									value={row.policy}
+									onChange={(event) =>
+										onPolicyChange(
+											row.sciName,
+											event.target.value as SpeciesPolicy,
+										)
+									}
+								>
+									<option value="automatic">Automatic</option>
+									<option value="always">Always detect</option>
+									<option value="never">Never detect</option>
+								</select>
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</Table>
 			{rows.length === 0 ? (
 				<p className="py-8 text-center text-muted-foreground text-sm">
-					No installed species match these filters.
+					No installed species match that search.
 				</p>
 			) : null}
 			<div className="flex flex-col gap-2 border-t pt-3 text-sm sm:flex-row sm:items-center sm:justify-between">

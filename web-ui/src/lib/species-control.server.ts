@@ -1,6 +1,5 @@
 import "@tanstack/react-start/server-only";
 
-import { execFile } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
 	access,
@@ -15,7 +14,6 @@ import {
 import { homedir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { promisify } from "node:util";
 import { resolveDetectionClipPath } from "./detection-file-path.server.ts";
 import {
 	parseBirdnetConfig,
@@ -29,7 +27,6 @@ import type {
 	SpeciesControlSaveInput,
 	SpeciesHistorySummary,
 	SpeciesListName,
-	SpeciesRangePreview,
 } from "./species-control-data.ts";
 import {
 	normalizeSpeciesControlSave,
@@ -45,30 +42,7 @@ type SpeciesControlDependencies = {
 	settingsPath?: string;
 	database?: DatabaseSync;
 	databasePath?: string;
-	previewScriptPath?: string;
-	now?: Date;
-	runner?: PreviewRunner;
 	extractedRoot?: string;
-};
-
-type PreviewRunner = (
-	executable: string,
-	args: string[],
-	options: { timeout: number; env: NodeJS.ProcessEnv },
-) => Promise<{ stdout: string }>;
-
-const execFileAsync = promisify(execFile);
-const defaultPreviewRunner: PreviewRunner = async (
-	executable,
-	args,
-	options,
-) => {
-	const result = await execFileAsync(executable, args, {
-		timeout: options.timeout,
-		env: options.env,
-		windowsHide: true,
-	});
-	return { stdout: result.stdout };
 };
 
 const LIST_FILES: Record<SpeciesListName, string> = {
@@ -301,8 +275,6 @@ export async function loadSpeciesControlPage(
 		custom: memberships.custom.has(species.sciName),
 		excluded: memberships.excluded.has(species.sciName),
 		whitelisted: memberships.whitelisted.has(species.sciName),
-		geographicallyEligible: null,
-		probability: null,
 		history: history.get(species.sciName) ?? emptyHistory,
 	}));
 	return {
@@ -468,130 +440,6 @@ export async function saveSpeciesControlLists(
 		await replaceAllLists(listDirectory, contents);
 		return { revision: (await loadLists(listDirectory, catalog)).revision };
 	});
-}
-
-const rangePreviewCache = new Map<string, SpeciesRangePreview>();
-
-function isoWeek(date: Date) {
-	const utc = new Date(
-		Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-	);
-	const day = utc.getUTCDay() || 7;
-	utc.setUTCDate(utc.getUTCDate() + 4 - day);
-	const yearStart = new Date(Date.UTC(utc.getUTCFullYear(), 0, 1));
-	return Math.ceil(
-		((utc.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7,
-	);
-}
-
-function unavailableRange(message: string): SpeciesRangePreview {
-	return {
-		status: "unavailable",
-		model: null,
-		week: null,
-		threshold: null,
-		species: [],
-		message,
-	};
-}
-
-export async function previewSpeciesRange(
-	dependencies: SpeciesControlDependencies = {},
-): Promise<SpeciesRangePreview> {
-	try {
-		const settingsPath = dependencies.settingsPath ?? resolveSettingsPath();
-		const modelDirectory =
-			dependencies.modelDirectory ?? resolveSpeciesModelDirectory();
-		const values = parseBirdnetConfig(await readFile(settingsPath, "utf8"));
-		const model = values.MODEL?.trim();
-		const latitude = Number(values.LATITUDE);
-		const longitude = Number(values.LONGITUDE);
-		const threshold = Number(values.SF_THRESH);
-		const dataModelVersion = Number(values.DATA_MODEL_VERSION);
-		if (
-			!model ||
-			!Number.isFinite(latitude) ||
-			!Number.isFinite(longitude) ||
-			!Number.isFinite(threshold) ||
-			threshold < 0 ||
-			threshold > 1 ||
-			![1, 2].includes(dataModelVersion)
-		) {
-			return unavailableRange(
-				"The configured model does not support a geographic preview.",
-			);
-		}
-		const week = isoWeek(dependencies.now ?? new Date());
-		const key = JSON.stringify({
-			model,
-			latitude,
-			longitude,
-			week,
-			dataModelVersion,
-			threshold,
-			modelDirectory,
-		});
-		const cached = rangePreviewCache.get(key);
-		if (cached) return cached;
-		const scriptPath =
-			dependencies.previewScriptPath ??
-			path.resolve(process.cwd(), "../scripts/species.py");
-		const runner = dependencies.runner ?? defaultPreviewRunner;
-		const { stdout } = await runner(
-			"python3",
-			[scriptPath, "--json", "--threshold", String(threshold)],
-			{
-				timeout: 20_000,
-				env: {
-					...process.env,
-					BIRDNET_CONF: settingsPath,
-					BIRDNET_MODEL_DIR: modelDirectory,
-				},
-			},
-		);
-		const raw = JSON.parse(stdout) as Record<string, unknown>;
-		if (
-			raw.model !== model ||
-			raw.week !== week ||
-			raw.threshold !== threshold ||
-			!Array.isArray(raw.species)
-		) {
-			throw new Error("Unexpected range preview payload");
-		}
-		const species = raw.species.map((entry) => {
-			if (!entry || typeof entry !== "object")
-				throw new Error("Invalid species");
-			const row = entry as Record<string, unknown>;
-			if (
-				typeof row.sciName !== "string" ||
-				typeof row.comName !== "string" ||
-				typeof row.probability !== "number" ||
-				!Number.isFinite(row.probability) ||
-				row.probability < 0 ||
-				row.probability > 1
-			) {
-				throw new Error("Invalid species range entry");
-			}
-			return {
-				sciName: row.sciName,
-				comName: row.comName,
-				probability: row.probability,
-			};
-		});
-		const preview: SpeciesRangePreview = {
-			status: "available",
-			model,
-			week,
-			threshold,
-			species,
-		};
-		rangePreviewCache.set(key, preview);
-		return preview;
-	} catch {
-		return unavailableRange(
-			"A geographic preview could not be generated on this station right now.",
-		);
-	}
 }
 
 type DetectionAssetRow = {

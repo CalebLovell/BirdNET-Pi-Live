@@ -9,6 +9,7 @@ import {
 import type { ChangeEvent, ReactNode } from "react";
 import { useState } from "react";
 
+import { InfoTip } from "~/components/ui/info-tip.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import type {
 	AudioSettings,
@@ -147,10 +148,12 @@ const controlClass =
 function Field({
 	label,
 	hint,
+	info,
 	children,
 }: {
 	label: string;
 	hint?: string;
+	info?: ReactNode;
 	children: ReactNode;
 }) {
 	return (
@@ -158,7 +161,10 @@ function Field({
 		// though Biome cannot see through this component's ReactNode boundary.
 		// biome-ignore lint/a11y/noLabelWithoutControl: nested labeled control
 		<label className="block space-y-1.5">
-			<span className="font-medium text-sm">{label}</span>
+			<span className="flex items-center gap-1.5 font-medium text-sm">
+				{label}
+				{info ? <InfoTip label={label}>{info}</InfoTip> : null}
+			</span>
 			{children}
 			{hint ? (
 				<span className="block text-muted-foreground text-xs leading-relaxed">
@@ -458,6 +464,17 @@ function DetectionCard({
 							<Field
 								label="Species-frequency threshold"
 								hint="Narrows candidates using location and season."
+								info={
+									<>
+										How common a species must be near you before BirdNET will
+										consider it at all. The score behind this is roughly how
+										often birders in your area report that bird this week, so
+										even an everyday yard bird sits near 0.5 — not 1.0. The 0.03
+										default is deliberately permissive. Lower it to catch more
+										species, raise it to cut false positives. Species on Always
+										detect skip this check entirely.
+									</>
+								}
 							>
 								<Input
 									type="number"

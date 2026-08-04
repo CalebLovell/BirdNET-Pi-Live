@@ -408,7 +408,9 @@ export function DetectionsTable({
 								<TableHead
 									key={header.id}
 									className={
-										header.column.id === "audio" ? "pr-0 text-right" : undefined
+										header.column.id === "audio"
+											? "pr-0 text-right font-semibold"
+											: "font-semibold"
 									}
 								>
 									{header.isPlaceholder

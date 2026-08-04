@@ -19,7 +19,6 @@ import {
 	loadSpeciesControlPage,
 	parseSpeciesList,
 	previewSpeciesHistoryDeletion,
-	previewSpeciesRange,
 	resolveSpeciesListDirectory,
 	resolveSpeciesModelDirectory,
 	saveSpeciesControlLists,
@@ -328,89 +327,6 @@ test("save enforces exclusion precedence and keeps Always species in Custom scop
 			),
 			"Canis latrans_Coyote\n",
 		);
-	} finally {
-		item.database.close();
-	}
-});
-
-test("range preview runs only the repository script with fixed arguments", async () => {
-	const item = await fixture();
-	try {
-		await writeFile(
-			item.config,
-			"MODEL=Fixture_Model\nDATA_MODEL_VERSION=2\nLATITUDE=41.5\nLONGITUDE=-93.6\nSF_THRESH=0.031\n",
-			"utf8",
-		);
-		let invocation:
-			| {
-					executable: string;
-					args: string[];
-					timeout: number;
-					env: NodeJS.ProcessEnv;
-			  }
-			| undefined;
-		const preview = await previewSpeciesRange({
-			modelDirectory: item.model,
-			settingsPath: item.config,
-			previewScriptPath: path.join(item.root, "owned-species.py"),
-			now: new Date("2026-07-31T12:00:00Z"),
-			runner: async (executable, args, options) => {
-				invocation = {
-					executable,
-					args,
-					timeout: options.timeout,
-					env: options.env,
-				};
-				return {
-					stdout: JSON.stringify({
-						model: "Fixture_Model",
-						week: 31,
-						threshold: 0.031,
-						species: [
-							{
-								sciName: "Canis latrans",
-								comName: "Coyote",
-								probability: 0.88,
-							},
-						],
-					}),
-				};
-			},
-		});
-		assert.equal(preview.status, "available");
-		assert.deepEqual(invocation?.args, [
-			path.join(item.root, "owned-species.py"),
-			"--json",
-			"--threshold",
-			"0.031",
-		]);
-		assert.equal(invocation?.executable, "python3");
-		assert.equal(invocation?.timeout, 20_000);
-		assert.equal(invocation?.env.BIRDNET_CONF, item.config);
-		assert.equal(invocation?.env.BIRDNET_MODEL_DIR, item.model);
-		assert.equal(preview.species[0]?.sciName, "Canis latrans");
-	} finally {
-		item.database.close();
-	}
-});
-
-test("range preview degrades safely when the helper output is malformed", async () => {
-	const item = await fixture();
-	try {
-		await writeFile(
-			item.config,
-			"MODEL=Fixture_Model\nDATA_MODEL_VERSION=1\nLATITUDE=41\nLONGITUDE=-93\nSF_THRESH=0.047\n",
-			"utf8",
-		);
-		const preview = await previewSpeciesRange({
-			modelDirectory: item.model,
-			settingsPath: item.config,
-			now: new Date("2026-07-31T12:00:00Z"),
-			runner: async () => ({ stdout: "not json" }),
-		});
-		assert.equal(preview.status, "unavailable");
-		assert.match(preview.message ?? "", /could not be generated/i);
-		assert.deepEqual(preview.species, []);
 	} finally {
 		item.database.close();
 	}

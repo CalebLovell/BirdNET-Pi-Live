@@ -11,9 +11,6 @@ test("species control route loads data, adapts mutations, and invalidates commit
 	assert.match(source, /loader:\s*\(\)\s*=>\s*getSpeciesControlPage/);
 	assert.match(source, /<SpeciesControlPage/);
 	assert.match(source, /useServerFn\(saveSpeciesControl\)/);
-	assert.match(source, /useServerFn\(getSpeciesRangePreview\)/);
-	assert.match(source, /useServerFn\(getSpeciesHistoryDeletePreview\)/);
-	assert.match(source, /useServerFn\(deleteSpeciesHistoryFn\)/);
 	assert.match(source, /router\.invalidate\(\)/);
 	assert.match(source, /Species control is unavailable/);
 });

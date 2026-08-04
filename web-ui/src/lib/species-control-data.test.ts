@@ -2,60 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
 	applySpeciesPolicy,
-	effectiveSpeciesState,
 	normalizeSpeciesControlSave,
 	speciesControlDeleteSchema,
 	speciesControlSaveSchema,
 } from "./species-control-data.ts";
-
-test("excluded wins over custom, whitelist, and geographic eligibility", () => {
-	assert.deepEqual(
-		effectiveSpeciesState({
-			customMode: true,
-			custom: true,
-			excluded: true,
-			whitelisted: true,
-			geographicallyEligible: true,
-		}),
-		{ outcome: "blocked", reason: "Excluded" },
-	);
-});
-
-test("custom-only mode blocks species outside the custom list", () => {
-	assert.deepEqual(
-		effectiveSpeciesState({
-			customMode: true,
-			custom: false,
-			excluded: false,
-			whitelisted: true,
-			geographicallyEligible: true,
-		}),
-		{ outcome: "blocked", reason: "Not in Custom list" },
-	);
-});
-
-test("whitelist bypasses only geographic filtering", () => {
-	assert.deepEqual(
-		effectiveSpeciesState({
-			customMode: false,
-			custom: false,
-			excluded: false,
-			whitelisted: true,
-			geographicallyEligible: false,
-		}),
-		{ outcome: "detectable", reason: "Always detect" },
-	);
-	assert.deepEqual(
-		effectiveSpeciesState({
-			customMode: false,
-			custom: false,
-			excluded: false,
-			whitelisted: false,
-			geographicallyEligible: false,
-		}),
-		{ outcome: "blocked", reason: "Outside current range" },
-	);
-});
 
 test("never detect clears conflicting memberships", () => {
 	assert.deepEqual(

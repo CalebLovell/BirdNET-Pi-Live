@@ -19,8 +19,6 @@ export type SpeciesControlRow = {
 	custom: boolean;
 	excluded: boolean;
 	whitelisted: boolean;
-	geographicallyEligible: boolean | null;
-	probability: number | null;
 	history: SpeciesHistorySummary;
 };
 
@@ -32,21 +30,6 @@ export type SpeciesControlPageData = {
 	unresolved: UnresolvedSpeciesLists;
 	customMode: boolean;
 	listFiles: Record<SpeciesListName, boolean>;
-};
-
-export type SpeciesRangeEntry = {
-	sciName: string;
-	comName: string;
-	probability: number;
-};
-
-export type SpeciesRangePreview = {
-	status: "available" | "unavailable";
-	model: string | null;
-	week: number | null;
-	threshold: number | null;
-	species: SpeciesRangeEntry[];
-	message?: string;
 };
 
 export type HistoryDeletePreview = {
@@ -116,34 +99,6 @@ export type SpeciesControlSaveInput = z.infer<typeof speciesControlSaveSchema>;
 export type SpeciesControlDeleteInput = z.infer<
 	typeof speciesControlDeleteSchema
 >;
-
-export type EffectiveSpeciesState =
-	| { outcome: "detectable"; reason: string }
-	| { outcome: "blocked"; reason: string }
-	| { outcome: "unknown"; reason: string };
-
-export function effectiveSpeciesState(input: {
-	customMode: boolean;
-	custom: boolean;
-	excluded: boolean;
-	whitelisted: boolean;
-	geographicallyEligible: boolean | null;
-}): EffectiveSpeciesState {
-	if (input.excluded) return { outcome: "blocked", reason: "Excluded" };
-	if (input.customMode && !input.custom) {
-		return { outcome: "blocked", reason: "Not in Custom list" };
-	}
-	if (input.whitelisted) {
-		return { outcome: "detectable", reason: "Always detect" };
-	}
-	if (input.geographicallyEligible === false) {
-		return { outcome: "blocked", reason: "Outside current range" };
-	}
-	if (input.geographicallyEligible === true) {
-		return { outcome: "detectable", reason: "In current range" };
-	}
-	return { outcome: "unknown", reason: "Range not checked" };
-}
 
 export function applySpeciesPolicy(
 	current: { custom: boolean; policy: SpeciesPolicy },

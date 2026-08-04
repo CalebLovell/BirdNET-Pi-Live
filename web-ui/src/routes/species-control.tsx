@@ -5,10 +5,7 @@ import { CircleAlert } from "lucide-react";
 import { SpeciesControlPage } from "~/components/species-control/species-control-page.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
-	deleteSpeciesHistoryFn,
 	getSpeciesControlPage,
-	getSpeciesHistoryDeletePreview,
-	getSpeciesRangePreview,
 	saveSpeciesControl,
 } from "~/lib/species-control.ts";
 
@@ -22,18 +19,12 @@ export const Route = createFileRoute("/species-control")({
 function SpeciesControlRoute() {
 	const initialData = Route.useLoaderData();
 	const save = useServerFn(saveSpeciesControl);
-	const preview = useServerFn(getSpeciesRangePreview);
-	const historyPreview = useServerFn(getSpeciesHistoryDeletePreview);
-	const deleteHistory = useServerFn(deleteSpeciesHistoryFn);
 	const router = useRouter();
 
 	return (
 		<SpeciesControlPage
 			initialData={initialData}
 			onSave={(data) => save({ data })}
-			onPreview={() => preview({})}
-			onHistoryPreview={(sciName) => historyPreview({ data: { sciName } })}
-			onHistoryDelete={(data) => deleteHistory({ data })}
 			onCommitted={() => router.invalidate()}
 		/>
 	);

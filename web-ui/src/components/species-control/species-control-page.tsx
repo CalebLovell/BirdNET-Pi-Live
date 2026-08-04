@@ -1,57 +1,44 @@
 import Fuse from "fuse.js";
 import {
 	CircleAlert,
-	Crosshair,
+	List,
+	ListChecks,
 	ListFilter,
-	MapPinned,
 	Save,
 	X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import { Input } from "~/components/ui/input.tsx";
+import { InfoTip } from "~/components/ui/info-tip.tsx";
+import { SearchInput } from "~/components/ui/search-input.tsx";
+import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import {
 	applySpeciesPolicy,
-	effectiveSpeciesState,
-	type HistoryDeletePreview,
-	type HistoryDeleteResult,
 	type SpeciesControlPageData,
 	type SpeciesControlSaveInput,
 	type SpeciesPolicy,
-	type SpeciesRangePreview,
 } from "~/lib/species-control-data.ts";
-import {
-	HistoryDeleteDetails,
-	SpeciesControlDialog,
-} from "./species-control-dialogs.tsx";
-import { SpeciesControlSummary } from "./species-control-summary.tsx";
+import { SpeciesControlDialog } from "./species-control-dialogs.tsx";
 import {
 	SpeciesControlTable,
 	type SpeciesControlViewRow,
+	type SpeciesSortKey,
 } from "./species-control-table.tsx";
 import { SpeciesControlTools } from "./species-control-tools.tsx";
 
 type PageAdapters = {
 	onSave?: (input: SpeciesControlSaveInput) => Promise<{ revision: string }>;
-	onPreview?: () => Promise<SpeciesRangePreview>;
-	onHistoryPreview?: (sciName: string) => Promise<HistoryDeletePreview>;
-	onHistoryDelete?: (input: {
-		sciName: string;
-		expectedRows: number;
-	}) => Promise<HistoryDeleteResult>;
 	onCommitted?: () => void | Promise<void>;
 };
 
-type Filter =
-	| "all"
-	| "detected"
-	| "unseen"
-	| "custom"
-	| "excluded"
-	| "whitelisted"
-	| "eligible"
-	| "ineligible";
+/**
+ * BirdNET has no scope setting of its own -- it restricts itself precisely when
+ * the Custom list is non-empty. The mode is therefore a view over that list
+ * rather than a separate stored flag, and leaving Custom mode has to empty the
+ * list. The departing list is stashed so returning is not a retyping exercise.
+ */
+type Scope = "normal" | "custom";
 
 function setFrom(
 	data: SpeciesControlPageData,
@@ -70,9 +57,6 @@ function changedCount(current: Set<string>, baseline: Set<string>) {
 export function SpeciesControlPage({
 	initialData,
 	onSave,
-	onPreview,
-	onHistoryPreview,
-	onHistoryDelete,
 	onCommitted,
 }: { initialData: SpeciesControlPageData } & PageAdapters) {
 	const initialSets = useMemo(
@@ -91,76 +75,49 @@ export function SpeciesControlPage({
 	const [baseline, setBaseline] = useState(() => initialSets);
 	const [revision, setRevision] = useState(initialData.revision);
 	const [query, setQuery] = useState("");
-	const [filter, setFilter] = useState<Filter>("all");
+	const [sort, setSort] = useState<SpeciesSortKey>("species");
+	const [reverse, setReverse] = useState(false);
 	const [page, setPage] = useState(1);
 	const [selected, setSelected] = useState(new Set<string>());
-	const [preview, setPreview] = useState<SpeciesRangePreview | null>(null);
-	const [previewing, setPreviewing] = useState(false);
 	const [removeUnresolved, setRemoveUnresolved] = useState(new Set<string>());
 	const [dialog, setDialog] = useState<"save" | "reset" | null>(null);
-	const [historyPreview, setHistoryPreview] =
-		useState<HistoryDeletePreview | null>(null);
+	const [scope, setScope] = useState<Scope>(() =>
+		initialData.customMode ? "custom" : "normal",
+	);
+	const [stashedCustom, setStashedCustom] = useState(() => new Set<string>());
 	const [pending, setPending] = useState(false);
 	const [feedback, setFeedback] = useState<{
 		tone: "error" | "success";
 		message: string;
 	} | null>(null);
 
+	// What BirdNET will actually do once saved, which is not the same as the
+	// scope on screen: Custom scope with nothing ticked still behaves as Normal.
+	// Only the policy edits read this now; the table states the policy alone.
 	const customMode = custom.size > 0;
+	const emptyCustomScope = scope === "custom" && custom.size === 0;
 	const pendingCount =
 		changedCount(custom, baseline.custom) +
 		changedCount(excluded, baseline.excluded) +
 		changedCount(whitelisted, baseline.whitelisted) +
 		removeUnresolved.size;
-	const probabilities = useMemo(
-		() =>
-			new Map(
-				(preview?.species ?? []).map((row) => [row.sciName, row.probability]),
-			),
-		[preview],
-	);
 	const viewRows = useMemo<SpeciesControlViewRow[]>(
 		() =>
 			initialData.rows.map((row) => {
-				const probability = probabilities.get(row.sciName);
-				const geographicallyEligible =
-					preview?.status === "available"
-						? probability !== undefined
-						: row.geographicallyEligible;
 				const policy: SpeciesPolicy = excluded.has(row.sciName)
 					? "never"
 					: whitelisted.has(row.sciName)
 						? "always"
 						: "automatic";
-				const state = {
+				return {
 					...row,
 					custom: custom.has(row.sciName),
 					excluded: excluded.has(row.sciName),
 					whitelisted: whitelisted.has(row.sciName),
-					geographicallyEligible,
-					probability: probability ?? null,
-				};
-				return {
-					...state,
 					policy,
-					effective: effectiveSpeciesState({
-						customMode,
-						custom: state.custom,
-						excluded: state.excluded,
-						whitelisted: state.whitelisted,
-						geographicallyEligible,
-					}),
 				};
 			}),
-		[
-			custom,
-			customMode,
-			excluded,
-			initialData.rows,
-			preview,
-			probabilities,
-			whitelisted,
-		],
+		[custom, excluded, initialData.rows, whitelisted],
 	);
 	const searched = useMemo(() => {
 		if (!query.trim()) return viewRows;
@@ -168,29 +125,28 @@ export function SpeciesControlPage({
 			.search(query.trim())
 			.map((result) => result.item);
 	}, [query, viewRows]);
-	const filtered = searched.filter((row) => {
-		switch (filter) {
-			case "detected":
-				return row.history.detections > 0;
-			case "unseen":
-				return row.history.detections === 0;
-			case "custom":
-				return row.custom;
-			case "excluded":
-				return row.excluded;
-			case "whitelisted":
-				return row.whitelisted;
-			case "eligible":
-				return row.geographicallyEligible === true;
-			case "ineligible":
-				return row.geographicallyEligible === false;
-			default:
-				return true;
-		}
-	});
-	const pageCount = Math.max(1, Math.ceil(filtered.length / 50));
+	const sorted = useMemo(() => {
+		const direction = reverse ? -1 : 1;
+		// Ranked rather than compared by label so the order reads as a scale from
+		// least to most intervention, not as an alphabetical accident.
+		const policyRank = { automatic: 0, always: 1, never: 2 };
+		return [...searched].sort((a, b) => {
+			if (sort === "count")
+				return (
+					direction * (b.history.detections - a.history.detections) ||
+					a.comName.localeCompare(b.comName)
+				);
+			if (sort === "policy")
+				return (
+					direction * (policyRank[a.policy] - policyRank[b.policy]) ||
+					a.comName.localeCompare(b.comName)
+				);
+			return direction * a.comName.localeCompare(b.comName);
+		});
+	}, [searched, sort, reverse]);
+	const pageCount = Math.max(1, Math.ceil(sorted.length / 50));
 	const safePage = Math.min(page, pageCount);
-	const pagedRows = filtered.slice((safePage - 1) * 50, safePage * 50);
+	const pagedRows = sorted.slice((safePage - 1) * 50, safePage * 50);
 	const unresolvedCount =
 		Object.values(initialData.unresolved).reduce(
 			(sum, values) => sum + values.length,
@@ -238,6 +194,27 @@ export function SpeciesControlPage({
 			} else value.delete(sciName);
 			return value;
 		});
+	}
+
+	function changeSort(key: SpeciesSortKey) {
+		if (key === sort) setReverse((current) => !current);
+		else {
+			setSort(key);
+			setReverse(false);
+		}
+		setPage(1);
+	}
+
+	function switchScope(next: Scope) {
+		if (next === scope) return;
+		if (next === "normal") {
+			setStashedCustom(new Set(custom));
+			setCustom(new Set());
+		} else {
+			setCustom(new Set(stashedCustom));
+		}
+		setScope(next);
+		setPage(1);
 	}
 
 	function applyBulk(policy: SpeciesPolicy | "custom") {
@@ -294,68 +271,6 @@ export function SpeciesControlPage({
 						: "Species controls could not be saved.",
 			});
 			setDialog(null);
-		} finally {
-			setPending(false);
-		}
-	}
-
-	async function runPreview() {
-		if (!onPreview) return;
-		setPreviewing(true);
-		setFeedback(null);
-		try {
-			const result = await onPreview();
-			setPreview(result);
-			if (result.status === "unavailable")
-				setFeedback({
-					tone: "error",
-					message: result.message ?? "Range preview is unavailable.",
-				});
-		} finally {
-			setPreviewing(false);
-		}
-	}
-
-	async function openHistory(row: SpeciesControlViewRow) {
-		if (!onHistoryPreview) return;
-		setPending(true);
-		try {
-			setHistoryPreview(await onHistoryPreview(row.sciName));
-		} catch (error) {
-			setFeedback({
-				tone: "error",
-				message:
-					error instanceof Error
-						? error.message
-						: "History preview could not be loaded.",
-			});
-		} finally {
-			setPending(false);
-		}
-	}
-
-	async function deleteHistory() {
-		if (!historyPreview || !onHistoryDelete) return;
-		setPending(true);
-		try {
-			const result = await onHistoryDelete({
-				sciName: historyPreview.sciName,
-				expectedRows: historyPreview.rows,
-			});
-			setFeedback({
-				tone: result.failedAssets ? "error" : "success",
-				message: `Deleted ${result.deletedRows} detections and ${result.deletedAssets} recording files.`,
-			});
-			setHistoryPreview(null);
-			await onCommitted?.();
-		} catch (error) {
-			setFeedback({
-				tone: "error",
-				message:
-					error instanceof Error
-						? error.message
-						: "History could not be deleted.",
-			});
 		} finally {
 			setPending(false);
 		}
@@ -447,62 +362,47 @@ export function SpeciesControlPage({
 			<PageHeaderCard
 				title="Species control"
 				description="Decide which installed species BirdNET may detect, then review the real effect before saving."
-				action={
-					<Button
-						disabled={!onPreview}
-						size="xs"
-						variant="outline"
-						icon={MapPinned}
-						loading={previewing}
-						onClick={runPreview}
-					>
-						Check current range
-					</Button>
-				}
-			>
-				<div className="mt-4 flex flex-col gap-3 border-[var(--line)] border-t pt-4 md:flex-row md:items-center md:justify-between">
-					<div className="flex items-start gap-3">
-						<span
-							className={`mt-0.5 flex size-8 items-center justify-center rounded-full ${customMode ? "bg-[color-mix(in_oklab,var(--sand)_30%,white)] text-[var(--bark)]" : "bg-[color-mix(in_oklab,var(--sage)_30%,white)] text-[var(--moss)]"}`}
-						>
-							<Crosshair className="size-4" />
-						</span>
-						<div>
-							<p className="font-semibold text-sm">
-								{customMode
-									? "Custom-only detection scope"
-									: "Normal detection scope"}
-							</p>
-							<p className="mt-0.5 text-muted-foreground text-xs">
-								{customMode
-									? `Only ${custom.size.toLocaleString()} Custom species can pass the classifier. Exclusions still win.`
-									: "All geographically eligible installed species can pass unless excluded."}
-							</p>
-						</div>
-					</div>
-					{preview?.status === "available" ? (
-						<p className="tabular-data text-muted-foreground text-xs">
-							Range week {preview.week} · threshold {preview.threshold}
-						</p>
-					) : null}
-				</div>
-			</PageHeaderCard>
-
-			<SpeciesControlSummary
-				custom={custom.size}
-				excluded={excluded.size}
-				whitelisted={whitelisted.size}
-				eligible={
-					viewRows.filter(
-						(row) =>
-							row.geographicallyEligible === true &&
-							!row.excluded &&
-							(!customMode || row.custom),
-					).length
-				}
-				unresolved={unresolvedCount}
-				pending={pendingCount}
 			/>
+
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+				<SearchInput
+					aria-label="Search installed species"
+					placeholder="Search species control..."
+					value={query}
+					onChange={(event) => {
+						setQuery(event.target.value);
+						setPage(1);
+					}}
+					onClear={() => {
+						setQuery("");
+						setPage(1);
+					}}
+				/>
+				{/* Scrolls rather than wraps on a narrow screen: a segmented control
+				    cannot break across lines without losing its joined shape. */}
+				<div className="-mx-1 flex max-w-full shrink-0 items-center gap-2 overflow-x-auto px-1 py-1">
+					<ToggleGroup
+						aria-label="Detection scope"
+						type="single"
+						variant="outline"
+						value={scope}
+						// Radix clears the value when the active item is pressed
+						// again; scope is never absent, so that press is ignored.
+						onValueChange={(value) => {
+							if (value) switchScope(value as Scope);
+						}}
+					>
+						<ToggleGroupItem value="normal" aria-label="Normal scope">
+							<List className="size-4" />
+							Normal
+						</ToggleGroupItem>
+						<ToggleGroupItem value="custom" aria-label="Custom scope">
+							<ListChecks className="size-4" />
+							Custom
+						</ToggleGroupItem>
+					</ToggleGroup>
+				</div>
+			</div>
 
 			{feedback ? (
 				<p
@@ -516,47 +416,31 @@ export function SpeciesControlPage({
 			) : null}
 
 			<section
-				aria-label="Species policies"
+				aria-label="Installed species"
 				className="feature-card rounded-md p-4"
 			>
-				<div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-					<div className="flex flex-1 flex-col gap-2 sm:flex-row">
-						<label className="flex-1" htmlFor="species-control-search">
-							<span className="mb-1 block text-muted-foreground text-xs">
-								Search installed species
-							</span>
-							<Input
-								id="species-control-search"
-								value={query}
-								placeholder="Coyote, squirrel, Canis…"
-								onChange={(event) => {
-									setQuery(event.target.value);
-									setPage(1);
-								}}
-							/>
-						</label>
-						<label>
-							<span className="mb-1 block text-muted-foreground text-xs">
-								Show
-							</span>
-							<select
-								className="h-9 min-w-44 rounded-md border border-input bg-card px-3 text-sm"
-								value={filter}
-								onChange={(event) => {
-									setFilter(event.target.value as Filter);
-									setPage(1);
-								}}
-							>
-								<option value="all">All installed</option>
-								<option value="detected">Detected here</option>
-								<option value="unseen">Not yet detected</option>
-								<option value="custom">Custom list</option>
-								<option value="excluded">Excluded</option>
-								<option value="whitelisted">Always detect</option>
-								<option value="eligible">Eligible now</option>
-								<option value="ineligible">Outside range</option>
-							</select>
-						</label>
+				<div className="mb-3 flex items-center justify-between gap-2">
+					<div className="flex items-center gap-1.5">
+						<div className="island-kicker">Installed species</div>
+						<InfoTip label="Installed species">
+							<p>
+								<strong>Normal</strong> scope lets any installed species be
+								detected unless you exclude it. <strong>Custom</strong> scope
+								flips that: only the species you tick can be detected.
+								Exclusions still win either way.
+							</p>
+							<p>
+								Leaving Custom scope empties the list, but your picks are
+								remembered — switching back restores them, and nothing reaches
+								the recorder until you save.
+							</p>
+							<p>
+								Per species, <strong>Automatic</strong> leaves the call to
+								BirdNET, <strong>Always detect</strong> skips its
+								species-frequency check, and <strong>Never detect</strong> drops
+								the species outright.
+							</p>
+						</InfoTip>
 					</div>
 					<SpeciesControlTools
 						onImport={importLists}
@@ -564,6 +448,21 @@ export function SpeciesControlPage({
 						onReset={() => setDialog("reset")}
 					/>
 				</div>
+
+				{/* A warning about live state, not documentation, so it stays on the
+				    page rather than moving into the tooltip above. */}
+				{emptyCustomScope ? (
+					<p className="mb-3 text-[var(--clay)] text-xs">
+						Nothing is ticked yet, so BirdNET keeps behaving as Normal until you
+						choose at least one species.
+					</p>
+				) : null}
+				{scope === "normal" && stashedCustom.size > 0 ? (
+					<p className="mb-3 text-muted-foreground text-xs">
+						Switching back to Custom restores the{" "}
+						{stashedCustom.size.toLocaleString()} species you had chosen.
+					</p>
+				) : null}
 				<div className="mt-3 flex min-h-8 flex-wrap items-center gap-2 border-[var(--line)] border-y py-2">
 					<ListFilter className="size-4 text-muted-foreground" />
 					<span className="text-muted-foreground text-xs">
@@ -571,14 +470,16 @@ export function SpeciesControlPage({
 							? `${selected.size} selected`
 							: "Select species for bulk changes"}
 					</span>
-					<Button
-						disabled={!selected.size}
-						size="xs"
-						variant="outline"
-						onClick={() => applyBulk("custom")}
-					>
-						Add to Custom
-					</Button>
+					{scope === "custom" ? (
+						<Button
+							disabled={!selected.size}
+							size="xs"
+							variant="outline"
+							onClick={() => applyBulk("custom")}
+						>
+							Add to Custom
+						</Button>
+					) : null}
 					<Button
 						disabled={!selected.size}
 						size="xs"
@@ -608,13 +509,16 @@ export function SpeciesControlPage({
 					rows={pagedRows}
 					page={safePage}
 					pageCount={pageCount}
-					total={filtered.length}
+					total={sorted.length}
 					selected={selected}
+					sort={sort}
+					reverse={reverse}
+					onSortChange={changeSort}
 					onSelectedChange={setSelected}
 					onCustomChange={toggleCustom}
 					onPolicyChange={updatePolicy}
-					onHistory={openHistory}
 					onPageChange={setPage}
+					showCustom={scope === "custom"}
 				/>
 			</section>
 
@@ -723,19 +627,6 @@ export function SpeciesControlPage({
 						setDialog(null);
 					}}
 				/>
-			) : null}
-			{historyPreview ? (
-				<SpeciesControlDialog
-					title={`Delete ${historyPreview.comName} history?`}
-					description="This permanently removes its detection rows and any unshared recording and spectrogram files. Species policy lists are not changed."
-					confirmLabel="Delete history"
-					destructive
-					pending={pending}
-					onCancel={() => setHistoryPreview(null)}
-					onConfirm={deleteHistory}
-				>
-					<HistoryDeleteDetails preview={historyPreview} />
-				</SpeciesControlDialog>
 			) : null}
 		</div>
 	);
