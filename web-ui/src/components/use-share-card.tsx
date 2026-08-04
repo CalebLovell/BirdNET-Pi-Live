@@ -40,16 +40,13 @@ async function copyText(text: string): Promise<boolean> {
  * from its own summary card rather than from a control floating beside one.
  *
  * Shared by the Today page's rolling window, the day page's calendar day and
- * the Timeline's selected period -- only the label, the subject and the text
- * they build differ.
+ * the Timeline's selected period -- the control reads the same on all three,
+ * and only the subject and the text they build differ.
  */
 export function useShareCard({
-	label,
 	subject = "",
 	load,
 }: {
-	/** The closed trigger's label, e.g. "Share today". */
-	label: string;
 	/**
 	 * What the card is about, e.g. the day's date. Paging from one day to the
 	 * next keeps this hook mounted, so the summary it is holding belongs to
@@ -129,13 +126,15 @@ export function useShareCard({
 	const trigger = (
 		<Button
 			variant="outline"
-			size="xs"
+			icon={Share2}
 			className="shrink-0"
 			onClick={() => setIsOpen((open) => !open)}
 			aria-expanded={isOpen}
 		>
-			<Share2 />
-			{isOpen ? "Hide summary" : label}
+			{/* Both words are the same everywhere the control appears: it is a plain
+			    show/hide toggle, and naming the subject back ("Share this day")
+			    only makes it longer than the card it sits on needs. */}
+			{isOpen ? "Hide" : "Share"}
 		</Button>
 	);
 
@@ -155,8 +154,11 @@ export function useShareCard({
 					<div className="mt-4 flex flex-wrap items-center gap-3">
 						{/* Copying a summary that is about to be replaced would put the
 						    wrong day on the clipboard. */}
-						<Button size="sm" onClick={copy} disabled={isStale || isLoading}>
-							{justCopied ? <Check /> : <Copy />}
+						<Button
+							icon={justCopied ? Check : Copy}
+							onClick={copy}
+							disabled={isStale || isLoading}
+						>
 							{justCopied ? "Copied!" : "Copy text"}
 						</Button>
 						<span className="text-muted-foreground text-xs">

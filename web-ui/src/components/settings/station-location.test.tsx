@@ -26,7 +26,7 @@ test("renders the station card with its location control in the header", async (
 			description="Name the station."
 			icon={MapPin}
 			state="idle"
-			onSubmit={() => {}}
+			onSave={() => {}}
 			action={<StationLocation current={current} onApply={() => {}} />}
 		>
 			<p>fields</p>

@@ -1,8 +1,8 @@
 import {
-	AudioLines,
 	ChartNoAxesColumnIncreasing,
+	Clock,
+	Feather,
 	Footprints,
-	Gauge,
 } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -12,25 +12,40 @@ import {
 	HeroCardShell,
 	SpeciesHeroCard,
 } from "~/components/species-hero-card.tsx";
-import { formatConfidence } from "~/lib/confidence.ts";
-import type { CurrentBird } from "~/lib/now.ts";
-import { formatClockTime, formatTimeAgo } from "~/lib/time-ago.ts";
+import { useShareCard } from "~/components/use-share-card.tsx";
+import type { CurrentBird, NowSummary } from "~/lib/now.ts";
+import { formatShareCard } from "~/lib/share-card.ts";
+import { getShareCard } from "~/lib/share-card-data.ts";
+import { formatClockTime, formatTimeAgo, hourLabel } from "~/lib/time-ago.ts";
 
 /**
- * The most recent detection, however long ago it was. There is deliberately no
- * "singing now" / "quiet" styling: a station that last heard something five
- * seconds ago and one that last heard something five days ago get the same card,
- * and the relative time is left to say which it is.
+ * The page's masthead: the most recent detection as its portrait, and the
+ * station's last 24 hours as its figures. The bird is what the card looks like;
+ * the window is what it is about, so the figures stay put as detections come and
+ * go beneath them. There is deliberately no "singing now" / "quiet" styling: a
+ * station that last heard something five seconds ago and one that last heard
+ * something five days ago get the same card, and the relative time is left to
+ * say which it is.
  */
 export function CurrentBirdCard({
 	current,
+	summary,
 	offsetMs,
 	flash,
 }: {
 	current: CurrentBird | null;
+	summary: NowSummary;
 	offsetMs: number;
 	flash: boolean;
 }) {
+	// The share control belongs to the card holding the figures it summarises,
+	// not to a button standing on its own beneath it. Nothing in the window means
+	// the card it would produce would be empty, so the control goes with it.
+	const share = useShareCard({
+		load: () => getShareCard().then(formatShareCard),
+	});
+	const canShare = summary.detections > 0;
+
 	// The only state worth distinguishing: a station whose database is still
 	// empty, where there is no detection to render a card from at all.
 	if (!current) {
@@ -53,35 +68,40 @@ export function CurrentBirdCard({
 	// `offsetMs` is 0 through hydration and only ages it forward from there.
 	const elapsedMs = current.ageMs + offsetMs;
 
-	// The station's all-time count for this species leads, so the card opens on
-	// the same two figures the species page does before the 24-hour pair.
+	// The whole station over the rolling window, not the bird in the portrait:
+	// these figures describe what the page is showing beneath them.
 	const stats = [
 		{
+			label: "Total species",
+			value: summary.species,
+			icon: Feather,
+		},
+		{
 			label: "Total detections",
-			value: current.allTimeCount,
+			value: summary.detections,
 			icon: ChartNoAxesColumnIncreasing,
 		},
 		{
-			label: "Avg. confidence",
-			value: formatConfidence(current.averageConfidence),
-			icon: Gauge,
-		},
-		{
-			label: "Heard in 24h",
-			value: current.countLast24h,
-			icon: AudioLines,
-		},
-		{
-			label: "Visits in 24h",
-			value: current.visitsLast24h,
+			label: "Total visits",
+			value: summary.visits,
 			icon: Footprints,
 			hint: "Detection runs separated by 15+ minutes of silence",
+		},
+		{
+			label: "Busiest hour",
+			value: summary.busiestHour ? hourLabel(summary.busiestHour.hour) : "—",
+			detail: summary.busiestHour
+				? `${summary.busiestHour.count.toLocaleString()} detections`
+				: undefined,
+			icon: Clock,
 		},
 	] satisfies PageHeaderStat[];
 
 	return (
 		<SpeciesHeroCard
-			label="Most recent detection"
+			label="Last 24 hours"
+			actions={canShare ? share.trigger : undefined}
+			footer={canShare ? share.summary : undefined}
 			comName={current.comName}
 			sciName={current.sciName}
 			speciesSlug={current.speciesSlug}

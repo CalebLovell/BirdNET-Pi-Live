@@ -1,4 +1,4 @@
-import { Loader2, Pause, Volume2 } from "lucide-react";
+import { Pause, Volume2 } from "lucide-react";
 
 import { Button } from "~/components/ui/button.tsx";
 import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
@@ -31,22 +31,13 @@ export function RecordingButton({
 			<Button
 				variant="outline"
 				size={iconOnly ? "icon-xs" : "xs"}
-				className={
-					iconOnly
-						? "shrink-0"
-						: "shrink-0 gap-1.5 px-2 text-[11px] has-[>svg]:px-2"
-				}
-				disabled={!audioUrl || isLoading}
+				className="shrink-0"
+				icon={isPlaying ? Pause : Volume2}
+				loading={isLoading}
+				disabled={!audioUrl}
 				onClick={togglePlay}
 				aria-label={isPlaying ? "Pause bird call" : "Play bird call"}
 			>
-				{isLoading ? (
-					<Loader2 className="size-3 animate-spin" />
-				) : isPlaying ? (
-					<Pause className="size-3" />
-				) : (
-					<Volume2 className="size-3" />
-				)}
 				{iconOnly ? null : "Bird Call"}
 			</Button>
 			{audioUrl && (

@@ -26,18 +26,18 @@ export function SpeciesControlTools({
 				}}
 			/>
 			<Button
-				size="sm"
+				size="xs"
 				variant="outline"
 				onClick={() => inputRef.current?.click()}
 			>
 				<Upload />
 				Import lists
 			</Button>
-			<Button size="sm" variant="outline" onClick={onExport}>
+			<Button size="xs" variant="outline" onClick={onExport}>
 				<Download />
 				Export lists
 			</Button>
-			<Button size="sm" variant="outline" onClick={onReset}>
+			<Button size="xs" variant="outline" onClick={onReset}>
 				<RotateCcw />
 				Reset lists
 			</Button>

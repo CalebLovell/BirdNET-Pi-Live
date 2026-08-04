@@ -110,7 +110,7 @@ export function ReviewWorkflow({
 					<Button
 						className="mt-4"
 						variant="outline"
-						size="sm"
+						size="xs"
 						onClick={onLoadMore}
 					>
 						Load more
@@ -159,7 +159,7 @@ export function ReviewWorkflow({
 						</h2>
 						<p className="text-[var(--bark)] text-xs italic">{row.sciName}</p>
 					</div>
-					<Button asChild variant="outline" size="sm">
+					<Button asChild variant="outline" size="xs">
 						<a href={row.ebirdUrl} target="_blank" rel="noreferrer">
 							<ExternalLink />
 							eBird reference
@@ -186,7 +186,7 @@ export function ReviewWorkflow({
 				    right, and the two ways out sit apart from them on the right. */}
 				<div className="flex flex-wrap items-center gap-2 border-[var(--line)] border-t pt-4">
 					<Button
-						size="sm"
+						size="xs"
 						disabled={!row.audioAvailable || busy}
 						onClick={() => setAction({ kind: "correct", row })}
 					>
@@ -195,7 +195,7 @@ export function ReviewWorkflow({
 					</Button>
 					<Button
 						variant="outline"
-						size="sm"
+						size="xs"
 						disabled={!row.audioAvailable || busy}
 						onClick={() => setPicker(row)}
 					>
@@ -205,7 +205,7 @@ export function ReviewWorkflow({
 					<div className="ml-auto flex items-center gap-2">
 						<Button
 							variant="ghost"
-							size="sm"
+							size="xs"
 							disabled={busy}
 							onClick={() => {
 								setSkipped(new Set(skipped).add(row.rowId));
@@ -217,7 +217,7 @@ export function ReviewWorkflow({
 						</Button>
 						<Button
 							variant="destructive"
-							size="sm"
+							size="xs"
 							disabled={busy}
 							onClick={() => setAction({ kind: "delete", row })}
 						>

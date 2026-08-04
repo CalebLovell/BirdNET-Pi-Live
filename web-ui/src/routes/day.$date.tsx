@@ -174,10 +174,10 @@ function DayHeader({ day }: { day: DayReview }) {
 					date={day.previousDate}
 					label="Previous day with detections"
 				>
-					<ChevronLeft className="size-3" />
+					<ChevronLeft />
 				</DayStepButton>
 				<DayStepButton date={day.nextDate} label="Next day with detections">
-					<ChevronRight className="size-3" />
+					<ChevronRight />
 				</DayStepButton>
 			</div>
 		</section>
@@ -259,7 +259,6 @@ function DaySummaryStrip({ day }: { day: DayReview }) {
 	// Named by date so paging to another day replaces the summary it holds
 	// instead of leaving yesterday's card behind the button.
 	const share = useShareCard({
-		label: "Share this day",
 		subject: day.date,
 		load: () => getDayShareCard({ data: day.date }).then(formatShareCard),
 	});

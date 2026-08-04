@@ -43,7 +43,7 @@ type PaginationLinkProps = {
 function PaginationLink({
 	className,
 	isActive,
-	size = "icon",
+	size = "icon-xs",
 	...props
 }: PaginationLinkProps) {
 	return (
@@ -70,8 +70,8 @@ function PaginationPrevious({
 	return (
 		<PaginationLink
 			aria-label="Go to previous page"
-			size="default"
-			className={cn("gap-1 px-2.5 sm:pl-2.5", className)}
+			size="xs"
+			className={className}
 			{...props}
 		>
 			<ChevronLeftIcon />
@@ -87,8 +87,8 @@ function PaginationNext({
 	return (
 		<PaginationLink
 			aria-label="Go to next page"
-			size="default"
-			className={cn("gap-1 px-2.5 sm:pr-2.5", className)}
+			size="xs"
+			className={className}
 			{...props}
 		>
 			<span className="hidden sm:block">Next</span>
@@ -105,10 +105,10 @@ function PaginationEllipsis({
 		<span
 			aria-hidden
 			data-slot="pagination-ellipsis"
-			className={cn("flex size-9 items-center justify-center", className)}
+			className={cn("flex size-6 items-center justify-center", className)}
 			{...props}
 		>
-			<MoreHorizontalIcon className="size-4" />
+			<MoreHorizontalIcon className="size-3" />
 			<span className="sr-only">More pages</span>
 		</span>
 	);

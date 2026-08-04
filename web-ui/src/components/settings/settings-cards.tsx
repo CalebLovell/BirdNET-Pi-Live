@@ -254,10 +254,7 @@ function StationCard({
 			icon={MapPin}
 			state={form.state}
 			message={form.message}
-			onSubmit={(event) => {
-				event.preventDefault();
-				void form.submit();
-			}}
+			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
 			action={
@@ -357,10 +354,7 @@ function DetectionCard({
 			icon={SlidersHorizontal}
 			state={form.state}
 			message={form.message}
-			onSubmit={(event) => {
-				event.preventDefault();
-				void form.submit();
-			}}
+			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
 		>
@@ -507,10 +501,7 @@ function PrivacyCard({
 			icon={ShieldCheck}
 			state={form.state}
 			message={form.message}
-			onSubmit={(event) => {
-				event.preventDefault();
-				void form.submit();
-			}}
+			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
 		>
@@ -558,10 +549,7 @@ function AudioCard({
 			icon={Mic2}
 			state={form.state}
 			message={form.message}
-			onSubmit={(event) => {
-				event.preventDefault();
-				void form.submit();
-			}}
+			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
 		>
@@ -687,10 +675,7 @@ function RecordingCard({
 			icon={Disc3}
 			state={form.state}
 			message={form.message}
-			onSubmit={(event) => {
-				event.preventDefault();
-				void form.submit();
-			}}
+			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
 		>
@@ -777,10 +762,7 @@ function StorageCard({
 			icon={HardDrive}
 			state={form.state}
 			message={form.message}
-			onSubmit={(event) => {
-				event.preventDefault();
-				void form.submit();
-			}}
+			onSave={() => void form.submit()}
 			restart={restartControl(form)}
 			saveDisabled={form.saveDisabled}
 		>

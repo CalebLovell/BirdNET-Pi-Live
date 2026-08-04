@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
-import { SummaryStrip } from "~/components/now/summary-strip.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
 import { usePublishLiveStatus } from "~/lib/live-status.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
@@ -78,13 +77,15 @@ function Today() {
 		<div className="page-wrap py-4">
 			<CurrentBirdCard
 				current={snapshot.current}
+				summary={snapshot.summary}
 				offsetMs={offsetMs}
 				flash={heroIsNew}
 			/>
 
-			<SummaryStrip summary={snapshot.summary} />
-
-			<div className="mt-4 grid gap-4 lg:grid-cols-2">
+			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
+			    fall back to is sized to max-content, so a long species name in the
+			    log below pushes the whole page wider than the phone it is on. */}
+			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
 				<SpeciesList
 					title="Top detections"
 					ariaLabel="Top detections in the last 24 hours"

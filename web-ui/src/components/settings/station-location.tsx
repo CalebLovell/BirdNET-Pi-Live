@@ -92,10 +92,10 @@ export function StationLocation({
 			<Button
 				type="button"
 				variant="outline"
-				disabled={state.kind === "locating"}
+				icon={Crosshair}
+				loading={state.kind === "locating"}
 				onClick={locate}
 			>
-				<Crosshair />
 				{state.kind === "locating" ? "Locating…" : "Use my location"}
 			</Button>
 			{open ? (

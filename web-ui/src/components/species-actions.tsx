@@ -1,4 +1,4 @@
-import { ExternalLink, Loader2, Pause, Volume2 } from "lucide-react";
+import { ExternalLink, Pause, Volume2 } from "lucide-react";
 
 import { Button } from "~/components/ui/button.tsx";
 import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
@@ -31,37 +31,24 @@ function SpeciesActions({ audioUrl, ebirdUrl, comName }: SpeciesActionsProps) {
 			{audioUrl !== undefined && (
 				<Button
 					variant="default"
-					size="xs"
-					className="gap-1.5 px-2.5 text-[11px] has-[>svg]:px-2.5"
-					disabled={!audioUrl || isLoading}
+					icon={isPlaying ? Pause : Volume2}
+					loading={isLoading}
+					disabled={!audioUrl}
 					onClick={togglePlay}
 					aria-label={
 						isPlaying ? `Pause ${comName} sound` : `Play ${comName} sound`
 					}
 				>
-					{isLoading ? (
-						<Loader2 className="size-3 animate-spin" />
-					) : isPlaying ? (
-						<Pause className="size-3" />
-					) : (
-						<Volume2 className="size-3" />
-					)}
 					{isPlaying ? "Pause" : "Bird Call"}
 				</Button>
 			)}
-			<Button
-				variant="outline"
-				size="xs"
-				className="gap-1.5 px-2.5 text-[11px] has-[>svg]:px-2.5"
-				asChild
-			>
+			<Button variant="outline" icon={ExternalLink} asChild>
 				<a
 					href={ebirdUrl}
 					target="_blank"
 					rel="noreferrer"
 					aria-label={`${comName} on eBird`}
 				>
-					<ExternalLink className="size-3" />
 					eBird
 				</a>
 			</Button>

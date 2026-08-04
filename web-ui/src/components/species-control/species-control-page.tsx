@@ -3,7 +3,6 @@ import {
 	CircleAlert,
 	Crosshair,
 	ListFilter,
-	Loader2,
 	MapPinned,
 	Save,
 	X,
@@ -450,12 +449,13 @@ export function SpeciesControlPage({
 				description="Decide which installed species BirdNET may detect, then review the real effect before saving."
 				action={
 					<Button
-						disabled={!onPreview || previewing}
-						size="sm"
+						disabled={!onPreview}
+						size="xs"
 						variant="outline"
+						icon={MapPinned}
+						loading={previewing}
 						onClick={runPreview}
 					>
-						{previewing ? <Loader2 className="animate-spin" /> : <MapPinned />}
 						Check current range
 					</Button>
 				}
@@ -684,12 +684,12 @@ export function SpeciesControlPage({
 						</p>
 					</div>
 					<div className="flex gap-2">
-						<Button size="sm" variant="outline" onClick={discard}>
+						<Button size="xs" variant="outline" onClick={discard}>
 							Discard
 						</Button>
 						<Button
 							disabled={!onSave}
-							size="sm"
+							size="xs"
 							onClick={() => setDialog("save")}
 						>
 							<Save />

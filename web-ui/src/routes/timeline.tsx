@@ -240,7 +240,6 @@ function Timeline() {
 	// from the loader's rows rather than fetched -- no round trip, and it can
 	// never disagree with the figures above it.
 	const share = useShareCard({
-		label: "Share",
 		// Named by what's showing, so switching period or stepping to another week
 		// rebuilds the card instead of leaving the last one behind the button.
 		subject: `${period}:${anchor}`,
@@ -270,38 +269,45 @@ function Timeline() {
 			    needs the switcher to reach a window that has something in it. */}
 			{hasAnyDetections && (
 				<div className="flex flex-wrap items-center justify-between gap-3">
-					<ToggleGroup
-						type="single"
-						variant="outline"
-						value={period}
-						onValueChange={(value) => {
-							if (!value) return;
-							const next = value as TimelinePeriod;
-							// Carry the spot in history across the switch, anchored on the
-							// last day of the current window that holds detections. Using the
-							// window's start instead would drop Annually onto January 1st and
-							// land the user in a dead month; falling back to it only matters
-							// when the current window is empty anyway.
-							const carried = lastActiveDay ?? activeWindow?.start;
-							show({
-								period: next,
-								date:
-									next === "all" || !carried
-										? undefined
-										: anchorForDay(next, carried),
-							});
-						}}
-					>
-						{TIMELINE_PERIODS.map((p) => {
-							const Icon = PERIOD_ICONS[p];
-							return (
-								<ToggleGroupItem key={p} value={p}>
-									<Icon className="size-4" />
-									{TIMELINE_PERIOD_LABELS[p]}
-								</ToggleGroupItem>
-							);
-						})}
-					</ToggleGroup>
+					{/* Five joined segments are wider than a phone, and a segmented
+					    control cannot wrap without breaking its own shape -- so on a
+					    narrow screen the row scrolls instead, the same way the site
+					    nav above it does. The padding keeps focus rings off the clip
+					    edge. */}
+					<div className="-mx-1 max-w-full overflow-x-auto px-1 py-1">
+						<ToggleGroup
+							type="single"
+							variant="outline"
+							value={period}
+							onValueChange={(value) => {
+								if (!value) return;
+								const next = value as TimelinePeriod;
+								// Carry the spot in history across the switch, anchored on the
+								// last day of the current window that holds detections. Using the
+								// window's start instead would drop Annually onto January 1st and
+								// land the user in a dead month; falling back to it only matters
+								// when the current window is empty anyway.
+								const carried = lastActiveDay ?? activeWindow?.start;
+								show({
+									period: next,
+									date:
+										next === "all" || !carried
+											? undefined
+											: anchorForDay(next, carried),
+								});
+							}}
+						>
+							{TIMELINE_PERIODS.map((p) => {
+								const Icon = PERIOD_ICONS[p];
+								return (
+									<ToggleGroupItem key={p} value={p}>
+										<Icon className="size-4" />
+										{TIMELINE_PERIOD_LABELS[p]}
+									</ToggleGroupItem>
+								);
+							})}
+						</ToggleGroup>
+					</div>
 
 					{period !== "all" && (
 						<WindowPicker

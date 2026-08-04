@@ -45,7 +45,7 @@ export function ReviewQueueSettings({
 
 	return (
 		<>
-			<Button variant="outline" size="sm" onClick={show}>
+			<Button variant="outline" size="xs" onClick={show}>
 				<SlidersHorizontal />
 				Queue settings
 			</Button>

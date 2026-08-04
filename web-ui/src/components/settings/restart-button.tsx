@@ -27,7 +27,8 @@ export function RestartButton({
 		<Button
 			type="button"
 			variant="outline"
-			disabled={busy}
+			icon={RefreshCw}
+			loading={busy}
 			title="Briefly interrupts recording while BirdNET reloads its settings"
 			onClick={async () => {
 				setBusy(true);
@@ -38,7 +39,6 @@ export function RestartButton({
 				}
 			}}
 		>
-			<RefreshCw aria-hidden="true" className={busy ? "animate-spin" : ""} />
 			{busy ? "Restarting…" : label}
 		</Button>
 	);

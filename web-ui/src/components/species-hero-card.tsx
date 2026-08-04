@@ -15,27 +15,49 @@ import { RecordingButton } from "~/components/recording-button.tsx";
  * scientific name, how long ago, when and how confidently, then the figures.
  * Only the data differs between the two pages -- never the shape.
  */
-export const HERO_CARD_SHELL =
-	"feature-card grid items-center gap-4 rounded-md p-4 sm:grid-cols-[11rem_minmax(0,1fr)]";
+export const HERO_CARD_SHELL = "feature-card rounded-md p-4";
+
+/**
+ * Portrait and content sit in their own grid rather than in the card itself, so
+ * anything the card unfolds below -- a share summary, say -- is a sibling of
+ * that row. Centring the portrait against the whole card instead would walk the
+ * bird down the page every time the panel opened.
+ */
+const HERO_CARD_ROW =
+	"grid items-center gap-4 sm:grid-cols-[11rem_minmax(0,1fr)]";
+
+/**
+ * Indented past the portrait column and the gap after it -- 11rem + gap-4 --
+ * so what unfolds lines up with the text above it rather than starting under
+ * the bird. Below `sm` the row is one column and there is nothing to clear.
+ */
+const HERO_CARD_FOOTER = "sm:pl-48";
 
 export function HeroCardShell({
 	label,
 	portrait,
 	className = HERO_CARD_SHELL,
 	style,
+	footer,
 	children,
 }: {
 	label: string;
 	portrait: ReactNode;
 	className?: string;
 	style?: CSSProperties;
+	/** Unfolds beneath the portrait row, aligned with the content column. */
+	footer?: ReactNode;
 	children: ReactNode;
 }) {
 	return (
 		<section aria-label={label} className={className} style={style}>
-			{portrait}
+			<div className={HERO_CARD_ROW}>
+				{portrait}
 
-			<div className="flex min-w-0 flex-col gap-2.5">{children}</div>
+				<div className="flex min-w-0 flex-col gap-2.5">{children}</div>
+			</div>
+
+			{footer ? <div className={HERO_CARD_FOOTER}>{footer}</div> : null}
 		</section>
 	);
 }
@@ -80,6 +102,7 @@ export function SpeciesHeroCard({
 	audioUrl,
 	stats,
 	actions,
+	footer,
 	className,
 	style,
 }: {
@@ -98,6 +121,8 @@ export function SpeciesHeroCard({
 	stats: PageHeaderStat[];
 	/** Top-right controls, e.g. the species page's eBird link. */
 	actions?: ReactNode;
+	/** Unfolds beneath the figures -- what `actions` opens, if anything. */
+	footer?: ReactNode;
 	className?: string;
 	style?: CSSProperties;
 }) {
@@ -107,6 +132,7 @@ export function SpeciesHeroCard({
 			portrait={<HeroPortrait imageUrl={imageUrl} comName={comName} />}
 			className={className}
 			style={style}
+			footer={footer}
 		>
 			{/* Title and actions share a line, so the column starts level with the
 			    top of the portrait. */}

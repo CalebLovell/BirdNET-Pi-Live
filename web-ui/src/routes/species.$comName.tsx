@@ -198,7 +198,7 @@ function BirdPage() {
 											})
 										}
 									>
-										<ChevronLeft className="size-3" />
+										<ChevronLeft />
 									</Button>
 									<div className="tabular-data min-w-12 text-center font-semibold text-sm">
 										{year}
@@ -215,7 +215,7 @@ function BirdPage() {
 											})
 										}
 									>
-										<ChevronRight className="size-3" />
+										<ChevronRight />
 									</Button>
 								</div>
 							) : null}

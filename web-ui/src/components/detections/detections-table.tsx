@@ -12,7 +12,6 @@ import {
 	ArrowUp,
 	ChevronLeft,
 	ChevronRight,
-	Loader2,
 	Pause,
 	Volume2,
 	X,
@@ -98,15 +97,10 @@ function RecordingButton({ row }: { row: DetectionTableRow }) {
 				aria-label={`${isPlaying ? "Pause" : "Play"} ${row.Com_Name} recording`}
 				size="xs"
 				variant="outline"
+				icon={isPlaying ? Pause : Volume2}
+				loading={isLoading}
 				onClick={togglePlay}
 			>
-				{isLoading ? (
-					<Loader2 className="animate-spin" />
-				) : isPlaying ? (
-					<Pause />
-				) : (
-					<Volume2 />
-				)}
 				Recording
 			</Button>
 			<audio
@@ -217,7 +211,11 @@ export function DetectionsFilters({
 					updateSearch({ page: 1, species: undefined });
 				}}
 			/>
-			<div className="flex shrink-0 items-center gap-2">
+			{/* Wraps because the two filters together are wider than a phone: side by
+			    side they need ~396px, and `shrink-0` means they would push the page
+			    out rather than squeeze. Above `sm` there is room for both on the
+			    line and the wrap never triggers. */}
+			<div className="flex shrink-0 flex-wrap items-center gap-2">
 				<DateFilter
 					id="detections-from"
 					label="From"
