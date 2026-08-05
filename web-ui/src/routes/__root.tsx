@@ -1,6 +1,4 @@
-import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
-import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
 import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -52,8 +50,8 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				    sidebar and the mobile bar fixed in frame like a dashboard.
 
 				    `fixed inset-0` rather than a `h-dvh` block in flow: anything else
-				    on the page that pokes below the fold (the devtools panel in dev,
-				    a portalled overlay) can still make the document scrollable, and a
+				    on the page that pokes below the fold (such as a portalled overlay)
+				    can still make the document scrollable, and a
 				    shell in flow would ride along with it. Pinned, it cannot move.
 
 				    `min-h-0` on the content column is the part that makes it work:
@@ -74,17 +72,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 						<main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
 					</div>
 				</div>
-				<TanStackDevtools
-					config={{
-						position: "bottom-right",
-					}}
-					plugins={[
-						{
-							name: "Tanstack Router",
-							render: <TanStackRouterDevtoolsPanel />,
-						},
-					]}
-				/>
 				<Scripts />
 			</body>
 		</html>
