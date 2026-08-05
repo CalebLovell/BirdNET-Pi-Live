@@ -53,22 +53,33 @@ type DetectionsFiltersProps = Pick<
 	"search" | "onSearchChange"
 >;
 
-const COLUMN_WIDTHS = [
-	"w-[4.2%]",
-	"w-[22%]",
-	"w-[24%]",
-	"w-[24%]",
-	"w-[14%]",
-	"w-[11.8%]",
-];
-const COLUMN_IDS = [
-	"select",
-	"recorded",
-	"species",
-	"scientificName",
-	"confidence",
-	"audio",
-];
+// Three tiers, measured off what the content actually needs plus the 16px cell
+// padding: compact under 44rem (icon-only recording button, no slack), the full
+// five columns from 44rem, the sixth from 64rem.
+//
+// Container queries, not viewport breakpoints: the sidebar takes ~345px, so a
+// 1280px window leaves the table barely 935px and a viewport-based rule would
+// bring the sixth column back into a space that cannot hold it. 64rem is the
+// six-column table's 62rem minimum plus room to breathe.
+//
+// Widths live on the header cells rather than a <colgroup> because the
+// scientific name column drops out when narrow: a display:none cell leaves the
+// table, so the remaining <col> elements would slide onto the wrong columns.
+// Narrow, the five surviving columns share out the missing 24%. Class names are
+// spelled out in full — Tailwind scans for literal strings, so a composed
+// `${WIDE}:w-[4.2%]` would compile to nothing.
+const HEADER_CLASSES: Record<string, string> = {
+	select: "w-[5.5%] @min-[64rem]:w-[4.2%]",
+	recorded: "w-[29.5%] @min-[44rem]:w-[28.9%] @min-[64rem]:w-[22%]",
+	species: "w-[35%] @min-[44rem]:w-[31.6%] @min-[64rem]:w-[24%]",
+	scientificName: "hidden w-[24%] @min-[64rem]:table-cell",
+	confidence: "w-[22%] @min-[44rem]:w-[18.4%] @min-[64rem]:w-[14%]",
+	audio: "w-[8%] pr-0 text-right @min-[44rem]:w-[15.6%] @min-[64rem]:w-[11.8%]",
+};
+const CELL_CLASSES: Record<string, string> = {
+	scientificName: "hidden @min-[64rem]:table-cell",
+	audio: "pr-0",
+};
 
 function recordedLabel(row: DetectionTableRow): string {
 	const date = new Date(`${row.Date}T${row.Time}`);
@@ -101,7 +112,10 @@ function RecordingButton({ row }: { row: DetectionTableRow }) {
 				loading={isLoading}
 				onClick={togglePlay}
 			>
-				Recording
+				{/* Compact drops the word and leaves the glyph: `hidden` takes the span
+				    out of the flex flow so the button's gap collapses with it, and the
+				    aria-label already carries the full name either way. */}
+				<span className="@min-[44rem]:inline hidden">Recording</span>
 			</Button>
 			<audio
 				ref={audioRef}
@@ -157,8 +171,11 @@ function DateFilter({
 			<label className="text-muted-foreground text-xs" htmlFor={id}>
 				{label}
 			</label>
+			{/* 7.5rem holds a 14px `2026-08-05` (72px) plus padding and the native
+			    picker glyph, and is what lets both date filters share one line on a
+			    414px phone -- at 9rem they wrapped to a line each. */}
 			<Input
-				className="!w-36"
+				className="!w-30 @min-[38rem]:!w-36"
 				id={id}
 				type="date"
 				value={value}
@@ -171,7 +188,7 @@ function DateFilter({
 				disabled={!value}
 				onClick={() => onChange(undefined)}
 			>
-				<X className="size-4" />
+				<X className="@min-[38rem]:size-4 size-3.5" />
 			</button>
 		</div>
 	);
@@ -195,39 +212,44 @@ export function DetectionsFilters({
 	}, 200);
 
 	return (
-		<div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-			<SearchInput
-				aria-label="Search detections"
-				placeholder="Search detections..."
-				value={queryInput}
-				onChange={(event) => {
-					const value = event.target.value;
-					setQueryInput(value);
-					debouncedSetQuery(value);
-				}}
-				onClear={() => {
-					setQueryInput("");
-					debouncedSetQuery.cancel();
-					updateSearch({ page: 1, species: undefined });
-				}}
-			/>
-			{/* Wraps because the two filters together are wider than a phone: side by
-			    side they need ~396px, and `shrink-0` means they would push the page
-			    out rather than squeeze. Above `sm` there is room for both on the
-			    line and the wrap never triggers. */}
-			<div className="flex shrink-0 flex-wrap items-center gap-2">
-				<DateFilter
-					id="detections-from"
-					label="From"
-					value={search.from ?? ""}
-					onChange={(from) => updateSearch({ page: 1, from })}
+		// The container and the layout it drives cannot be the same element -- a
+		// container query only sees descendants, so `@container` here and
+		// `@min-[38rem]:flex-row` on the child.
+		<div className="@container">
+			<div className="flex @min-[38rem]:flex-row flex-col @min-[38rem]:items-center @min-[38rem]:justify-between @min-[38rem]:gap-3 gap-2">
+				<SearchInput
+					aria-label="Search detections"
+					placeholder="Search detections..."
+					value={queryInput}
+					onChange={(event) => {
+						const value = event.target.value;
+						setQueryInput(value);
+						debouncedSetQuery(value);
+					}}
+					onClear={() => {
+						setQueryInput("");
+						debouncedSetQuery.cancel();
+						updateSearch({ page: 1, species: undefined });
+					}}
 				/>
-				<DateFilter
-					id="detections-to"
-					label="To"
-					value={search.to ?? ""}
-					onChange={(to) => updateSearch({ page: 1, to })}
-				/>
+				{/* `flex-wrap` is the safety net, not the plan: at the compact field
+			    width the pair needs ~368px and fits one line on a 414px phone. It
+			    only wraps below that, and `shrink-0` keeps them legible rather than
+			    squeezing the date text out of its box. */}
+				<div className="flex shrink-0 flex-wrap items-center gap-2">
+					<DateFilter
+						id="detections-from"
+						label="From"
+						value={search.from ?? ""}
+						onChange={(from) => updateSearch({ page: 1, from })}
+					/>
+					<DateFilter
+						id="detections-to"
+						label="To"
+						value={search.to ?? ""}
+						onChange={(to) => updateSearch({ page: 1, to })}
+					/>
+				</div>
 			</div>
 		</div>
 	);
@@ -258,26 +280,22 @@ export function DetectionsTable({
 		{
 			id: "select",
 			header: ({ table }) => (
-				<div className="flex justify-center">
-					<input
-						aria-label="Select all detections on this page"
-						checked={table.getIsAllPageRowsSelected()}
-						className="size-3.5 accent-[var(--moss)]"
-						type="checkbox"
-						onChange={table.getToggleAllPageRowsSelectedHandler()}
-					/>
-				</div>
+				<input
+					aria-label="Select all detections on this page"
+					checked={table.getIsAllPageRowsSelected()}
+					className="block size-3.5 accent-[var(--moss)]"
+					type="checkbox"
+					onChange={table.getToggleAllPageRowsSelectedHandler()}
+				/>
 			),
 			cell: ({ row }) => (
-				<div className="flex justify-center">
-					<input
-						aria-label={`Select ${row.original.Com_Name}`}
-						checked={row.getIsSelected()}
-						className="size-3.5 accent-[var(--moss)]"
-						type="checkbox"
-						onChange={row.getToggleSelectedHandler()}
-					/>
-				</div>
+				<input
+					aria-label={`Select ${row.original.Com_Name}`}
+					checked={row.getIsSelected()}
+					className="block size-3.5 accent-[var(--moss)]"
+					type="checkbox"
+					onChange={row.getToggleSelectedHandler()}
+				/>
 			),
 			enableHiding: false,
 		},
@@ -366,7 +384,11 @@ export function DetectionsTable({
 		},
 		{
 			id: "audio",
-			header: "Recording",
+			// Stays in the accessibility tree when compact hides it: an unlabelled
+			// column is a worse trade than the ~88px the word costs.
+			header: () => (
+				<span className="sr-only @min-[44rem]:not-sr-only">Recording</span>
+			),
 			cell: ({ row }) => (
 				<div className="flex justify-end">
 					<RecordingButton row={row.original} />
@@ -394,24 +416,15 @@ export function DetectionsTable({
 		page.total === 0 ? 0 : (search.page - 1) * search.pageSize + 1;
 	const rangeEnd = Math.min(search.page * search.pageSize, page.total);
 	return (
-		<div className="space-y-3">
-			<Table className="min-w-[62rem] table-fixed">
-				<colgroup>
-					{COLUMN_WIDTHS.map((width, index) => (
-						<col key={COLUMN_IDS[index]} className={width} />
-					))}
-				</colgroup>
+		<div className="@container space-y-3">
+			<Table className="@min-[44rem]:min-w-[44rem] @min-[64rem]:min-w-[62rem] min-w-[34rem] table-fixed">
 				<TableHeader>
 					{table.getHeaderGroups().map((headerGroup) => (
 						<TableRow key={headerGroup.id}>
 							{headerGroup.headers.map((header) => (
 								<TableHead
 									key={header.id}
-									className={
-										header.column.id === "audio"
-											? "pr-0 text-right font-semibold"
-											: "font-semibold"
-									}
+									className={`font-semibold ${HEADER_CLASSES[header.column.id] ?? ""}`}
 								>
 									{header.isPlaceholder
 										? null
@@ -435,7 +448,7 @@ export function DetectionsTable({
 							{row.getVisibleCells().map((cell) => (
 								<TableCell
 									key={cell.id}
-									className={cell.column.id === "audio" ? "pr-0" : undefined}
+									className={CELL_CLASSES[cell.column.id]}
 								>
 									{flexRender(cell.column.columnDef.cell, cell.getContext())}
 								</TableCell>

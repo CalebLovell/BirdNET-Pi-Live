@@ -356,4 +356,18 @@ a {
     background-color: var(--background);
     color: var(--foreground);
   }
+  /* The browser's own calendar glyph is drawn at the field's font size and in
+     full-strength ink, so it sat noticeably larger and darker than the lucide
+     icons beside it. Pin it to the 14px the rest of the row's icons use and
+     mute it to match, so the date field reads as part of the same set. */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    width: 0.875rem;
+    height: 0.875rem;
+    padding: 0;
+    opacity: 0.55;
+    cursor: pointer;
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+  }
 }
