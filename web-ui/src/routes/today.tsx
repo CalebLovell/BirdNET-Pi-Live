@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from "react";
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
-import { usePublishLiveStatus } from "~/lib/live-status.ts";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
@@ -55,9 +54,6 @@ function Today() {
 		POLL_INTERVAL_MS,
 	);
 	const offsetMs = useAgeOffset(snapshot.generatedAt);
-	// The footer carries the station's liveness for the whole site, so the page
-	// that actually polls is what tells it when the last snapshot landed.
-	usePublishLiveStatus(snapshot.generatedAt);
 	const freshKeys = useFreshKeys(snapshot.recent.map((row) => row.key));
 	// Follows the poll rather than the loader, so the tab keeps pace with the hero
 	// card as new birds arrive. It reuses the hero's own image, whatever that

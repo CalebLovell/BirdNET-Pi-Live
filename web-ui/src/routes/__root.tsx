@@ -1,8 +1,8 @@
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
-import { Footer } from "~/components/Footer.tsx";
-import { Header } from "~/components/Header.tsx";
+import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
+import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
 import { DEFAULT_FAVICON } from "~/lib/use-favicon.ts";
 import appCss from "../styles.css?url";
@@ -47,10 +47,15 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				<div className="flex min-h-screen flex-col">
-					<Header />
-					<main className="flex-1">{children}</main>
-					<Footer />
+				{/* `min-w-0` on the content column stops a wide table or a long
+				    species name from forcing the whole row wider than the viewport
+				    and squeezing the sidebar. */}
+				<div className="flex min-h-screen">
+					<SiteSidebar />
+					<div className="flex min-w-0 flex-1 flex-col">
+						<MobileNav />
+						<main className="flex-1">{children}</main>
+					</div>
 				</div>
 				<TanStackDevtools
 					config={{

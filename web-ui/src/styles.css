@@ -30,7 +30,6 @@
 	   instead drains the chroma and the 2px ring just reads black. */
 	--focus-ring: color-mix(in oklch, var(--moss) 50%, oklch(0.3 0.17 145));
   --kicker: var(--moss);
-  --header-bg: color-mix(in oklab, var(--paper) 92%, var(--paper-raised) 8%);
   --link-bg-hover: color-mix(in oklab, var(--sage) 18%, var(--paper-raised));
 
   --background: var(--paper);
@@ -157,9 +156,14 @@ code {
   font-variant-numeric: tabular-nums;
 }
 
+/* Content fills whatever the sidebar leaves rather than centring in a capped
+   column: the sidebar is pinned to the viewport's left edge, so a max-width
+   here would strand content in the middle of the remaining space. The 1rem
+   inline padding is what makes the gap from the sidebar to the first card
+   match the gap from the last card to the right edge. */
 .page-wrap {
-  width: min(1440px, calc(100% - 2rem));
-  margin-inline: auto;
+  width: 100%;
+  padding-inline: 1rem;
 }
 
 .display-title {
@@ -227,6 +231,45 @@ a {
   transform: scaleX(1);
 }
 
+/* The vertical counterpart to .nav-link. The underline that marks the active
+   header link reads as an underline, not a selection, once the links are
+   stacked -- so the sidebar marks its active row with a filled pill and a rule
+   on the inner edge instead. */
+.sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.4rem 0.625rem;
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: color-mix(in oklab, var(--ink) 70%, var(--moss) 30%);
+  box-shadow: inset 2px 0 0 transparent;
+}
+
+.sidebar-link:hover {
+  background: var(--meadow);
+  color: var(--ink);
+}
+
+.sidebar-link.is-active {
+  background: var(--meadow);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: inset 2px 0 0 var(--moss);
+}
+
+.sidebar-icon {
+  width: 1rem;
+  height: 1rem;
+  flex: none;
+  opacity: 0.75;
+}
+
+.sidebar-link.is-active .sidebar-icon {
+  opacity: 1;
+}
+
 .rise-in {
   animation: rise-in 700ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
@@ -274,10 +317,6 @@ a {
   50% {
     opacity: 0.5;
   }
-}
-
-.site-footer {
-  background: var(--header-bg);
 }
 
 @layer base {

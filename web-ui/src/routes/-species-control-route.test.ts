@@ -25,7 +25,7 @@ test("species control route loads data, adapts mutations, and invalidates commit
 
 test("navigation places Control immediately after Species", async () => {
 	const source = await readFile(
-		new URL("../components/Header.tsx", import.meta.url),
+		new URL("../components/sidebar/sidebar-nav.tsx", import.meta.url),
 		"utf8",
 	);
 	const species = source.indexOf('to="/species"');
