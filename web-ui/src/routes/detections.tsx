@@ -1,23 +1,14 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
-import {
-	ChartNoAxesColumnIncreasing,
-	CircleAlert,
-	Feather,
-	Files,
-	Trash2,
-} from "lucide-react";
-import { useMemo, useState } from "react";
+import { CircleAlert, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
 	DetectionsTable,
 } from "~/components/detections/detections-table.tsx";
-import {
-	PageHeaderCard,
-	type PageHeaderStat,
-} from "~/components/page-header-card.tsx";
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
 	hasActiveFilters,
@@ -60,31 +51,6 @@ function Detections() {
 	// emptied it.
 	const stationEmpty = isEmpty && !isFiltered;
 
-	// `page.total` already honours the active filters; the species figure can
-	// only speak for the loaded page, so its label says so.
-	const stats = useMemo<PageHeaderStat[]>(() => {
-		// Nothing matched, so every figure would be a 0 or a "1 of 1" describing
-		// nothing. The row comes off rather than reading as broken.
-		if (page.total === 0) return [];
-
-		const species = new Set(page.rows.map((row) => row.Com_Name)).size;
-		const pageCount = Math.max(1, Math.ceil(page.total / search.pageSize));
-
-		return [
-			{
-				label: "Matching detections",
-				value: page.total,
-				icon: ChartNoAxesColumnIncreasing,
-			},
-			{ label: "Species on this page", value: species, icon: Feather },
-			{
-				label: "Page",
-				value: `${Math.min(search.page, pageCount)} of ${pageCount}`,
-				icon: Files,
-			},
-		] satisfies PageHeaderStat[];
-	}, [page, search.page, search.pageSize]);
-
 	async function confirmDeletion() {
 		setIsDeleting(true);
 		setFeedback(null);
@@ -125,7 +91,6 @@ function Detections() {
 				<PageHeaderCard
 					title="Detections"
 					description="Browse, filter, and manage every individual detection."
-					stats={stats}
 				/>
 
 				{!stationEmpty && (

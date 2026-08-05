@@ -9,6 +9,14 @@ test("species control route loads data, adapts mutations, and invalidates commit
 	);
 	assert.match(source, /createFileRoute\("\/species-control"\)/);
 	assert.match(source, /loader:\s*\(\)\s*=>\s*getSpeciesControlPage/);
+	assert.match(
+		source,
+		/validateSearch:\s*normalizeSpeciesControlWorkspaceSearch/,
+	);
+	assert.match(source, /Route\.useSearch\(\)/);
+	assert.match(source, /Route\.useNavigate\(\)/);
+	assert.match(source, /search=\{search\}/);
+	assert.match(source, /replace:\s*true/);
 	assert.match(source, /<SpeciesControlPage/);
 	assert.match(source, /useServerFn\(saveSpeciesControl\)/);
 	assert.match(source, /router\.invalidate\(\)/);

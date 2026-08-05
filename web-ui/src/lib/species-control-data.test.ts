@@ -1,28 +1,97 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-	applySpeciesPolicy,
+	applySpeciesStatus,
 	normalizeSpeciesControlSave,
 	speciesControlDeleteSchema,
+	speciesControlInputWithStatus,
+	speciesControlResetInput,
 	speciesControlSaveSchema,
+	speciesStatusFor,
 } from "./species-control-data.ts";
 
-test("never detect clears conflicting memberships", () => {
+test("reset input clears managed lists without removing unresolved entries", () => {
+	assert.deepEqual(speciesControlResetInput("revision-42"), {
+		revision: "revision-42",
+		custom: [],
+		excluded: [],
+		whitelisted: [],
+		removeUnresolved: [],
+	});
+});
+
+test("bulk status input proposes a save without mutating current lists", () => {
+	const current = {
+		revision: "revision-42",
+		custom: ["Canis latrans"],
+		excluded: ["Sciurus carolinensis"],
+		whitelisted: ["Procyon lotor"],
+		removeUnresolved: [],
+	};
 	assert.deepEqual(
-		applySpeciesPolicy({ custom: true, policy: "always" }, "never", true),
-		{ custom: false, policy: "never" },
+		speciesControlInputWithStatus(
+			current,
+			["Canis latrans", "Sciurus carolinensis"],
+			"always",
+		),
+		{
+			revision: "revision-42",
+			custom: [],
+			excluded: [],
+			whitelisted: ["Procyon lotor", "Canis latrans", "Sciurus carolinensis"],
+			removeUnresolved: [],
+		},
+	);
+	assert.deepEqual(current, {
+		revision: "revision-42",
+		custom: ["Canis latrans"],
+		excluded: ["Sciurus carolinensis"],
+		whitelisted: ["Procyon lotor"],
+		removeUnresolved: [],
+	});
+});
+
+test("status resolution gives explicit policies precedence over list membership", () => {
+	assert.equal(
+		speciesStatusFor({ custom: true, excluded: true, whitelisted: true }),
+		"never",
+	);
+	assert.equal(
+		speciesStatusFor({ custom: true, excluded: false, whitelisted: true }),
+		"always",
+	);
+	assert.equal(
+		speciesStatusFor({ custom: true, excluded: false, whitelisted: false }),
+		"custom",
+	);
+	assert.equal(
+		speciesStatusFor({ custom: false, excluded: false, whitelisted: false }),
+		"automatic",
 	);
 });
 
-test("always detect joins Custom while custom-only mode is active", () => {
-	assert.deepEqual(
-		applySpeciesPolicy({ custom: false, policy: "never" }, "always", true),
-		{ custom: true, policy: "always" },
-	);
-	assert.deepEqual(
-		applySpeciesPolicy({ custom: true, policy: "always" }, "automatic", true),
-		{ custom: true, policy: "automatic" },
-	);
+test("applying a status produces mutually exclusive list memberships", () => {
+	assert.equal(applySpeciesStatus.length, 1);
+	assert.deepEqual(applySpeciesStatus("automatic"), {
+		custom: false,
+		excluded: false,
+		whitelisted: false,
+	});
+	assert.deepEqual(applySpeciesStatus("custom"), {
+		custom: true,
+		excluded: false,
+		whitelisted: false,
+	});
+	assert.deepEqual(applySpeciesStatus("always"), {
+		custom: false,
+		excluded: false,
+		whitelisted: true,
+	});
+	assert.deepEqual(applySpeciesStatus("never"), {
+		custom: false,
+		excluded: true,
+		whitelisted: false,
+	});
 });
 
 test("save normalization trims, stably deduplicates, and preserves list order", () => {

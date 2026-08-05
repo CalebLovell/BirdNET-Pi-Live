@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import {
+	createMemoryHistory,
+	createRootRoute,
+	createRoute,
+	createRouter,
+	RouterProvider,
+} from "@tanstack/react-router";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { SpeciesControlPageData } from "~/lib/species-control-data.ts";
@@ -44,15 +51,34 @@ const data: SpeciesControlPageData = {
 	],
 };
 
-test("renders the complete species policy workspace", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage initialData={data} />,
-	);
+async function renderPage() {
+	const rootRoute = createRootRoute();
+	const indexRoute = createRoute({
+		getParentRoute: () => rootRoute,
+		path: "/",
+		component: () => (
+			<SpeciesControlPage
+				initialData={data}
+				search={{ page: 1, sort: "species", direction: "asc" }}
+				onSearchChange={() => {}}
+			/>
+		),
+	});
+	const router = createRouter({
+		routeTree: rootRoute.addChildren([indexRoute]),
+		history: createMemoryHistory({ initialEntries: ["/"] }),
+	});
+	await router.load();
+	return renderToStaticMarkup(<RouterProvider router={router} />);
+}
+
+test("renders the complete species policy workspace", async () => {
+	const markup = await renderPage();
 	assert.match(markup, />Species control</);
-	assert.match(markup, /aria-label="Detection scope"/);
+	assert.doesNotMatch(markup, /Detection mode/);
 	assert.match(markup, /aria-label="Search installed species"/);
 	assert.match(markup, />Installed species</);
-	for (const heading of ["Species", "Count", "Policy"]) {
+	for (const heading of ["Species", "Scientific name", "Count", "Status"]) {
 		assert.match(markup, new RegExp(`>${heading}<`));
 	}
 	assert.match(markup, />Import lists</);
@@ -61,10 +87,43 @@ test("renders the complete species policy workspace", () => {
 	assert.match(markup, /Old species_Old name/);
 });
 
-test("policy is the only verdict the table states", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage initialData={data} />,
-	);
+test("keeps page tools outside the table and bulk status in its header", async () => {
+	const markup = await renderPage();
+	const toolbarStart = markup.indexOf('data-layout="species-control-toolbar"');
+	const installedStart = markup.indexOf('aria-label="Installed species"');
+	assert.ok(toolbarStart >= 0, "expected the exterior Species control toolbar");
+	assert.ok(installedStart > toolbarStart, "expected toolbar before the card");
+
+	const toolbar = markup.slice(toolbarStart, installedStart);
+	let previousIndex = -1;
+	for (const label of [
+		'aria-label="Search installed species"',
+		">Import lists<",
+		">Export lists<",
+		">Reset lists<",
+	]) {
+		const index = toolbar.indexOf(label);
+		assert.ok(index > previousIndex, `expected ${label} in toolbar order`);
+		previousIndex = index;
+	}
+	assert.equal(toolbar.match(/data-size="default"/g)?.length, 3);
+	assert.equal(toolbar.match(/h-9/g)?.length, 4);
+
+	const installed = markup.slice(installedStart);
+	assert.match(installed, /data-layout="installed-species-header"/);
+	assert.match(installed, />Installed species</);
+	assert.doesNotMatch(installed, /<select/);
+	assert.doesNotMatch(installed, />Import lists</);
+	assert.doesNotMatch(installed, />Export lists</);
+	assert.doesNotMatch(installed, />Reset lists</);
+	assert.doesNotMatch(installed, /border-\[var\(--line\)\] border-y py-2/);
+});
+
+test("status is the only verdict the table states", async () => {
+	const markup = await renderPage();
+	assert.match(markup, />Always detect</);
+	assert.match(markup, />Never detect</);
+	assert.doesNotMatch(markup, />Policy</);
 	assert.doesNotMatch(markup, />Effective</);
 	// The summary cards are gone; their captions are the cheapest proof.
 	for (const caption of [
@@ -78,63 +137,51 @@ test("policy is the only verdict the table states", () => {
 	}
 });
 
-// The scope switch itself always carries a "Custom" button, so these assert on
-// the controls the switch governs rather than on the word appearing anywhere.
-// The scopes are described in a tooltip, which renders nothing until opened.
-test("normal scope hides every Custom control, since the list has no effect", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage initialData={data} />,
-	);
-	assert.doesNotMatch(markup, /in Custom list/); // row checkbox
-	assert.doesNotMatch(markup, />Add to Custom</); // bulk action
+test("offers four explicit bulk status actions", async () => {
+	const markup = await renderPage();
+	for (const [status, borderClass] of [
+		["Automatic", "border-[var(--line)]"],
+		["Custom", "border-[color-mix(in_oklab,var(--sage)_65%,var(--line))]"],
+		[
+			"Always detect",
+			"border-[color-mix(in_oklab,var(--sand)_65%,var(--line))]",
+		],
+		[
+			"Never detect",
+			"border-[color-mix(in_oklab,var(--clay)_45%,var(--line))]",
+		],
+	] as const) {
+		const button = markup.match(
+			new RegExp(
+				`<button(?=[^>]*aria-label="Set selected species to ${status}")(?=[^>]*disabled="")[^>]*>`,
+			),
+		)?.[0];
+		assert.ok(button, `expected the ${status} bulk action`);
+		assert.match(button, /data-variant="outline"/);
+		assert.ok(
+			button.includes(borderClass),
+			`expected the ${status} action to use its tinted border`,
+		);
+	}
+	assert.doesNotMatch(markup, /<select/);
 });
 
-test("custom scope restores the Custom column", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage
-			initialData={{
-				...data,
-				customMode: true,
-				rows: data.rows.map((row) =>
-					row.sciName === "Canis latrans" ? { ...row, custom: true } : row,
-				),
-			}}
-		/>,
-	);
-	assert.match(markup, /in Custom list/);
-	assert.match(markup, />Add to Custom</);
-});
-
-test("custom scope with nothing ticked warns on the page, not in the tooltip", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage initialData={{ ...data, customMode: true }} />,
-	);
-	assert.match(markup, /BirdNET keeps behaving as Normal/);
-});
-
-test("the scopes are explained on demand rather than above the table", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage initialData={data} />,
-	);
+test("the four statuses are explained on demand rather than above the table", async () => {
+	const markup = await renderPage();
 	assert.match(markup, /aria-label="About Installed species"/);
-	// Prose that used to sit between the search row and the table.
-	assert.doesNotMatch(markup, /Every installed species can be detected/);
-	assert.doesNotMatch(markup, /Exclusions still win/);
+	assert.doesNotMatch(markup, /Normal mode|Custom mode|Detection mode/);
 });
 
-test("detection history is no longer deletable from this page", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage initialData={data} />,
-	);
+test("detection history is no longer deletable from this page", async () => {
+	const markup = await renderPage();
 	assert.doesNotMatch(markup, />Delete history</);
 	assert.doesNotMatch(markup, />History</);
 	assert.doesNotMatch(markup, />Manage</);
 });
 
-test("does not show a save bar until a policy change is staged", () => {
-	const markup = renderToStaticMarkup(
-		<SpeciesControlPage initialData={data} />,
-	);
+test("does not render staged save controls", async () => {
+	const markup = await renderPage();
 	assert.doesNotMatch(markup, />Review and save</);
+	assert.doesNotMatch(markup, /pending change/);
 	assert.doesNotMatch(markup, /role="alertdialog"/);
 });

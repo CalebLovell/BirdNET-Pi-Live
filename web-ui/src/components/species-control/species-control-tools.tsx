@@ -13,7 +13,7 @@ export function SpeciesControlTools({
 }) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	return (
-		<div className="flex flex-wrap gap-2">
+		<div className="flex shrink-0 flex-wrap justify-end gap-2 lg:ml-auto">
 			<input
 				ref={inputRef}
 				className="sr-only"
@@ -26,18 +26,29 @@ export function SpeciesControlTools({
 				}}
 			/>
 			<Button
-				size="xs"
+				className="h-9"
+				size="default"
 				variant="outline"
 				onClick={() => inputRef.current?.click()}
 			>
 				<Upload />
 				Import lists
 			</Button>
-			<Button size="xs" variant="outline" onClick={onExport}>
+			<Button
+				className="h-9"
+				size="default"
+				variant="outline"
+				onClick={onExport}
+			>
 				<Download />
 				Export lists
 			</Button>
-			<Button size="xs" variant="outline" onClick={onReset}>
+			<Button
+				className="h-9"
+				size="default"
+				variant="outline"
+				onClick={onReset}
+			>
 				<RotateCcw />
 				Reset lists
 			</Button>

@@ -24,7 +24,7 @@ function SpeciesActions({ audioUrl, ebirdUrl, comName }: SpeciesActionsProps) {
 		<div
 			className={
 				audioUrl !== undefined
-					? "relative z-10 flex w-full flex-wrap items-center justify-between gap-2"
+					? "relative z-10 flex w-full flex-wrap items-center justify-start gap-2"
 					: "relative z-10 flex flex-wrap items-center gap-2"
 			}
 		>

@@ -19,6 +19,8 @@ export function ConfirmDialog({
 	children,
 	confirmLabel,
 	cancelLabel = "Cancel",
+	cancelIcon,
+	confirmIcon,
 	destructive = false,
 	pending = false,
 	onCancel,
@@ -30,6 +32,8 @@ export function ConfirmDialog({
 	children?: ReactNode;
 	confirmLabel: string;
 	cancelLabel?: string;
+	cancelIcon?: ReactNode;
+	confirmIcon?: ReactNode;
 	destructive?: boolean;
 	pending?: boolean;
 	onCancel: () => void;
@@ -76,6 +80,7 @@ export function ConfirmDialog({
 						variant="outline"
 						onClick={onCancel}
 					>
+						{cancelIcon}
 						{cancelLabel}
 					</Button>
 					<Button
@@ -84,6 +89,7 @@ export function ConfirmDialog({
 						variant={destructive ? "destructive" : "default"}
 						onClick={onConfirm}
 					>
+						{confirmIcon}
 						{confirmLabel}
 					</Button>
 				</div>

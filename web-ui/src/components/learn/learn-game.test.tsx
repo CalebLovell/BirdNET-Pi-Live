@@ -45,7 +45,7 @@ const round: LearnRound = {
 	],
 };
 
-test("uses a listening rail beside the choices on wide screens", () => {
+test("stacks the clip above the choices in a centered column", () => {
 	const markup = renderToStaticMarkup(
 		<LearnGame
 			round={round}
@@ -54,7 +54,8 @@ test("uses a listening rail beside the choices on wide screens", () => {
 		/>,
 	);
 
-	assert.match(markup, /lg:grid-cols-\[minmax\(12rem,1fr\)_minmax\(0,2fr\)\]/);
+	assert.match(markup, /mx-auto mt-4 flex w-full max-w-2xl flex-col/);
+	assert.doesNotMatch(markup, /lg:grid-cols-/);
 	assert.match(
 		markup,
 		/<fieldset[^>]*><legend[^>]*>Listening prompt<\/legend>/,

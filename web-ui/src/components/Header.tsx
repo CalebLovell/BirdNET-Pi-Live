@@ -31,7 +31,9 @@ export function Header() {
 					</Link>
 					<Link
 						to="/species-control"
+						search={{ page: 1, sort: "species", direction: "asc" }}
 						className="nav-link"
+						activeOptions={{ includeSearch: false }}
 						activeProps={{ className: "nav-link is-active" }}
 					>
 						Control

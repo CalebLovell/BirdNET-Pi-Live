@@ -1,4 +1,6 @@
+import { Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { Badge } from "~/components/ui/badge.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
 	Table,
@@ -10,31 +12,86 @@ import {
 } from "~/components/ui/table.tsx";
 import type {
 	SpeciesControlRow,
-	SpeciesPolicy,
+	SpeciesStatus,
 } from "~/lib/species-control-data.ts";
+import type {
+	SpeciesControlSort,
+	SpeciesControlSortDirection,
+} from "~/lib/species-control-workspace.ts";
+import { comNameToSlug } from "~/lib/species-slug.ts";
 
 export type SpeciesControlViewRow = SpeciesControlRow & {
-	policy: SpeciesPolicy;
+	status: SpeciesStatus;
 };
 
-export type SpeciesSortKey = "species" | "count" | "policy";
+export type SpeciesSortKey = SpeciesControlSort;
 
-/**
- * Each column starts in the direction that is useful rather than in a uniform
- * one: names read A-Z, but a count is being asked "which is highest?". Reverse
- * flips whichever of those the column began with.
- */
-const NATURAL_ASCENDING: Record<SpeciesSortKey, boolean> = {
-	species: true,
-	count: false,
-	policy: true,
+const STATUS_RANK: Record<SpeciesStatus, number> = {
+	automatic: 0,
+	custom: 1,
+	always: 2,
+	never: 3,
+};
+
+export function sortSpeciesControlRows(
+	rows: SpeciesControlViewRow[],
+	sort: SpeciesSortKey,
+	direction: SpeciesControlSortDirection,
+): SpeciesControlViewRow[] {
+	const multiplier = direction === "asc" ? 1 : -1;
+	return [...rows].sort((left, right) => {
+		if (sort === "count") {
+			return (
+				multiplier *
+				(left.history.detections - right.history.detections ||
+					left.comName.localeCompare(right.comName))
+			);
+		}
+		if (sort === "status") {
+			return (
+				multiplier *
+				(STATUS_RANK[left.status] - STATUS_RANK[right.status] ||
+					left.comName.localeCompare(right.comName))
+			);
+		}
+		const comparison =
+			sort === "scientific"
+				? left.sciName.localeCompare(right.sciName)
+				: left.comName.localeCompare(right.comName);
+		return multiplier * comparison;
+	});
+}
+
+const STATUS_PRESENTATION: Record<
+	SpeciesStatus,
+	{ label: string; className: string }
+> = {
+	automatic: {
+		label: "Automatic",
+		className: "bg-muted text-muted-foreground",
+	},
+	custom: {
+		label: "Custom",
+		className:
+			"bg-[color-mix(in_oklab,var(--sage)_35%,var(--paper-raised))] text-[var(--moss)]",
+	},
+	always: {
+		label: "Always detect",
+		className:
+			"bg-[color-mix(in_oklab,var(--sand)_30%,var(--paper-raised))] text-[var(--bark)]",
+	},
+	never: {
+		label: "Never detect",
+		className:
+			"bg-[color-mix(in_oklab,var(--clay)_15%,var(--paper-raised))] text-destructive",
+	},
 };
 
 function SortHeader({
 	label,
 	sortKey,
 	sort,
-	reverse,
+	direction,
 	onSortChange,
 	align = "left",
 	className = "",
@@ -42,13 +99,13 @@ function SortHeader({
 	label: string;
 	sortKey: SpeciesSortKey;
 	sort: SpeciesSortKey;
-	reverse: boolean;
+	direction: SpeciesControlSortDirection;
 	onSortChange: (key: SpeciesSortKey) => void;
 	align?: "left" | "right";
 	className?: string;
 }) {
 	const active = sort === sortKey;
-	const ascending = NATURAL_ASCENDING[sortKey] !== reverse;
+	const ascending = direction === "asc";
 	const Icon = active && ascending ? ArrowUp : ArrowDown;
 	return (
 		<TableHead
@@ -77,13 +134,10 @@ export function SpeciesControlTable({
 	total,
 	selected,
 	sort,
-	reverse,
+	direction,
 	onSortChange,
 	onSelectedChange,
-	onCustomChange,
-	onPolicyChange,
 	onPageChange,
-	showCustom,
 }: {
 	rows: SpeciesControlViewRow[];
 	page: number;
@@ -91,14 +145,10 @@ export function SpeciesControlTable({
 	total: number;
 	selected: Set<string>;
 	sort: SpeciesSortKey;
-	reverse: boolean;
+	direction: SpeciesControlSortDirection;
 	onSortChange: (key: SpeciesSortKey) => void;
 	onSelectedChange: (next: Set<string>) => void;
-	onCustomChange: (sciName: string, checked: boolean) => void;
-	onPolicyChange: (sciName: string, policy: SpeciesPolicy) => void;
 	onPageChange: (page: number) => void;
-	/** Custom membership only bites in Custom scope, so Normal scope hides it. */
-	showCustom: boolean;
 }) {
 	const allSelected =
 		rows.length > 0 && rows.every((row) => selected.has(row.sciName));
@@ -108,20 +158,19 @@ export function SpeciesControlTable({
 		<div className="space-y-3">
 			<Table className="min-w-[44rem] table-fixed">
 				<colgroup>
-					<col className="w-[6%]" />
-					<col className={showCustom ? "w-[25%]" : "w-[30%]"} />
-					<col className={showCustom ? "w-[27%]" : "w-[32%]"} />
+					<col className="w-[4.2%]" />
+					<col className="w-[27.8%]" />
+					<col className="w-[36%]" />
 					<col className="w-[12%]" />
-					{showCustom ? <col className="w-[12%]" /> : null}
-					<col className={showCustom ? "w-[18%]" : "w-[20%]"} />
+					<col className="w-[20%]" />
 				</colgroup>
 				<TableHeader>
 					<TableRow>
-						<TableHead className="text-center font-semibold">
+						<TableHead className="text-left font-semibold">
 							<input
 								aria-label="Select all species on this page"
 								checked={allSelected}
-								className="mx-auto block size-3.5 accent-[var(--moss)]"
+								className="block size-3.5 accent-[var(--moss)]"
 								type="checkbox"
 								onChange={(event) => {
 									const next = new Set(selected);
@@ -137,28 +186,31 @@ export function SpeciesControlTable({
 							label="Species"
 							sortKey="species"
 							sort={sort}
-							reverse={reverse}
+							direction={direction}
 							onSortChange={onSortChange}
+							className="pl-0"
 						/>
-						<TableHead className="font-semibold">Scientific name</TableHead>
+						<SortHeader
+							label="Scientific name"
+							sortKey="scientific"
+							sort={sort}
+							direction={direction}
+							onSortChange={onSortChange}
+							className="pl-1"
+						/>
 						<SortHeader
 							label="Count"
 							sortKey="count"
 							sort={sort}
-							reverse={reverse}
+							direction={direction}
 							onSortChange={onSortChange}
 							align="right"
 						/>
-						{showCustom ? (
-							<TableHead className="text-center font-semibold">
-								Custom
-							</TableHead>
-						) : null}
 						<SortHeader
-							label="Policy"
-							sortKey="policy"
+							label="Status"
+							sortKey="status"
 							sort={sort}
-							reverse={reverse}
+							direction={direction}
 							onSortChange={onSortChange}
 							align="right"
 						/>
@@ -167,11 +219,11 @@ export function SpeciesControlTable({
 				<TableBody>
 					{rows.map((row) => (
 						<TableRow key={row.sciName}>
-							<TableCell className="text-center">
+							<TableCell className="text-left">
 								<input
 									aria-label={`Select ${row.comName}`}
 									checked={selected.has(row.sciName)}
-									className="mx-auto block size-3.5 accent-[var(--moss)]"
+									className="block size-3.5 accent-[var(--moss)]"
 									type="checkbox"
 									onChange={(event) => {
 										const next = new Set(selected);
@@ -182,10 +234,16 @@ export function SpeciesControlTable({
 									}}
 								/>
 							</TableCell>
-							<TableCell>
-								<div className="font-medium">{row.comName}</div>
+							<TableCell className="pl-0">
+								<Link
+									to="/species/$comName"
+									params={{ comName: comNameToSlug(row.comName) }}
+									className="font-medium no-underline hover:underline"
+								>
+									{row.comName}
+								</Link>
 							</TableCell>
-							<TableCell>
+							<TableCell className="pl-1">
 								<em className="text-[var(--bark)]">{row.sciName}</em>
 							</TableCell>
 							{/* Most of a 6,000-row catalogue has never been heard, so a
@@ -195,36 +253,13 @@ export function SpeciesControlTable({
 							>
 								{row.history.detections.toLocaleString()}
 							</TableCell>
-							{showCustom ? (
-								<TableCell className="text-center">
-									<input
-										aria-label={`Include ${row.comName} in Custom list`}
-										checked={row.custom}
-										disabled={row.policy === "never"}
-										className="mx-auto block size-4 accent-[var(--moss)] disabled:opacity-40"
-										type="checkbox"
-										onChange={(event) =>
-											onCustomChange(row.sciName, event.target.checked)
-										}
-									/>
-								</TableCell>
-							) : null}
 							<TableCell className="text-right">
-								<select
-									aria-label={`${row.comName} policy`}
-									className="h-8 rounded-md border border-input bg-card px-2 text-sm"
-									value={row.policy}
-									onChange={(event) =>
-										onPolicyChange(
-											row.sciName,
-											event.target.value as SpeciesPolicy,
-										)
-									}
+								<Badge
+									variant="ghost"
+									className={STATUS_PRESENTATION[row.status].className}
 								>
-									<option value="automatic">Automatic</option>
-									<option value="always">Always detect</option>
-									<option value="never">Never detect</option>
-								</select>
+									{STATUS_PRESENTATION[row.status].label}
+								</Badge>
 							</TableCell>
 						</TableRow>
 					))}

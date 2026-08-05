@@ -8,9 +8,11 @@ import {
 	getSpeciesControlPage,
 	saveSpeciesControl,
 } from "~/lib/species-control.ts";
+import { normalizeSpeciesControlWorkspaceSearch } from "~/lib/species-control-workspace.ts";
 
 export const Route = createFileRoute("/species-control")({
 	head: () => ({ meta: [{ title: pageTitle("Species control") }] }),
+	validateSearch: normalizeSpeciesControlWorkspaceSearch,
 	loader: () => getSpeciesControlPage(),
 	component: SpeciesControlRoute,
 	errorComponent: SpeciesControlUnavailable,
@@ -18,12 +20,18 @@ export const Route = createFileRoute("/species-control")({
 
 function SpeciesControlRoute() {
 	const initialData = Route.useLoaderData();
+	const search = Route.useSearch();
+	const navigate = Route.useNavigate();
 	const save = useServerFn(saveSpeciesControl);
 	const router = useRouter();
 
 	return (
 		<SpeciesControlPage
 			initialData={initialData}
+			search={search}
+			onSearchChange={(nextSearch) =>
+				navigate({ search: nextSearch, replace: true })
+			}
 			onSave={(data) => save({ data })}
 			onCommitted={() => router.invalidate()}
 		/>

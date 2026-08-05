@@ -112,23 +112,27 @@ export function LearnGame({
 			aria-label="Bird call quiz"
 			className="feature-card rounded-md p-4"
 		>
-			<div className="flex items-center justify-between gap-4">
-				<div className="island-kicker">
-					Bird {index + 1} of {round.questions.length}
-				</div>
-				<div className="tabular-data text-muted-foreground text-xs">
-					{runningScore.score} pts
-				</div>
+			{/* The only thing that rides the card's full width -- it labels the card
+			    rather than belonging to the game below it. */}
+			<div className="island-kicker">
+				Bird {index + 1} of {round.questions.length}
 			</div>
 
-			<ProgressTrack
-				total={round.questions.length}
-				results={results}
-				current={index}
-			/>
+			{/* The card spans the page, but the game itself stays a single centered
+			    column: score, progress, clip, choices, in the order you use them. */}
+			<div className="mx-auto mt-4 flex w-full max-w-2xl flex-col gap-4">
+				<div className="flex flex-col gap-2">
+					<div className="tabular-data self-end text-muted-foreground text-xs">
+						{runningScore.score} pts
+					</div>
+					<ProgressTrack
+						total={round.questions.length}
+						results={results}
+						current={index}
+					/>
+				</div>
 
-			<div className="mt-4 grid gap-4 lg:grid-cols-[minmax(12rem,1fr)_minmax(0,2fr)] lg:items-center">
-				<fieldset className="flex flex-col items-center gap-2 lg:border-[var(--line)] lg:border-r lg:pr-4">
+				<fieldset className="flex flex-col items-center gap-2">
 					<legend className="sr-only">Listening prompt</legend>
 					<ClipPlayer key={question.id} audioUrl={question.audioUrl} />
 					<div className="tabular-data text-muted-foreground text-xs">
@@ -157,51 +161,53 @@ export function LearnGame({
 						/>
 					))}
 				</fieldset>
-			</div>
 
-			<div className="mt-4 min-h-16 border-[var(--line)] border-t pt-4">
-				{isSolved && answer ? (
-					<div className="flex flex-wrap items-center justify-between gap-4">
-						<div className="flex items-center gap-2 text-sm">
-							<span className="font-semibold">
-								{wrongGuesses.length === 0
-									? "First try —"
-									: `Got it in ${wrongGuesses.length + 1} —`}
-							</span>
-							<span className="tabular-data">
-								+{pointsForAttempt(wrongGuesses.length + 1)} pts
-							</span>
-							<ConfidencePill confidence={question.confidence} />
-							<Link
-								to="/species/$comName"
-								params={{ comName: answer.speciesSlug }}
-								className="text-sm no-underline hover:underline"
-							>
-								About the {answer.comName}
-							</Link>
+				{/* No reserved height -- this strip is only ever as tall as whatever it
+				    is currently saying. */}
+				<div className="border-[var(--line)] border-t pt-4">
+					{isSolved && answer ? (
+						<div className="flex flex-wrap items-center justify-center gap-4">
+							<div className="flex items-center gap-2 text-sm">
+								<span className="font-semibold">
+									{wrongGuesses.length === 0
+										? "First try —"
+										: `Got it in ${wrongGuesses.length + 1} —`}
+								</span>
+								<span className="tabular-data">
+									+{pointsForAttempt(wrongGuesses.length + 1)} pts
+								</span>
+								<ConfidencePill confidence={question.confidence} />
+								<Link
+									to="/species/$comName"
+									params={{ comName: answer.speciesSlug }}
+									className="text-sm no-underline hover:underline"
+								>
+									About the {answer.comName}
+								</Link>
+							</div>
+							<Button onClick={advance}>
+								{index + 1 >= round.questions.length ? (
+									<>
+										<Trophy className="size-4" />
+										See your score
+									</>
+								) : (
+									// Trailing, unlike the leading icons elsewhere: the arrow is
+									// pointing at where the button takes you.
+									<>
+										Next bird
+										<ArrowRight className="size-4" />
+									</>
+								)}
+							</Button>
 						</div>
-						<Button onClick={advance}>
-							{index + 1 >= round.questions.length ? (
-								<>
-									<Trophy className="size-4" />
-									See your score
-								</>
-							) : (
-								// Trailing, unlike the leading icons elsewhere: the arrow is
-								// pointing at where the button takes you.
-								<>
-									Next bird
-									<ArrowRight className="size-4" />
-								</>
-							)}
-						</Button>
-					</div>
-				) : (
-					<p className="text-muted-foreground text-sm">
-						Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first try,{" "}
-						{POINTS_BY_ATTEMPT[1]} on the second — keys 1–4 work too.
-					</p>
-				)}
+					) : (
+						<p className="text-center text-muted-foreground text-sm">
+							Listen, then pick the bird. {POINTS_BY_ATTEMPT[0]} points first
+							try, {POINTS_BY_ATTEMPT[1]} on the second — keys 1–4 work too.
+						</p>
+					)}
+				</div>
 			</div>
 		</section>
 	);
@@ -218,7 +224,7 @@ function ProgressTrack({
 	current: number;
 }) {
 	return (
-		<div className="mt-4 flex gap-1">
+		<div className="flex gap-1">
 			{Array.from({ length: total }, (_, position) => {
 				const result = results[position];
 				const background = result

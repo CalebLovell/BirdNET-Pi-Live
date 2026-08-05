@@ -3,7 +3,7 @@ import { z } from "zod";
 export const SPECIES_LIST_LIMIT = 7_000;
 export const UNRESOLVED_REMOVAL_LIMIT = 1_000;
 
-export type SpeciesPolicy = "automatic" | "always" | "never";
+export type SpeciesStatus = "automatic" | "custom" | "always" | "never";
 export type SpeciesListName = "custom" | "excluded" | "whitelisted";
 
 export type SpeciesHistorySummary = {
@@ -100,15 +100,72 @@ export type SpeciesControlDeleteInput = z.infer<
 	typeof speciesControlDeleteSchema
 >;
 
-export function applySpeciesPolicy(
-	current: { custom: boolean; policy: SpeciesPolicy },
-	policy: SpeciesPolicy,
-	customMode: boolean,
-): { custom: boolean; policy: SpeciesPolicy } {
-	if (policy === "never") return { custom: false, policy };
-	if (policy === "always")
-		return { custom: customMode || current.custom, policy };
-	return { custom: current.custom, policy };
+export function speciesControlResetInput(
+	revision: string,
+): SpeciesControlSaveInput {
+	return speciesControlSaveSchema.parse({
+		revision,
+		custom: [],
+		excluded: [],
+		whitelisted: [],
+		removeUnresolved: [],
+	});
+}
+
+export function speciesControlInputWithStatus(
+	current: SpeciesControlSaveInput,
+	selected: readonly string[],
+	status: SpeciesStatus,
+): SpeciesControlSaveInput {
+	const custom = new Set(current.custom);
+	const excluded = new Set(current.excluded);
+	const whitelisted = new Set(current.whitelisted);
+	const membership = applySpeciesStatus(status);
+
+	for (const sciName of selected) {
+		membership.custom ? custom.add(sciName) : custom.delete(sciName);
+		membership.excluded ? excluded.add(sciName) : excluded.delete(sciName);
+		membership.whitelisted
+			? whitelisted.add(sciName)
+			: whitelisted.delete(sciName);
+	}
+
+	return speciesControlSaveSchema.parse({
+		...current,
+		custom: [...custom],
+		excluded: [...excluded],
+		whitelisted: [...whitelisted],
+	});
+}
+
+type SpeciesMembership = {
+	custom: boolean;
+	excluded: boolean;
+	whitelisted: boolean;
+};
+
+export function speciesStatusFor({
+	custom,
+	excluded,
+	whitelisted,
+}: SpeciesMembership): SpeciesStatus {
+	if (excluded) return "never";
+	if (whitelisted) return "always";
+	if (custom) return "custom";
+	return "automatic";
+}
+
+export function applySpeciesStatus(status: SpeciesStatus): SpeciesMembership {
+	if (status === "never") {
+		return { custom: false, excluded: true, whitelisted: false };
+	}
+	if (status === "always") {
+		return { custom: false, excluded: false, whitelisted: true };
+	}
+	if (status === "custom") {
+		return { custom: true, excluded: false, whitelisted: false };
+	}
+	return { custom: false, excluded: false, whitelisted: false };
 }
 
 function stableUnique(values: unknown): string[] {
