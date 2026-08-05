@@ -316,53 +316,58 @@ export function SpeciesControlPage({
 	}
 
 	return (
-		<div className="page-wrap space-y-4 py-4">
-			<PageHeaderCard
-				title="Species control"
-				description="Decide which installed species BirdNET may detect. Every change is confirmed before it takes effect."
-			/>
+		// Fills `main` exactly and never scrolls itself, so the header, toolbar and
+		// the card's pager hold their place and only the rows move. `h-full`
+		// measures against `main`, which the shell already bounds to the viewport.
+		<div className="page-wrap flex h-full min-h-0 flex-col gap-4 py-4">
+			<div className="@container shrink-0 space-y-4">
+				<PageHeaderCard
+					title="Species control"
+					description="Decide which installed species BirdNET may detect. Every change is confirmed before it takes effect."
+				/>
 
-			<div
-				data-layout="species-control-toolbar"
-				className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center"
-			>
-				<SearchInput
-					aria-label="Search installed species"
-					className="sm:min-w-64 sm:flex-[1_1_20rem]"
-					placeholder="Search species control..."
-					value={queryInput}
-					onChange={(event) => {
-						const value = event.target.value;
-						setQueryInput(value);
-						debouncedSetQuery(value);
-					}}
-					onClear={() => {
-						setQueryInput("");
-						debouncedSetQuery.cancel();
-						onSearchChange({ ...search, page: 1, query: undefined });
-					}}
-				/>
-				<SpeciesControlTools
-					onImport={importLists}
-					onExport={exportLists}
-					onReset={() => setDialog({ kind: "reset" })}
-				/>
+				<div
+					data-layout="species-control-toolbar"
+					className="flex @min-[38rem]:flex-row flex-col @min-[38rem]:flex-wrap @min-[38rem]:items-center gap-3"
+				>
+					<SearchInput
+						aria-label="Search installed species"
+						className="@min-[38rem]:min-w-64 @min-[38rem]:flex-[1_1_20rem]"
+						placeholder="Search species control..."
+						value={queryInput}
+						onChange={(event) => {
+							const value = event.target.value;
+							setQueryInput(value);
+							debouncedSetQuery(value);
+						}}
+						onClear={() => {
+							setQueryInput("");
+							debouncedSetQuery.cancel();
+							onSearchChange({ ...search, page: 1, query: undefined });
+						}}
+					/>
+					<SpeciesControlTools
+						onImport={importLists}
+						onExport={exportLists}
+						onReset={() => setDialog({ kind: "reset" })}
+					/>
+				</div>
+
+				{errorMessage ? (
+					<p className="flex items-center gap-2 text-destructive text-sm">
+						<CircleAlert className="size-4" />
+						{errorMessage}
+					</p>
+				) : null}
 			</div>
-
-			{errorMessage ? (
-				<p className="flex items-center gap-2 text-destructive text-sm">
-					<CircleAlert className="size-4" />
-					{errorMessage}
-				</p>
-			) : null}
 
 			<section
 				aria-label="Installed species"
-				className="feature-card rounded-md p-4"
+				className="@container feature-card flex min-h-0 flex-1 flex-col rounded-md p-4"
 			>
 				<div
 					data-layout="installed-species-header"
-					className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+					className="mb-3 flex shrink-0 @min-[38rem]:flex-row flex-col @min-[38rem]:items-center @min-[38rem]:justify-between gap-3"
 				>
 					<div className="flex items-center gap-1.5">
 						<div className="island-kicker">Installed species</div>
@@ -375,7 +380,7 @@ export function SpeciesControlPage({
 							</p>
 						</InfoTip>
 					</div>
-					<div className="flex flex-wrap items-center gap-2 sm:justify-end">
+					<div className="flex flex-wrap items-center @min-[38rem]:justify-end gap-2">
 						<ListFilter className="size-4 text-muted-foreground" />
 						<span className="text-muted-foreground text-xs">
 							{selected.size
@@ -424,11 +429,14 @@ export function SpeciesControlPage({
 			</section>
 
 			{unresolvedCount > 0 ? (
+				// Keeps its natural height but never more than it is owed: the page no
+				// longer scrolls, so a long list has to scroll inside its own card
+				// rather than pushing the table's pager off the bottom.
 				<section
 					aria-label="Unmatched list entries"
-					className="feature-card rounded-md p-4"
+					className="feature-card flex max-h-64 shrink-0 flex-col rounded-md p-4"
 				>
-					<div className="flex items-start gap-3">
+					<div className="flex shrink-0 items-start gap-3">
 						<CircleAlert className="mt-0.5 size-5 text-[var(--clay)]" />
 						<div>
 							<h2 className="display-title font-semibold">
@@ -440,7 +448,7 @@ export function SpeciesControlPage({
 							</p>
 						</div>
 					</div>
-					<div className="mt-3 space-y-2">
+					<div className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
 						{(
 							Object.entries(initialData.unresolved) as [
 								"custom" | "excluded" | "whitelisted",

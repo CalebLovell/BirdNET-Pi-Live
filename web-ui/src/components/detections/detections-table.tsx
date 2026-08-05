@@ -53,31 +53,34 @@ type DetectionsFiltersProps = Pick<
 	"search" | "onSearchChange"
 >;
 
-// Three tiers, measured off what the content actually needs plus the 16px cell
-// padding: compact under 44rem (icon-only recording button, no slack), the full
-// five columns from 44rem, the sixth from 64rem.
+// Three tiers, each sized from what the content actually measures plus the 16px
+// cell padding, and each dropping the least essential column left:
+//
+//   under 34rem  species, recorded, audio      -- min 26rem
+//   34rem+       + confidence                  -- min 34rem
+//   64rem+       + scientific name             -- min 62rem
 //
 // Container queries, not viewport breakpoints: the sidebar takes ~345px, so a
 // 1280px window leaves the table barely 935px and a viewport-based rule would
-// bring the sixth column back into a space that cannot hold it. 64rem is the
-// six-column table's 62rem minimum plus room to breathe.
+// bring a column back into a space that cannot hold it.
 //
-// Widths live on the header cells rather than a <colgroup> because the
-// scientific name column drops out when narrow: a display:none cell leaves the
-// table, so the remaining <col> elements would slide onto the wrong columns.
-// Narrow, the five surviving columns share out the missing 24%. Class names are
-// spelled out in full — Tailwind scans for literal strings, so a composed
-// `${WIDE}:w-[4.2%]` would compile to nothing.
+// Widths live on the header cells rather than a <colgroup> because columns drop
+// out: a display:none cell leaves the table, so the remaining <col> elements
+// would slide onto the wrong columns. Class names are spelled out in full --
+// Tailwind scans for literal strings, so a composed `${WIDE}:w-[4.2%]` would
+// compile to nothing. Each tier's percentages sum to 100.
 const HEADER_CLASSES: Record<string, string> = {
-	select: "w-[5.5%] @min-[64rem]:w-[4.2%]",
-	recorded: "w-[29.5%] @min-[44rem]:w-[28.9%] @min-[64rem]:w-[22%]",
-	species: "w-[35%] @min-[44rem]:w-[31.6%] @min-[64rem]:w-[24%]",
+	select: "w-[7.2%] @min-[34rem]:w-[5.5%] @min-[64rem]:w-[4.2%]",
+	species: "w-[44.1%] @min-[34rem]:w-[35%] @min-[64rem]:w-[24%]",
+	recorded: "w-[38.2%] @min-[34rem]:w-[29.5%] @min-[64rem]:w-[22%]",
 	scientificName: "hidden w-[24%] @min-[64rem]:table-cell",
-	confidence: "w-[22%] @min-[44rem]:w-[18.4%] @min-[64rem]:w-[14%]",
-	audio: "w-[8%] pr-0 text-right @min-[44rem]:w-[15.6%] @min-[64rem]:w-[11.8%]",
+	confidence:
+		"hidden @min-[34rem]:table-cell @min-[34rem]:w-[22%] @min-[64rem]:w-[14%]",
+	audio: "w-[10.5%] pr-0 text-right @min-[34rem]:w-[8%] @min-[64rem]:w-[11.8%]",
 };
 const CELL_CLASSES: Record<string, string> = {
 	scientificName: "hidden @min-[64rem]:table-cell",
+	confidence: "hidden @min-[34rem]:table-cell",
 	audio: "pr-0",
 };
 
@@ -112,10 +115,12 @@ function RecordingButton({ row }: { row: DetectionTableRow }) {
 				loading={isLoading}
 				onClick={togglePlay}
 			>
-				{/* Compact drops the word and leaves the glyph: `hidden` takes the span
-				    out of the flex flow so the button's gap collapses with it, and the
-				    aria-label already carries the full name either way. */}
-				<span className="@min-[44rem]:inline hidden">Recording</span>
+				{/* The word only returns in the widest tier, where the audio column is
+				    11.8% (117px+) and can hold the 90px button -- below that it is 8%
+				    and the label would burst the column. `hidden` takes the span out
+				    of the flex flow so the button's gap collapses with it, and the
+				    aria-label carries the full name either way. */}
+				<span className="@min-[64rem]:inline hidden">Recording</span>
 			</Button>
 			<audio
 				ref={audioRef}
@@ -171,25 +176,36 @@ function DateFilter({
 			<label className="text-muted-foreground text-xs" htmlFor={id}>
 				{label}
 			</label>
-			{/* 7.5rem holds a 14px `2026-08-05` (72px) plus padding and the native
-			    picker glyph, and is what lets both date filters share one line on a
-			    414px phone -- at 9rem they wrapped to a line each. */}
+			{/* 8rem leaves the 14px date text (72px) clear of the native picker
+			    glyph and the gap now set on it in styles.css; at 7.5rem the year ran
+			    into the calendar icon. */}
 			<Input
-				className="!w-30 @min-[38rem]:!w-36"
+				className="!w-32 @min-[38rem]:!w-36"
 				id={id}
 				type="date"
 				value={value}
 				onChange={(event) => onChange(event.target.value || undefined)}
 			/>
-			<button
+			{/* The station's one button rather than a bare <button>: this was a
+			    borderless glyph that read as decoration, and it missed the shared
+			    hover, focus-visible ring and disabled treatment. `type` is explicit
+			    because a <button> defaults to `submit`. Native buttons are already
+			    in the tab order, so no tabIndex belongs here -- adding one would
+			    only risk overriding it. */}
+			{/* `icon-lg` is the 36px square that matches the field's h-9 exactly --
+			    at icon-sm it sat 8px short and read as a different control. `title`
+			    gives the pointer a tooltip; the aria-label stays longer because a
+			    screen reader hears it out of context. */}
+			<Button
 				type="button"
 				aria-label={`Clear ${label.toLowerCase()} date`}
-				className="flex size-6 items-center justify-center text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+				title="Clear"
 				disabled={!value}
+				icon={X}
+				size="icon-lg"
+				variant="outline"
 				onClick={() => onChange(undefined)}
-			>
-				<X className="@min-[38rem]:size-4 size-3.5" />
-			</button>
+			/>
 		</div>
 	);
 }
@@ -216,7 +232,10 @@ export function DetectionsFilters({
 		// container query only sees descendants, so `@container` here and
 		// `@min-[38rem]:flex-row` on the child.
 		<div className="@container">
-			<div className="flex @min-[38rem]:flex-row flex-col @min-[38rem]:items-center @min-[38rem]:justify-between @min-[38rem]:gap-3 gap-2">
+			{/* Stacked, the search and the dates are separate rows of the form and
+			    take the page's own 4-unit rhythm; side by side they only need the
+			    tighter 3 that separates neighbours in a row. */}
+			<div className="flex @min-[38rem]:flex-row flex-col @min-[38rem]:items-center @min-[38rem]:justify-between @min-[38rem]:gap-3 gap-4">
 				<SearchInput
 					aria-label="Search detections"
 					placeholder="Search detections..."
@@ -236,7 +255,14 @@ export function DetectionsFilters({
 			    width the pair needs ~368px and fits one line on a 414px phone. It
 			    only wraps below that, and `shrink-0` keeps them legible rather than
 			    squeezing the date text out of its box. */}
-				<div className="flex shrink-0 flex-wrap items-center gap-2">
+				{/* Stacked, the group is a full-width flex item and would sit hard
+				    left; `self-end` pulls it to the right edge so it stays where the
+				    row layout puts it. `self-auto` hands alignment back to the row's
+				    `items-center` above 38rem -- left as `self-end` it would align on
+				    the cross axis there and drop the dates to the row's bottom.
+				    `justify-end` keeps both filters right when they wrap to two
+				    lines. */}
+				<div className="flex shrink-0 flex-wrap items-center justify-end gap-2 @min-[38rem]:self-auto self-end">
 					<DateFilter
 						id="detections-from"
 						label="From"
@@ -300,26 +326,6 @@ export function DetectionsTable({
 			enableHiding: false,
 		},
 		{
-			id: "recorded",
-			header: () => (
-				<SortButton
-					label="Recorded"
-					sort="recorded"
-					search={search}
-					onSort={sortBy}
-				/>
-			),
-			cell: ({ row }) => (
-				<Link
-					to="/day/$date"
-					params={{ date: row.original.Date }}
-					className="tabular-data text-sm no-underline hover:underline"
-				>
-					{recordedLabel(row.original)}
-				</Link>
-			),
-		},
-		{
 			accessorKey: "Com_Name",
 			id: "species",
 			header: () => (
@@ -339,6 +345,26 @@ export function DetectionsTable({
 					className="font-medium no-underline hover:underline"
 				>
 					{row.original.Com_Name}
+				</Link>
+			),
+		},
+		{
+			id: "recorded",
+			header: () => (
+				<SortButton
+					label="Recorded"
+					sort="recorded"
+					search={search}
+					onSort={sortBy}
+				/>
+			),
+			cell: ({ row }) => (
+				<Link
+					to="/day/$date"
+					params={{ date: row.original.Date }}
+					className="tabular-data text-sm no-underline hover:underline"
+				>
+					{recordedLabel(row.original)}
 				</Link>
 			),
 		},
@@ -387,7 +413,7 @@ export function DetectionsTable({
 			// Stays in the accessibility tree when compact hides it: an unlabelled
 			// column is a worse trade than the ~88px the word costs.
 			header: () => (
-				<span className="sr-only @min-[44rem]:not-sr-only">Recording</span>
+				<span className="sr-only @min-[64rem]:not-sr-only">Recording</span>
 			),
 			cell: ({ row }) => (
 				<div className="flex justify-end">
@@ -416,9 +442,25 @@ export function DetectionsTable({
 		page.total === 0 ? 0 : (search.page - 1) * search.pageSize + 1;
 	const rangeEnd = Math.min(search.page * search.pageSize, page.total);
 	return (
-		<div className="@container space-y-3">
-			<Table className="@min-[44rem]:min-w-[44rem] @min-[64rem]:min-w-[62rem] min-w-[34rem] table-fixed">
-				<TableHeader>
+		// A column, not a stack: the scrollport takes the leftover height so the
+		// rows are the only thing that scrolls, and the pager below stays put.
+		// `min-h-0` is what lets it shrink -- a flex child defaults to
+		// `min-height: auto` and would otherwise push the pager off the page.
+		// No gap: the rows scroll directly beneath the pager's top rule, so the
+		// footer reads as the edge of the scrollport rather than floating over it.
+		<div className="@container flex min-h-0 flex-1 flex-col">
+			<Table
+				className="@min-[34rem]:min-w-[34rem] @min-[64rem]:min-w-[62rem] min-w-[26rem] table-fixed"
+				containerClassName="min-h-0 flex-1 overflow-y-auto"
+			>
+				{/* Sticky per-`th` rather than on the `thead`: with the collapsed
+				    borders Tailwind's preflight sets, the row's own border stays
+				    behind with the row instead of travelling with the pinned header,
+				    so the rule is drawn as an inset shadow on the cells. The base
+				    `[&_tr]:border-b` is switched off or the two stack into a visible
+				    double line. The card's background sits behind the fill -- both
+				    stops of that gradient resolve to --paper-raised, so flat matches. */}
+				<TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-[var(--surface-strong)] [&_th]:shadow-[inset_0_-1px_0_var(--line)] [&_tr]:border-none">
 					{table.getHeaderGroups().map((headerGroup) => (
 						<TableRow key={headerGroup.id}>
 							{headerGroup.headers.map((header) => (
@@ -458,11 +500,14 @@ export function DetectionsTable({
 				</TableBody>
 			</Table>
 
-			<div className="flex flex-col gap-3 border-t pt-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+			{/* The two halves measure ~364px side by side, so 26rem is the real
+			    point where they stop fitting -- the old 38rem stacked them while
+			    there was still most of a row's worth of space going spare. */}
+			<div className="flex shrink-0 @min-[26rem]:flex-row flex-col @min-[26rem]:items-center @min-[26rem]:justify-between gap-3 border-t pt-3 text-sm">
 				<span className="tabular-data text-muted-foreground">
 					Showing {rangeStart}–{rangeEnd} of {page.total}
 				</span>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<label className="flex items-center gap-2 text-muted-foreground">
 						<span className="sr-only">Detections per page</span>
 						<select
@@ -483,19 +528,30 @@ export function DetectionsTable({
 					<Button
 						aria-label="Previous page"
 						disabled={search.page <= 1}
-						size="icon-xs"
+						size="icon"
 						variant="outline"
 						onClick={() => updateSearch({ page: search.page - 1 })}
 					>
 						<ChevronLeft />
 					</Button>
-					<span className="tabular-data min-w-18 text-center text-muted-foreground">
+					{/* Exactly the widest string it can hold: both sides top out at
+					    `pageCount`'s digit count, `tabular-data` pins every digit to
+					    1ch, and " / " measures ~0.7em. Counting the separator as three
+					    characters instead over-reserved by 15px, which is what left the
+					    arrows looking stranded. Fixed per page count, so paging never
+					    reflows it. */}
+					<span
+						className="tabular-data text-center text-muted-foreground"
+						style={{
+							minWidth: `calc(${String(pageCount).length * 2}ch + 0.75em)`,
+						}}
+					>
 						{search.page} / {pageCount}
 					</span>
 					<Button
 						aria-label="Next page"
 						disabled={search.page >= pageCount}
-						size="icon-xs"
+						size="icon"
 						variant="outline"
 						onClick={() => updateSearch({ page: search.page + 1 })}
 					>

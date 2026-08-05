@@ -47,14 +47,31 @@ function RootDocument({ children }: { children: React.ReactNode }) {
 				<HeadContent />
 			</head>
 			<body>
-				{/* `min-w-0` on the content column stops a wide table or a long
-				    species name from forcing the whole row wider than the viewport
-				    and squeezing the sidebar. */}
-				<div className="flex min-h-screen">
+				{/* The shell is pinned to the viewport and never scrolls itself.
+				    Scrolling happens only inside `main`, which is what keeps the
+				    sidebar and the mobile bar fixed in frame like a dashboard.
+
+				    `fixed inset-0` rather than a `h-dvh` block in flow: anything else
+				    on the page that pokes below the fold (the devtools panel in dev,
+				    a portalled overlay) can still make the document scrollable, and a
+				    shell in flow would ride along with it. Pinned, it cannot move.
+
+				    `min-h-0` on the content column is the part that makes it work:
+				    a flex child's default `min-height: auto` refuses to shrink below
+				    its content, so without it the column grows past the viewport and
+				    the overflow escapes to the window again.
+
+				    `min-w-0` stops a wide table or a long species name from forcing
+				    the whole row wider than the viewport and squeezing the sidebar. */}
+				<div className="fixed inset-0 flex overflow-hidden">
 					<SiteSidebar />
-					<div className="flex min-w-0 flex-1 flex-col">
+					<div className="flex min-h-0 min-w-0 flex-1 flex-col">
 						<MobileNav />
-						<main className="flex-1">{children}</main>
+						{/* No `scrollbar-gutter` here on purpose: reserving the gutter
+						    always would leave a dead band at the right edge on top of
+						    the page's own 1rem, so the content would sit further from
+						    the edge than it does from the sidebar. */}
+						<main className="min-h-0 flex-1 overflow-y-auto">{children}</main>
 					</div>
 				</div>
 				<TanStackDevtools

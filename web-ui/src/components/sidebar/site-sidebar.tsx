@@ -40,19 +40,20 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
  * The desktop sidebar: a card in the same family as the page's content cards,
  * inset from the viewport so paper shows to its left and above and below it.
  *
- * `sticky` rather than `fixed` deliberately -- staying in normal flow means the
- * main column needs no matching left offset, so the two can never disagree
- * about the sidebar's width.
+ * Nothing sticky or fixed here: the shell in `__root` is a single non-scrolling
+ * viewport, so the column simply sits in normal flow at full height and stays
+ * put while the content pane scrolls beside it. That also means the main column
+ * needs no matching left offset, so the two can never disagree about width.
  *
  * The inset lives on the `aside` and the scrolling on the card inside it: a
- * single element can't both be the sticky full-height box and the padded card
- * without the padding scrolling away with the content. `h-full` then makes the
- * card exactly a viewport minus the inset, so the station block stays reachable
- * on a short window.
+ * single element can't both be the full-height box and the padded card without
+ * the padding scrolling away with the content. `h-full` then makes the card
+ * exactly a viewport minus the inset, so the station block stays reachable on a
+ * short window.
  */
 export function SiteSidebar() {
 	return (
-		<aside className="sticky top-0 hidden h-screen shrink-0 py-4 pl-4 lg:block">
+		<aside className="hidden h-full shrink-0 py-4 pl-4 lg:block">
 			<div className="feature-card h-full w-64 overflow-y-auto rounded-md">
 				<SidebarBody />
 			</div>

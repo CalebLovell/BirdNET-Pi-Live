@@ -116,7 +116,15 @@ test("renders Installed species with five sortable, unified columns", async () =
 		markup,
 		/<a href="\/species\/coyote" class="font-medium no-underline hover:underline">Coyote<\/a>/,
 	);
-	assert.match(markup, /<col class="w-\[4\.2%\]"\/?>/);
+	// Column widths sit on the header cells rather than a <colgroup>: the
+	// narrower tiers hide columns outright, and a display:none cell leaves the
+	// table, which would slide the remaining <col> elements onto the wrong
+	// columns. The selection column still holds its narrow fixed share.
+	assert.doesNotMatch(markup, /<colgroup/);
+	assert.match(
+		markup,
+		/data-slot="table-head"[^>]*class="[^"]*@min-\[46rem\]:w-\[4\.4%\][^"]*"/,
+	);
 	assert.match(
 		markup,
 		/data-slot="table-head" class="[^"]*pl-0[^"]*" aria-sort="ascending"/,

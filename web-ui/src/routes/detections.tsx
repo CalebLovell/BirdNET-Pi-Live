@@ -86,8 +86,12 @@ function Detections() {
 	}
 
 	return (
-		<div className="page-wrap space-y-4 py-4">
-			<div className="space-y-4">
+		// The page fills `main` exactly and never scrolls itself, so the header,
+		// filters and the card's pager all hold their place and only the rows
+		// move. `h-full` measures against `main`, which the shell has already
+		// bounded to the viewport.
+		<div className="page-wrap flex h-full min-h-0 flex-col gap-4 py-4">
+			<div className="shrink-0 space-y-4">
 				<PageHeaderCard
 					title="Detections"
 					description="Browse, filter, and manage every individual detection."
@@ -117,57 +121,60 @@ function Detections() {
 						{feedback.message}
 					</p>
 				) : null}
-
-				<section
-					aria-label="Detections"
-					className="feature-card rounded-md p-4"
-				>
-					<div
-						className={`flex items-center justify-between gap-2 ${isEmpty ? "" : "mb-3"}`}
-					>
-						<div className="island-kicker">All detections</div>
-						{/* With no rows there is nothing selectable, so the button would
-						    only ever sit disabled. */}
-						{!isEmpty && (
-							<Button
-								disabled={selectedCount === 0}
-								size="xs"
-								variant={selectedCount > 0 ? "destructive" : "outline"}
-								onClick={() => setDeleteOpen(true)}
-							>
-								<Trash2 />
-								{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
-							</Button>
-						)}
-					</div>
-					{isEmpty ? (
-						<p className="mt-4 text-muted-foreground text-sm">
-							{isFiltered
-								? "No detections match these filters."
-								: "No detections recorded yet."}
-						</p>
-					) : (
-						<DetectionsTable
-							page={page}
-							search={search}
-							onSearchChange={(nextSearch) =>
-								navigate({ search: nextSearch, replace: true })
-							}
-							rowSelection={rowSelection}
-							onRowSelectionChange={setRowSelection}
-						/>
-					)}
-				</section>
-
-				{deleteOpen ? (
-					<DeleteDetectionsDialog
-						count={selectedCount}
-						pending={isDeleting}
-						onCancel={() => setDeleteOpen(false)}
-						onConfirm={confirmDeletion}
-					/>
-				) : null}
 			</div>
+
+			{/* Takes the leftover height when there are rows to scroll. An empty
+			    state has nothing to scroll, so it keeps its natural size rather
+			    than stretching a one-line message down the whole page. */}
+			<section
+				aria-label="Detections"
+				className={`feature-card flex min-h-0 flex-col rounded-md p-4 ${isEmpty ? "shrink-0" : "flex-1"}`}
+			>
+				<div
+					className={`flex shrink-0 items-center justify-between gap-2 ${isEmpty ? "" : "mb-3"}`}
+				>
+					<div className="island-kicker">All detections</div>
+					{/* With no rows there is nothing selectable, so the button would
+						    only ever sit disabled. */}
+					{!isEmpty && (
+						<Button
+							disabled={selectedCount === 0}
+							size="xs"
+							variant={selectedCount > 0 ? "destructive" : "outline"}
+							onClick={() => setDeleteOpen(true)}
+						>
+							<Trash2 />
+							{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
+						</Button>
+					)}
+				</div>
+				{isEmpty ? (
+					<p className="mt-4 text-muted-foreground text-sm">
+						{isFiltered
+							? "No detections match these filters."
+							: "No detections recorded yet."}
+					</p>
+				) : (
+					<DetectionsTable
+						page={page}
+						search={search}
+						onSearchChange={(nextSearch) =>
+							navigate({ search: nextSearch, replace: true })
+						}
+						rowSelection={rowSelection}
+						onRowSelectionChange={setRowSelection}
+					/>
+				)}
+			</section>
+
+			{deleteOpen ? (
+				<DeleteDetectionsDialog
+					count={selectedCount}
+					pending={isDeleting}
+					onCancel={() => setDeleteOpen(false)}
+					onConfirm={confirmDeletion}
+				/>
+			) : null}
 		</div>
 	);
 }

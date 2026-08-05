@@ -62,6 +62,32 @@ export function sortSpeciesControlRows(
 	});
 }
 
+// Same scheme as the detections table -- see the long note there. Three tiers,
+// sized from what the content measures plus the 16px cell padding, dropping the
+// least essential column left: scientific name goes first, then the count.
+// Status stays at every width because setting it is the point of the page.
+//
+//   under 26rem  species, status            -- min 20rem
+//   26rem+       + count                    -- min 26rem
+//   46rem+       + scientific name          -- min 44rem
+//
+// Container queries rather than viewport breakpoints: the sidebar means the
+// window is never what this table actually has to work with. Widths sit on the
+// header cells rather than a <colgroup> because a display:none cell leaves the
+// table and the remaining <col> elements would slide onto the wrong columns.
+const HEADER_CLASSES: Record<string, string> = {
+	select: "w-[9.4%] @min-[26rem]:w-[7.2%] @min-[46rem]:w-[4.4%]",
+	species: "w-[62.5%] @min-[26rem]:w-[52.4%] @min-[46rem]:w-[27.8%]",
+	scientific: "hidden @min-[46rem]:table-cell @min-[46rem]:w-[35.8%]",
+	count:
+		"hidden @min-[26rem]:table-cell @min-[26rem]:w-[18.8%] @min-[46rem]:w-[12%]",
+	status: "w-[28.1%] @min-[26rem]:w-[21.6%] @min-[46rem]:w-[20%]",
+};
+const CELL_CLASSES: Record<string, string> = {
+	scientific: "hidden @min-[46rem]:table-cell",
+	count: "hidden @min-[26rem]:table-cell",
+};
+
 const STATUS_PRESENTATION: Record<
 	SpeciesStatus,
 	{ label: string; className: string }
@@ -155,18 +181,22 @@ export function SpeciesControlTable({
 	const rangeStart = total ? (page - 1) * 50 + 1 : 0;
 	const rangeEnd = Math.min(page * 50, total);
 	return (
-		<div className="space-y-3">
-			<Table className="min-w-[44rem] table-fixed">
-				<colgroup>
-					<col className="w-[4.2%]" />
-					<col className="w-[27.8%]" />
-					<col className="w-[36%]" />
-					<col className="w-[12%]" />
-					<col className="w-[20%]" />
-				</colgroup>
-				<TableHeader>
+		// No gap between the rows and the pager: the footer reads as the edge of
+		// the scrollport rather than floating above it.
+		<div className="@container flex min-h-0 flex-1 flex-col">
+			<Table
+				className="@min-[26rem]:min-w-[26rem] @min-[46rem]:min-w-[44rem] min-w-[20rem] table-fixed"
+				containerClassName="min-h-0 flex-1 overflow-y-auto"
+			>
+				{/* Sticky per-`th`: with collapsed borders the row's own border stays
+				    behind instead of travelling with the pinned header, so the rule is
+				    an inset shadow and the base `[&_tr]:border-b` is switched off --
+				    together they drew a double line. */}
+				<TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-[var(--surface-strong)] [&_th]:shadow-[inset_0_-1px_0_var(--line)] [&_tr]:border-none">
 					<TableRow>
-						<TableHead className="text-left font-semibold">
+						<TableHead
+							className={`text-left font-semibold ${HEADER_CLASSES.select}`}
+						>
 							<input
 								aria-label="Select all species on this page"
 								checked={allSelected}
@@ -188,7 +218,7 @@ export function SpeciesControlTable({
 							sort={sort}
 							direction={direction}
 							onSortChange={onSortChange}
-							className="pl-0"
+							className={`pl-0 ${HEADER_CLASSES.species}`}
 						/>
 						<SortHeader
 							label="Scientific name"
@@ -196,7 +226,7 @@ export function SpeciesControlTable({
 							sort={sort}
 							direction={direction}
 							onSortChange={onSortChange}
-							className="pl-1"
+							className={`pl-1 ${HEADER_CLASSES.scientific}`}
 						/>
 						<SortHeader
 							label="Count"
@@ -205,6 +235,7 @@ export function SpeciesControlTable({
 							direction={direction}
 							onSortChange={onSortChange}
 							align="right"
+							className={HEADER_CLASSES.count}
 						/>
 						<SortHeader
 							label="Status"
@@ -213,6 +244,7 @@ export function SpeciesControlTable({
 							direction={direction}
 							onSortChange={onSortChange}
 							align="right"
+							className={HEADER_CLASSES.status}
 						/>
 					</TableRow>
 				</TableHeader>
@@ -243,13 +275,13 @@ export function SpeciesControlTable({
 									{row.comName}
 								</Link>
 							</TableCell>
-							<TableCell className="pl-1">
+							<TableCell className={`pl-1 ${CELL_CLASSES.scientific}`}>
 								<em className="text-[var(--bark)]">{row.sciName}</em>
 							</TableCell>
 							{/* Most of a 6,000-row catalogue has never been heard, so a
 							    zero is muted rather than competing with real counts. */}
 							<TableCell
-								className={`tabular-data text-right ${row.history.detections ? "" : "text-muted-foreground"}`}
+								className={`tabular-data text-right ${CELL_CLASSES.count} ${row.history.detections ? "" : "text-muted-foreground"}`}
 							>
 								{row.history.detections.toLocaleString()}
 							</TableCell>
@@ -266,31 +298,42 @@ export function SpeciesControlTable({
 				</TableBody>
 			</Table>
 			{rows.length === 0 ? (
-				<p className="py-8 text-center text-muted-foreground text-sm">
+				<p className="shrink-0 py-8 text-center text-muted-foreground text-sm">
 					No installed species match that search.
 				</p>
 			) : null}
-			<div className="flex flex-col gap-2 border-t pt-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+			{/* 26rem is where the two halves genuinely stop fitting side by side;
+			    `sm` stacked them with most of a row's width still going spare. */}
+			<div className="flex shrink-0 @min-[26rem]:flex-row flex-col @min-[26rem]:items-center @min-[26rem]:justify-between gap-3 border-t pt-3 text-sm">
 				<span className="tabular-data text-muted-foreground">
 					Showing {rangeStart}–{rangeEnd} of {total}
 				</span>
-				<div className="flex items-center gap-2">
+				<div className="flex items-center gap-1">
 					<Button
 						aria-label="Previous page"
 						disabled={page <= 1}
-						size="icon-xs"
+						size="icon"
 						variant="outline"
 						onClick={() => onPageChange(page - 1)}
 					>
 						<ChevronLeft />
 					</Button>
-					<span className="tabular-data min-w-16 text-center text-muted-foreground">
+					{/* Exactly the widest string it can hold: both sides top out at
+					    `pageCount`'s digit count, `tabular-data` pins each digit to 1ch,
+					    and " / " measures ~0.7em. Fixed per page count, so paging never
+					    reflows it. */}
+					<span
+						className="tabular-data text-center text-muted-foreground"
+						style={{
+							minWidth: `calc(${String(pageCount).length * 2}ch + 0.75em)`,
+						}}
+					>
 						{page} / {pageCount}
 					</span>
 					<Button
 						aria-label="Next page"
 						disabled={page >= pageCount}
-						size="icon-xs"
+						size="icon"
 						variant="outline"
 						onClick={() => onPageChange(page + 1)}
 					>

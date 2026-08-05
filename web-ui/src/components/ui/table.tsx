@@ -2,7 +2,14 @@ import type * as React from "react";
 
 import { cn } from "~/lib/utils.ts";
 
-function Table({ className, ...props }: React.ComponentProps<"table">) {
+function Table({
+	className,
+	containerClassName,
+	...props
+}: React.ComponentProps<"table"> & {
+	/** Styles the scrollport, not the table -- e.g. to give it a bounded height. */
+	containerClassName?: string;
+}) {
 	// -mx-1/px-1 cancel out, but the padding keeps the first and last columns'
 	// focus rings from being clipped by the scrollport they sit flush against.
 	// Width is left to auto so the negative margins widen the box by exactly the
@@ -10,7 +17,7 @@ function Table({ className, ...props }: React.ComponentProps<"table">) {
 	return (
 		<div
 			data-slot="table-container"
-			className="-mx-1 relative overflow-x-auto px-1"
+			className={cn("relative -mx-1 overflow-x-auto px-1", containerClassName)}
 		>
 			<table
 				data-slot="table"

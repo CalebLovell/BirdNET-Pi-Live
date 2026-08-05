@@ -37,7 +37,9 @@ export function MobileNav() {
 
 	return (
 		<>
-			<div className="sticky top-0 z-30 flex h-14 items-center gap-3 border-[var(--line)] border-b bg-[var(--paper-raised)] px-4 lg:hidden">
+			{/* `shrink-0`, not `sticky`: the bar sits outside the scrolling pane in
+			    the shell, so it holds its place without any stickiness. */}
+			<div className="z-30 flex h-14 shrink-0 items-center gap-3 border-[var(--line)] border-b bg-[var(--paper-raised)] px-4 lg:hidden">
 				<button
 					type="button"
 					onClick={() => setIsOpen(true)}
