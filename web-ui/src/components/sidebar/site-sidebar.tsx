@@ -37,18 +37,25 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 /**
- * The desktop sidebar: a white column flush to the viewport's left edge,
- * running the full height of the window.
+ * The desktop sidebar: a card in the same family as the page's content cards,
+ * inset from the viewport so paper shows to its left and above and below it.
  *
  * `sticky` rather than `fixed` deliberately -- staying in normal flow means the
  * main column needs no matching left offset, so the two can never disagree
- * about the sidebar's width. Its own `overflow-y` keeps the station block
- * reachable when the viewport is shorter than the nav.
+ * about the sidebar's width.
+ *
+ * The inset lives on the `aside` and the scrolling on the card inside it: a
+ * single element can't both be the sticky full-height box and the padded card
+ * without the padding scrolling away with the content. `h-full` then makes the
+ * card exactly a viewport minus the inset, so the station block stays reachable
+ * on a short window.
  */
 export function SiteSidebar() {
 	return (
-		<aside className="sticky top-0 hidden h-screen w-64 shrink-0 overflow-y-auto border-[var(--line)] border-r bg-[var(--paper-raised)] lg:block">
-			<SidebarBody />
+		<aside className="sticky top-0 hidden h-screen shrink-0 py-4 pl-4 lg:block">
+			<div className="feature-card h-full w-64 overflow-y-auto rounded-md">
+				<SidebarBody />
+			</div>
 		</aside>
 	);
 }

@@ -236,6 +236,7 @@ a {
    stacked -- so the sidebar marks its active row with a filled pill and a rule
    on the inner edge instead. */
 .sidebar-link {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -244,7 +245,20 @@ a {
   text-decoration: none;
   font-size: 0.9rem;
   color: color-mix(in oklab, var(--ink) 70%, var(--moss) 30%);
-  box-shadow: inset 2px 0 0 transparent;
+}
+
+/* A separate element rather than an inset box-shadow: a shadow is clipped to
+   the pill's border radius, so the rule bows inward at both ends instead of
+   reading as a straight rule. This one keeps square ends whatever the pill
+   behind it does. */
+.sidebar-link.is-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--moss);
 }
 
 .sidebar-link:hover {
@@ -256,7 +270,6 @@ a {
   background: var(--meadow);
   color: var(--ink);
   font-weight: 700;
-  box-shadow: inset 2px 0 0 var(--moss);
 }
 
 .sidebar-icon {
