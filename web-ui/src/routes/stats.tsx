@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+	Bird,
 	CalendarDays,
 	ChartNoAxesColumnIncreasing,
 	Clock3,
@@ -8,6 +9,7 @@ import {
 
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
+import { EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
@@ -100,30 +102,44 @@ function Stats() {
 				stats={headerStats}
 			/>
 
-			<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-				<DetectionsByHourCard activity={stats.hourActivity} />
-				<DetectionsOverTimeCard trend={stats.detectionTrend} />
-				{/* No min-height: the two lists sit in the same grid row, so they
+			{/* Six cards, four of them repeating the same sentence, is a worse way
+			    of saying "nothing here yet" than saying it once. Every figure on
+			    this page is derived from detections, so with none there is nothing
+			    for any of the cards to be about. */}
+			{isEmpty ? (
+				<EmptyState icon={Bird} title="No detections recorded yet.">
+					Once the station has heard something, its figures will break down here
+					by species, day and hour.
+				</EmptyState>
+			) : (
+				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+					<DetectionsByHourCard activity={stats.hourActivity} />
+					<DetectionsOverTimeCard trend={stats.detectionTrend} />
+					{/* No min-height: the two lists sit in the same grid row, so they
 				    already stretch to match each other. Reserving height instead only
 				    padded them with dead space until the lists were long enough. */}
-				<SpeciesList title="Top species" species={stats.topSpeciesList} />
-				<SpeciesList title="Rarest species" species={stats.rarestSpeciesList} />
+					<SpeciesList title="Top species" species={stats.topSpeciesList} />
+					<SpeciesList
+						title="Rarest species"
+						species={stats.rarestSpeciesList}
+					/>
 
-				<TooltipProvider>
-					<SpeciesActivityList
-						title="New arrivals"
-						description={`Species heard in the last ${ARRIVAL_WINDOW_DAYS} days that were absent for the ${ARRIVAL_WINDOW_DAYS} days before that — new sightings and returning migrants alike.`}
-						species={arrivalItems}
-						emptyMessage="No new arrivals in the last two weeks."
-					/>
-					<SpeciesActivityList
-						title="Gone quiet"
-						description={`Regular visitors — heard on at least ${RESIDENT_MIN_DAYS} separate days — with no detection in the last ${QUIET_AFTER_DAYS} days. They may have migrated away or shifted territory.`}
-						species={quietItems}
-						emptyMessage="Every regular visitor has been heard recently."
-					/>
-				</TooltipProvider>
-			</div>
+					<TooltipProvider>
+						<SpeciesActivityList
+							title="New arrivals"
+							description={`Species heard in the last ${ARRIVAL_WINDOW_DAYS} days that were absent for the ${ARRIVAL_WINDOW_DAYS} days before that — new sightings and returning migrants alike.`}
+							species={arrivalItems}
+							emptyMessage="No new arrivals in the last two weeks."
+						/>
+						<SpeciesActivityList
+							title="Gone quiet"
+							description={`Regular visitors — heard on at least ${RESIDENT_MIN_DAYS} separate days — with no detection in the last ${QUIET_AFTER_DAYS} days. They may have migrated away or shifted territory.`}
+							species={quietItems}
+							emptyMessage="Every regular visitor has been heard recently."
+						/>
+					</TooltipProvider>
+				</div>
+			)}
 		</div>
 	);
 }

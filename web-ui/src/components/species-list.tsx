@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { rankingBarPercent } from "~/lib/stats-data.ts";
@@ -45,7 +46,7 @@ export function SpeciesList({
 			<div className="island-kicker">{title}</div>
 
 			{species.length === 0 ? (
-				<p className="mt-4 text-muted-foreground text-sm">{emptyMessage}</p>
+				<EmptyNote>{emptyMessage}</EmptyNote>
 			) : (
 				<ol className="mt-4 space-y-1">
 					{species.map((item) => (

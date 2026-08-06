@@ -4,15 +4,15 @@ import {
 	useRouter,
 } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CircleAlert } from "lucide-react";
-
 import { LockedPage } from "~/components/auth/locked-page.tsx";
+import { PageStatus } from "~/components/page-status.tsx";
 import { SessionCard } from "~/components/settings/session-card.tsx";
 import {
 	SETTINGS_PAGE_DESCRIPTION,
 	SETTINGS_PAGE_TITLE,
 	SettingsPage,
 } from "~/components/settings/settings-page.tsx";
+import { Button } from "~/components/ui/button.tsx";
 import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
@@ -111,27 +111,27 @@ function SettingsContent({
 }
 
 function SettingsUnavailable() {
+	const router = useRouter();
+
 	return (
 		<div className="page-wrap py-4">
-			<section className="feature-card rounded-md p-5">
-				<div className="flex items-start gap-3">
-					<CircleAlert
-						aria-hidden="true"
-						className="mt-0.5 size-5 text-destructive"
-					/>
-					<div>
-						<h1 className="display-title font-semibold text-xl">
-							Settings unavailable
-						</h1>
-						<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-relaxed">
-							The BirdNET configuration could not be read. Check that the
-							service can access <code>/etc/birdnet/birdnet.conf</code>, or set
-							the
-							<code>BIRDNET_CONF</code> environment variable to its location.
-						</p>
-					</div>
-				</div>
-			</section>
+			<PageStatus
+				tone="unavailable"
+				title="Settings unavailable"
+				actions={
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => router.invalidate()}
+					>
+						Try again
+					</Button>
+				}
+			>
+				The BirdNET configuration could not be read. Check that the service can
+				access <code>/etc/birdnet/birdnet.conf</code>, or set the{" "}
+				<code>BIRDNET_CONF</code> environment variable to its location.
+			</PageStatus>
 		</div>
 	);
 }
