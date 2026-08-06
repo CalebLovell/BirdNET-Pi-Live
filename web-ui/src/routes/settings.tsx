@@ -1,7 +1,13 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	useRouteContext,
+	useRouter,
+} from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert } from "lucide-react";
 
+import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
+import { SessionCard } from "~/components/settings/session-card.tsx";
 import { SettingsPage } from "~/components/settings/settings-page.tsx";
 import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -30,16 +36,25 @@ export const Route = createFileRoute("/settings")({
 	// Settled together so the masthead paints with the cards rather than
 	// snapping in a moment later. `getStationHealth` does not throw, so it
 	// cannot be what sends this route to its error component.
-	loader: async () => ({
-		data: await getSettingsPage(),
-		health: await getStationHealth(),
-	}),
+	loader: async ({ context }) => {
+		if (!context.auth.unlocked) return null;
+		return { data: await getSettingsPage(), health: await getStationHealth() };
+	},
 	component: SettingsRoute,
 	errorComponent: SettingsUnavailable,
 });
 
 function SettingsRoute() {
 	const loaded = Route.useLoaderData();
+	if (!loaded) return <UnlockGate title="Settings" />;
+	return <SettingsContent loaded={loaded} />;
+}
+
+function SettingsContent({
+	loaded,
+}: {
+	loaded: NonNullable<ReturnType<typeof Route.useLoaderData>>;
+}) {
 	const data = loaded.data;
 	const { data: health } = usePolledData(
 		getStationHealth,
@@ -55,11 +70,13 @@ function SettingsRoute() {
 	const reset = useServerFn(resetSettingsFn);
 	const restart = useServerFn(restartStationFn);
 	const router = useRouter();
+	const { auth } = useRouteContext({ from: "__root__" });
 
 	return (
 		<SettingsPage
 			data={data}
 			health={health}
+			access={<SessionCard isDefaultPassword={auth.isDefaultPassword} />}
 			onRestart={(card) => restart({ data: { card } })}
 			onReset={async () => {
 				const result = await reset({});

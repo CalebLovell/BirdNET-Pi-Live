@@ -158,6 +158,8 @@ function cleanup()
   exit
 }
 
+# Deliberately excludes /etc/birdnet/web-ui-auth.conf: the web UI password
+# hash is not station data and must not travel in a shareable archive.
 required=("/home/$BIRDNET_USER/BirdNET-Pi/birdnet.conf"
 "/home/$BIRDNET_USER/BirdNET-Pi/scripts/birds.db"
 "/home/$BIRDNET_USER/BirdNET-Pi/BirdDB.txt"

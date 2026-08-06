@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouteContext } from "@tanstack/react-router";
 import {
 	Bird,
 	CalendarDays,
@@ -6,6 +6,7 @@ import {
 	CheckCheck,
 	GraduationCap,
 	ListTree,
+	Lock,
 	Settings,
 	SlidersHorizontal,
 	Sunrise,
@@ -23,6 +24,18 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 		activeProps: { className: "sidebar-link is-active" },
 		onClick: onNavigate,
 	};
+
+	const { auth } = useRouteContext({ from: "__root__" });
+	// Gated pages stay listed rather than disappearing: a visitor should be able
+	// to see the station has settings without being able to open them, and the
+	// nav must not change shape when you unlock.
+	const lock = auth.unlocked ? null : (
+		<Lock
+			className="ml-auto size-3 text-muted-foreground"
+			aria-label="Locked"
+			role="img"
+		/>
+	);
 
 	return (
 		<nav className="flex flex-col gap-0.5 px-2">
@@ -49,6 +62,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 			>
 				<SlidersHorizontal className="sidebar-icon" aria-hidden="true" />
 				Control
+				{lock}
 			</Link>
 			<Link
 				to="/detections"
@@ -67,6 +81,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 			>
 				<CheckCheck className="sidebar-icon" aria-hidden="true" />
 				Review
+				{lock}
 			</Link>
 			<Link to="/learn" {...linkProps}>
 				<GraduationCap className="sidebar-icon" aria-hidden="true" />
@@ -79,6 +94,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 			<Link to="/settings" {...linkProps}>
 				<Settings className="sidebar-icon" aria-hidden="true" />
 				Settings
+				{lock}
 			</Link>
 		</nav>
 	);

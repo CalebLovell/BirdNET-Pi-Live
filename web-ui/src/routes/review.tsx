@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert, Feather, ListChecks } from "lucide-react";
 import { useState } from "react";
+import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
 import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
@@ -24,15 +25,34 @@ export const Route = createFileRoute("/review")({
 	head: () => ({ meta: [{ title: pageTitle("Review") }] }),
 	validateSearch: normalizeReviewSearch,
 	loaderDeps: ({ search }) => search,
-	loader: async ({ deps }) => ({
-		page: await getReviewPage({ data: deps }),
-		species: await getReviewSpecies(),
-	}),
+	loader: async ({ context, deps }) => {
+		if (!context.auth.unlocked) return null;
+		return {
+			page: await getReviewPage({ data: deps }),
+			species: await getReviewSpecies(),
+		};
+	},
 	component: Review,
+	// Gating this route gave its loader a second way to fail: the unlock status
+	// resolved in the root's `beforeLoad` can go stale -- another device rotating
+	// the session nonce, say -- between that check and the loader's call, and the
+	// gated server function then refuses. A narrow window, but without a boundary
+	// it surfaces raw.
+	errorComponent: ReviewUnavailable,
 });
 
 function Review() {
-	const { page, species } = Route.useLoaderData();
+	const loaded = Route.useLoaderData();
+	if (!loaded) return <UnlockGate title="Review" />;
+	return <ReviewContent loaded={loaded} />;
+}
+
+function ReviewContent({
+	loaded,
+}: {
+	loaded: NonNullable<ReturnType<typeof Route.useLoaderData>>;
+}) {
+	const { page, species } = loaded;
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();
@@ -107,5 +127,29 @@ function Review() {
 				}
 			/>
 		</div>
+	);
+}
+
+function ReviewUnavailable() {
+	return (
+		<main className="page-wrap py-4">
+			<section className="feature-card rounded-md p-5">
+				<div className="flex items-start gap-3">
+					<CircleAlert
+						aria-hidden="true"
+						className="mt-0.5 size-5 text-destructive"
+					/>
+					<div>
+						<h1 className="display-title font-semibold text-xl">
+							Review is unavailable
+						</h1>
+						<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-relaxed">
+							The detection queue could not be read, or this browser's session
+							expired while the page was open. Reload to sign in again.
+						</p>
+					</div>
+				</div>
+			</section>
+		</main>
 	);
 }

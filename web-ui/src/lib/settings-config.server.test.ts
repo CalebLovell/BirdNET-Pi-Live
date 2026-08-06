@@ -29,7 +29,7 @@ async function fixtureConfig(contents: string) {
 test("parses quoted, unquoted, and blank shell assignments", () => {
 	const parsed = parseBirdnetConfig(
 		[
-			'# comment',
+			"# comment",
 			'SITE_NAME="Creek \\"North\\""',
 			"LATITUDE=41.25",
 			"EXTRACTION_LENGTH=",
@@ -147,7 +147,9 @@ test("round-trips RTSP streams and blank extraction length", async () => {
 });
 
 test("rejects newlines before writing configuration strings", async () => {
-	const file = await fixtureConfig('SITE_NAME="Backyard"\nLATITUDE=0\nLONGITUDE=0\n');
+	const file = await fixtureConfig(
+		'SITE_NAME="Backyard"\nLATITUDE=0\nLONGITUDE=0\n',
+	);
 	await assert.rejects(
 		writeSettingsCard(
 			"station",

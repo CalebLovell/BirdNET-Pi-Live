@@ -1,7 +1,12 @@
 import { createServerFn } from "@tanstack/react-start";
 
+import { requireUnlocked } from "./auth.ts";
 import { loadStationHealth } from "./health.server.ts";
 
-export const getStationHealth = createServerFn({ method: "GET" }).handler(() =>
-	loadStationHealth(),
-);
+// Gated because this is Settings-page data -- disk usage, database size, how
+// long since the last detection. It is only ever rendered behind the unlock
+// gate, but a server function is its own reachable endpoint, so the route
+// check that hides the page does nothing to protect this.
+export const getStationHealth = createServerFn({ method: "GET" })
+	.middleware([requireUnlocked])
+	.handler(() => loadStationHealth());

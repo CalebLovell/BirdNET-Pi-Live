@@ -1,5 +1,5 @@
 import { AlertTriangle, CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import type { StationHealth } from "~/lib/health-data.ts";
@@ -22,6 +22,7 @@ export function SettingsPage({
 	onReset,
 	onRestart,
 	health,
+	access,
 }: {
 	data: SettingsPageData;
 	savers?: SettingsSavers;
@@ -31,6 +32,12 @@ export function SettingsPage({
 	onReset?: () => Promise<ResetOutcome>;
 	/** Bounces a card's services. Omit to hide every restart control. */
 	onRestart?: SettingsRestarter;
+	/**
+	 * The Access card, last in the flow. Passed in rather than rendered here so
+	 * this component stays free of the session server functions, and so the
+	 * settings page still renders in a test without them.
+	 */
+	access?: ReactNode;
 }) {
 	const [reset, setReset] = useState<ResetOutcome | null>(null);
 
@@ -112,6 +119,7 @@ export function SettingsPage({
 				savers={savers}
 				restarter={onRestart}
 			/>
+			{access}
 		</main>
 	);
 }

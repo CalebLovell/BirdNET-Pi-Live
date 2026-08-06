@@ -64,9 +64,7 @@ test("each card can invoke only its allowlisted services", async () => {
 		);
 		assert.deepEqual(
 			calls,
-			services.length
-				? [{ args: ["systemctl", "restart", ...services] }]
-				: [],
+			services.length ? [{ args: ["systemctl", "restart", ...services] }] : [],
 			kind,
 		);
 	}
