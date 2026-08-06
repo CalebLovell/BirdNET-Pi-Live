@@ -1,4 +1,5 @@
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { RouteError, RouteNotFound } from "~/components/root-status.tsx";
 import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
 import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
 import { getUnlockStatusFn } from "~/lib/auth.ts";
@@ -39,6 +40,11 @@ export const Route = createRootRoute({
 			},
 		],
 	}),
+	// Placed on the root so nothing can fall through to the router's own bare
+	// defaults. `notFoundMode` stays at its default of `fuzzy`, so a route that
+	// wants to keep its own masthead only has to declare its own handler.
+	notFoundComponent: RouteNotFound,
+	errorComponent: RouteError,
 	shellComponent: RootDocument,
 });
 
