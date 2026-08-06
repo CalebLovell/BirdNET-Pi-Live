@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 // a server function -- if a name below gets renamed or removed, this file
 // fails to load before the assertions even run.
 import { requireUnlocked, signOutAllDevicesFn } from "./auth.ts";
+import { getStationHealth } from "./health.ts";
 import {
 	confirmReviewDetection,
 	deleteReviewDetection,
@@ -79,6 +80,7 @@ test("every gated server function carries requireUnlocked", () => {
 	void getReviewSpecies;
 	void getSettingsPage;
 	void getSpeciesControlPage;
+	void getStationHealth;
 
 	const settingsSource = sourceOf("./settings.ts");
 	for (const name of [
@@ -116,4 +118,8 @@ test("every gated server function carries requireUnlocked", () => {
 	for (const name of ["signOutAllDevicesFn"]) {
 		assertGated(authSource, name);
 	}
+
+	// Lives outside the three gated feature modules, which is exactly how it
+	// was missed the first time round.
+	assertGated(sourceOf("./health.ts"), "getStationHealth");
 });

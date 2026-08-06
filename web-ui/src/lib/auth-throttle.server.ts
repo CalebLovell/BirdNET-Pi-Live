@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 
 import { readFile, writeFile } from "node:fs/promises";
-import { isPrivateAddress } from "./auth-policy.server";
+import { isPrivateAddress } from "./auth-policy.server.ts";
 
 export const FREE_ATTEMPTS = 5;
 export const MAX_BACKOFF_MS = 900_000;
@@ -80,7 +80,13 @@ export class UnlockThrottle {
 	async #save(state: ThrottleState) {
 		this.#state = state;
 		try {
-			await writeFile(this.#statePath, JSON.stringify(state), "utf8");
+			// 0600 like the auth file beside it: this records client addresses
+			// and the timing of unlock attempts, which no other local account
+			// has any business reading.
+			await writeFile(this.#statePath, JSON.stringify(state), {
+				encoding: "utf8",
+				mode: 0o600,
+			});
 		} catch {
 			// Disk full or read-only: keep throttling from memory rather than
 			// turning a logging problem into a lockout.
