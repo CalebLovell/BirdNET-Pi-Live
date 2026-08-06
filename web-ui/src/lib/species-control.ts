@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { requireUnlocked } from "./auth.ts";
 import {
 	loadSpeciesControlPage,
 	saveSpeciesControlLists,
@@ -10,5 +11,6 @@ export const getSpeciesControlPage = createServerFn({ method: "GET" }).handler(
 );
 
 export const saveSpeciesControl = createServerFn({ method: "POST" })
+	.middleware([requireUnlocked])
 	.validator(speciesControlSaveSchema)
 	.handler(({ data }) => saveSpeciesControlLists(data));

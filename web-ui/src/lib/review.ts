@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { openWritableDetectionsDb, sqlite } from "~/db/index.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
+import { requireUnlocked } from "~/lib/auth.ts";
 import {
 	attachSpeciesImages,
 	correctDetection,
@@ -31,6 +32,7 @@ export const getReviewSpecies = createServerFn({ method: "GET" }).handler(() =>
 	loadSpeciesCatalog(),
 );
 export const confirmReviewDetection = createServerFn({ method: "POST" })
+	.middleware([requireUnlocked])
 	.validator((input: { rowId: number }) => input)
 	.handler(({ data }) => {
 		const writable = openWritableDetectionsDb();
@@ -42,6 +44,7 @@ export const confirmReviewDetection = createServerFn({ method: "POST" })
 		}
 	});
 export const recategorizeReviewDetection = createServerFn({ method: "POST" })
+	.middleware([requireUnlocked])
 	.validator(
 		(input: { rowId: number; sciName: string; comName: string }) => input,
 	)
@@ -60,6 +63,7 @@ export const recategorizeReviewDetection = createServerFn({ method: "POST" })
 		}
 	});
 export const deleteReviewDetection = createServerFn({ method: "POST" })
+	.middleware([requireUnlocked])
 	.validator((input: { rowId: number }) => input)
 	.handler(async ({ data }) => {
 		const writable = openWritableDetectionsDb();
