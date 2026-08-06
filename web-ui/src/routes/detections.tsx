@@ -124,55 +124,56 @@ function Detections() {
 				) : null}
 			</div>
 
-			{/* Takes the leftover height when there are rows to scroll. An empty
-			    state has nothing to scroll, so it keeps its natural size rather
-			    than stretching a one-line message down the whole page. */}
-			<section
-				aria-label="Detections"
-				className={`feature-card flex min-h-0 flex-col rounded-md p-4 ${isEmpty ? "shrink-0" : "flex-1"}`}
-			>
-				<div
-					className={`flex shrink-0 items-center justify-between gap-2 ${isEmpty ? "" : "mb-3"}`}
+			{/* A station that has never recorded anything replaces the table card
+			    outright rather than sitting a card inside it -- there is no table
+			    to head, and the filters above are gone too, so the shell would be
+			    an empty frame around one message. A filter that matched nothing
+			    keeps the card: the control that emptied it is right there. */}
+			{stationEmpty ? (
+				<EmptyState icon={Bird} title="No detections recorded yet.">
+					Detections will appear here once the station hears something.
+				</EmptyState>
+			) : (
+				/* Takes the leftover height when there are rows to scroll. An empty
+				   filter result has nothing to scroll, so it keeps its natural size
+				   rather than stretching a one-line message down the whole page. */
+				<section
+					aria-label="Detections"
+					className={`feature-card flex min-h-0 flex-col rounded-md p-4 ${isEmpty ? "shrink-0" : "flex-1"}`}
 				>
-					<div className="island-kicker">All detections</div>
-					{/* With no rows there is nothing selectable, so the button would
-						    only ever sit disabled. */}
-					{!isEmpty && (
-						<Button
-							disabled={selectedCount === 0}
-							size="xs"
-							variant={selectedCount > 0 ? "destructive" : "outline"}
-							onClick={() => setDeleteOpen(true)}
-						>
-							<Trash2 />
-							{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
-						</Button>
-					)}
-				</div>
-				{isEmpty ? (
-					// A filter that matched nothing is a quiet aside -- the control that
-					// emptied the table is right there. A station that has never
-					// recorded anything is the whole page being empty, and gets the
-					// weight to match.
-					isFiltered ? (
+					<div
+						className={`flex shrink-0 items-center justify-between gap-2 ${isEmpty ? "" : "mb-3"}`}
+					>
+						<div className="island-kicker">All detections</div>
+						{/* With no rows there is nothing selectable, so the button would
+							    only ever sit disabled. */}
+						{!isEmpty && (
+							<Button
+								disabled={selectedCount === 0}
+								size="xs"
+								variant={selectedCount > 0 ? "destructive" : "outline"}
+								onClick={() => setDeleteOpen(true)}
+							>
+								<Trash2 />
+								{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
+							</Button>
+						)}
+					</div>
+					{isEmpty ? (
 						<EmptyNote>No detections match these filters.</EmptyNote>
 					) : (
-						<EmptyState icon={Bird} title="No detections recorded yet.">
-							Detections will appear here once the station hears something.
-						</EmptyState>
-					)
-				) : (
-					<DetectionsTable
-						page={page}
-						search={search}
-						onSearchChange={(nextSearch) =>
-							navigate({ search: nextSearch, replace: true })
-						}
-						rowSelection={rowSelection}
-						onRowSelectionChange={setRowSelection}
-					/>
-				)}
-			</section>
+						<DetectionsTable
+							page={page}
+							search={search}
+							onSearchChange={(nextSearch) =>
+								navigate({ search: nextSearch, replace: true })
+							}
+							rowSelection={rowSelection}
+							onRowSelectionChange={setRowSelection}
+						/>
+					)}
+				</section>
+			)}
 
 			{deleteOpen ? (
 				<DeleteDetectionsDialog

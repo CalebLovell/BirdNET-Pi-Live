@@ -18,6 +18,7 @@ test("a station that has never recorded anything gets the page-level card", asyn
 		"./timeline.tsx",
 		"./learn.tsx",
 		"./species.index.tsx",
+		"./stats.tsx",
 	]) {
 		const source = await read(file);
 		assert.match(source, /<EmptyState/, `${file} should use EmptyState`);
@@ -27,6 +28,30 @@ test("a station that has never recorded anything gets the page-level card", asyn
 			`${file}'s page-level empty should carry the bird`,
 		);
 	}
+});
+
+/**
+ * Caught live against an empty database: the detections page rendered its
+ * EmptyState inside the table card, so the page-level treatment appeared as a
+ * card within a card under a kicker heading a table that was not there.
+ */
+test("a page-level empty replaces its card rather than nesting inside one", async () => {
+	const detections = await read("./detections.tsx");
+	const stationEmptyBranch = detections.slice(
+		detections.indexOf("{stationEmpty ?"),
+		detections.indexOf("<section"),
+	);
+	assert.match(stationEmptyBranch, /<EmptyState/);
+	assert.ok(
+		detections.indexOf("{stationEmpty ?") < detections.indexOf("<section"),
+		"the station-empty branch must sit outside the table card",
+	);
+
+	const stats = await read("./stats.tsx");
+	assert.ok(
+		stats.indexOf("{isEmpty ? (") < stats.indexOf("<DetectionsByHourCard"),
+		"the stats grid must sit inside the non-empty branch",
+	);
 });
 
 test("a quiet day keeps the page-level card it already had", async () => {
