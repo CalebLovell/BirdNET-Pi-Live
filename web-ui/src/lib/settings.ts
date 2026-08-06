@@ -23,9 +23,9 @@ import {
 	storageSettingsSchema,
 } from "./settings-data.ts";
 
-export const getSettingsPage = createServerFn({ method: "GET" }).handler(() =>
-	loadSettingsPageData(),
-);
+export const getSettingsPage = createServerFn({ method: "GET" })
+	.middleware([requireUnlocked])
+	.handler(() => loadSettingsPageData());
 
 export const saveStationSettingsFn = createServerFn({ method: "POST" })
 	.middleware([requireUnlocked])

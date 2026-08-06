@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert, Feather, ListChecks } from "lucide-react";
 import { useState } from "react";
+import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
 import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
@@ -24,15 +25,28 @@ export const Route = createFileRoute("/review")({
 	head: () => ({ meta: [{ title: pageTitle("Review") }] }),
 	validateSearch: normalizeReviewSearch,
 	loaderDeps: ({ search }) => search,
-	loader: async ({ deps }) => ({
-		page: await getReviewPage({ data: deps }),
-		species: await getReviewSpecies(),
-	}),
+	loader: async ({ context, deps }) => {
+		if (!context.auth.unlocked) return null;
+		return {
+			page: await getReviewPage({ data: deps }),
+			species: await getReviewSpecies(),
+		};
+	},
 	component: Review,
 });
 
 function Review() {
-	const { page, species } = Route.useLoaderData();
+	const loaded = Route.useLoaderData();
+	if (!loaded) return <UnlockGate title="Review" />;
+	return <ReviewContent loaded={loaded} />;
+}
+
+function ReviewContent({
+	loaded,
+}: {
+	loaded: NonNullable<ReturnType<typeof Route.useLoaderData>>;
+}) {
+	const { page, species } = loaded;
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();

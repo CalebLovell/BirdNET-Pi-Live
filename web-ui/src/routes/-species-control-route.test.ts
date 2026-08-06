@@ -8,7 +8,10 @@ test("species control route loads data, adapts mutations, and invalidates commit
 		"utf8",
 	);
 	assert.match(source, /createFileRoute\("\/species-control"\)/);
-	assert.match(source, /loader:\s*\(\)\s*=>\s*getSpeciesControlPage/);
+	assert.match(
+		source,
+		/loader:\s*async\s*\(\{\s*context\s*\}\)\s*=>\s*\n?\s*context\.auth\.unlocked\s*\?\s*await getSpeciesControlPage\(\)\s*:\s*null/,
+	);
 	assert.match(
 		source,
 		/validateSearch:\s*normalizeSpeciesControlWorkspaceSearch/,

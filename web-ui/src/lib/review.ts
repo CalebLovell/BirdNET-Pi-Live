@@ -17,6 +17,7 @@ import {
 import { readReviewRareSpeciesMax } from "~/lib/settings.server.ts";
 
 export const getReviewPage = createServerFn({ method: "GET" })
+	.middleware([requireUnlocked])
 	.validator((input: Record<string, unknown>) => normalizeReviewSearch(input))
 	.handler(async ({ data }) =>
 		attachSpeciesImages(
@@ -28,9 +29,9 @@ export const getReviewPage = createServerFn({ method: "GET" })
 			),
 		),
 	);
-export const getReviewSpecies = createServerFn({ method: "GET" }).handler(() =>
-	loadSpeciesCatalog(),
-);
+export const getReviewSpecies = createServerFn({ method: "GET" })
+	.middleware([requireUnlocked])
+	.handler(() => loadSpeciesCatalog());
 export const confirmReviewDetection = createServerFn({ method: "POST" })
 	.middleware([requireUnlocked])
 	.validator((input: { rowId: number }) => input)

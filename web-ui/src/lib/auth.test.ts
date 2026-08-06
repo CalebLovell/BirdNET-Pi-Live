@@ -10,9 +10,12 @@ import { requireUnlocked } from "./auth.ts";
 import {
 	confirmReviewDetection,
 	deleteReviewDetection,
+	getReviewPage,
+	getReviewSpecies,
 	recategorizeReviewDetection,
 } from "./review.ts";
 import {
+	getSettingsPage,
 	resetSettingsFn,
 	restartStationFn,
 	saveAudioSettingsFn,
@@ -23,7 +26,10 @@ import {
 	saveStationSettingsFn,
 	saveStorageSettingsFn,
 } from "./settings.ts";
-import { saveSpeciesControl } from "./species-control.ts";
+import {
+	getSpeciesControlPage,
+	saveSpeciesControl,
+} from "./species-control.ts";
 
 // @tanstack/react-start's `.handler(...)` does not retain a `.options`
 // property on the server function it returns (confirmed against the
@@ -68,6 +74,10 @@ test("every gated server function carries requireUnlocked", () => {
 	void confirmReviewDetection;
 	void deleteReviewDetection;
 	void recategorizeReviewDetection;
+	void getReviewPage;
+	void getReviewSpecies;
+	void getSettingsPage;
+	void getSpeciesControlPage;
 
 	const settingsSource = sourceOf("./settings.ts");
 	for (const name of [
@@ -80,17 +90,23 @@ test("every gated server function carries requireUnlocked", () => {
 		"saveReviewSettingsFn",
 		"resetSettingsFn",
 		"restartStationFn",
+		"getSettingsPage",
 	]) {
 		assertGated(settingsSource, name);
 	}
 
-	assertGated(sourceOf("./species-control.ts"), "saveSpeciesControl");
+	const speciesControlSource = sourceOf("./species-control.ts");
+	for (const name of ["saveSpeciesControl", "getSpeciesControlPage"]) {
+		assertGated(speciesControlSource, name);
+	}
 
 	const reviewSource = sourceOf("./review.ts");
 	for (const name of [
 		"confirmReviewDetection",
 		"recategorizeReviewDetection",
 		"deleteReviewDetection",
+		"getReviewPage",
+		"getReviewSpecies",
 	]) {
 		assertGated(reviewSource, name);
 	}

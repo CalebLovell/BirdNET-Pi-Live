@@ -1,11 +1,15 @@
 import { createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
 import { MobileNav } from "~/components/sidebar/mobile-nav.tsx";
 import { SiteSidebar } from "~/components/sidebar/site-sidebar.tsx";
+import { getUnlockStatusFn } from "~/lib/auth.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { DEFAULT_FAVICON } from "~/lib/use-favicon.ts";
 import appCss from "../styles.css?url";
 
 export const Route = createRootRoute({
+	// Resolved here so the sidebar and every gated route read the same answer
+	// from router context instead of each making its own round trip.
+	beforeLoad: async () => ({ auth: await getUnlockStatusFn() }),
 	head: () => ({
 		meta: [
 			{

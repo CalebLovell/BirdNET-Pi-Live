@@ -2,6 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert } from "lucide-react";
 
+import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
 import { SpeciesControlPage } from "~/components/species-control/species-control-page.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
@@ -13,13 +14,23 @@ import { normalizeSpeciesControlWorkspaceSearch } from "~/lib/species-control-wo
 export const Route = createFileRoute("/species-control")({
 	head: () => ({ meta: [{ title: pageTitle("Species control") }] }),
 	validateSearch: normalizeSpeciesControlWorkspaceSearch,
-	loader: () => getSpeciesControlPage(),
+	loader: async ({ context }) =>
+		context.auth.unlocked ? await getSpeciesControlPage() : null,
 	component: SpeciesControlRoute,
 	errorComponent: SpeciesControlUnavailable,
 });
 
 function SpeciesControlRoute() {
 	const initialData = Route.useLoaderData();
+	if (!initialData) return <UnlockGate title="Species control" />;
+	return <SpeciesControlContent initialData={initialData} />;
+}
+
+function SpeciesControlContent({
+	initialData,
+}: {
+	initialData: NonNullable<ReturnType<typeof Route.useLoaderData>>;
+}) {
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const save = useServerFn(saveSpeciesControl);
