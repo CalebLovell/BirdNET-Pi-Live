@@ -4,8 +4,10 @@ import { CircleAlert, Feather, ListChecks } from "lucide-react";
 import { useState } from "react";
 import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
+import { PageStatus } from "~/components/page-status.tsx";
 import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
 import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
+import { Button } from "~/components/ui/button.tsx";
 import { CONFIDENT_MIN, formatConfidence } from "~/lib/confidence.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
@@ -145,25 +147,26 @@ function ReviewContent({
 }
 
 function ReviewUnavailable() {
+	const router = useRouter();
+
 	return (
 		<div className="page-wrap py-4">
-			<section className="feature-card rounded-md p-5">
-				<div className="flex items-start gap-3">
-					<CircleAlert
-						aria-hidden="true"
-						className="mt-0.5 size-5 text-destructive"
-					/>
-					<div>
-						<h1 className="display-title font-semibold text-xl">
-							Review is unavailable
-						</h1>
-						<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-relaxed">
-							The detection queue could not be read, or this browser's session
-							expired while the page was open. Reload to sign in again.
-						</p>
-					</div>
-				</div>
-			</section>
+			<PageStatus
+				tone="unavailable"
+				title="Review is unavailable"
+				actions={
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => router.invalidate()}
+					>
+						Try again
+					</Button>
+				}
+			>
+				The detection queue could not be read, or this browser's session expired
+				while the page was open. Reload to sign in again.
+			</PageStatus>
 		</div>
 	);
 }

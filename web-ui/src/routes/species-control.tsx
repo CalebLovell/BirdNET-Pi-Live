@@ -1,13 +1,13 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CircleAlert } from "lucide-react";
-
 import { LockedPage } from "~/components/auth/locked-page.tsx";
+import { PageStatus } from "~/components/page-status.tsx";
 import {
 	SPECIES_CONTROL_PAGE_DESCRIPTION,
 	SPECIES_CONTROL_PAGE_TITLE,
 	SpeciesControlPage,
 } from "~/components/species-control/species-control-page.tsx";
+import { Button } from "~/components/ui/button.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
 	getSpeciesControlPage,
@@ -60,26 +60,26 @@ function SpeciesControlContent({
 }
 
 function SpeciesControlUnavailable() {
+	const router = useRouter();
+
 	return (
 		<div className="page-wrap py-4">
-			<section className="feature-card rounded-md p-5">
-				<div className="flex items-start gap-3">
-					<CircleAlert
-						aria-hidden="true"
-						className="mt-0.5 size-5 text-destructive"
-					/>
-					<div>
-						<h1 className="display-title font-semibold text-xl">
-							Species control is unavailable
-						</h1>
-						<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-relaxed">
-							The installed model catalog or species-list directory could not be
-							read. Check the BirdNET model and service permissions, then reload
-							this page.
-						</p>
-					</div>
-				</div>
-			</section>
+			<PageStatus
+				tone="unavailable"
+				title="Species control is unavailable"
+				actions={
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => router.invalidate()}
+					>
+						Try again
+					</Button>
+				}
+			>
+				The installed model catalog or species-list directory could not be read.
+				Check the BirdNET model and service permissions, then reload this page.
+			</PageStatus>
 		</div>
 	);
 }
