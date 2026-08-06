@@ -1,6 +1,7 @@
 import {
 	createFileRoute,
 	Link,
+	notFound,
 	stripSearchParams,
 } from "@tanstack/react-router";
 import {
@@ -17,13 +18,17 @@ import { z } from "zod";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
-import type { PageHeaderStat } from "~/components/page-header-card.tsx";
+import {
+	PageHeaderCard,
+	type PageHeaderStat,
+} from "~/components/page-header-card.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesActions } from "~/components/species-actions.tsx";
 import {
 	HERO_CARD_SHELL,
 	SpeciesHeroCard,
 } from "~/components/species-hero-card.tsx";
+import { StatusPage } from "~/components/status-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
 	Tooltip,
@@ -32,6 +37,7 @@ import {
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
+import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -65,16 +71,31 @@ export const Route = createFileRoute("/species/$comName")({
 		middlewares: [stripSearchParams({ year: DEFAULT_YEAR })],
 	},
 	loaderDeps: ({ search }) => ({ year: search.year }),
-	loader: ({ params, deps }) =>
-		getSpeciesDetail({
+	loader: async ({ params, deps }) => {
+		const result = await getSpeciesDetail({
 			data: { comNameSlug: params.comName, year: deps.year },
-		}),
-	// The bird's own name, once the loader has resolved the slug. Until then --
-	// and for a slug that matches nothing -- the section name stands in.
+		});
+		// Thrown rather than rendered so the router's not-found path handles it,
+		// which is what lets this route keep its own masthead below.
+		if (result.status === "unknown") throw notFound();
+		return result;
+	},
+	// The bird's own name once the loader has resolved the slug -- for an
+	// undetected bird too, since the catalog gave us the name even though the
+	// station has never heard it. Until then the section name stands in.
 	head: ({ loaderData }) => ({
-		meta: [{ title: pageTitle(loaderData?.comName ?? "Species") }],
+		meta: [
+			{
+				title: pageTitle(
+					loaderData?.status === "detected"
+						? loaderData.detail.comName
+						: (loaderData?.comName ?? "Species"),
+				),
+			},
+		],
 	}),
 	component: BirdPage,
+	notFoundComponent: SpeciesNotFound,
 });
 
 type HeatMapWeek = {
@@ -137,27 +158,112 @@ function buildHeatMap(history: TrendPoint[]): {
 	return { weeks, maximum };
 }
 
+const SPECIES_SECTION = "Species";
+const SPECIES_SECTION_DESCRIPTION =
+	"Every species ever recorded at this station.";
+
 function BirdPage() {
-	const detail = Route.useLoaderData();
+	const result = Route.useLoaderData();
+
+	if (result.status === "undetected") {
+		return (
+			<UndetectedSpecies comName={result.comName} sciName={result.sciName} />
+		);
+	}
+	// `unknown` never reaches the component: the loader throws `notFound()` for
+	// it, and `SpeciesNotFound` renders instead.
+	if (result.status !== "detected") return null;
+
+	return <SpeciesDetailView detail={result.detail} />;
+}
+
+/**
+ * A bird the installed model knows about that this station has never heard.
+ * Not an error card: it carries the bird's name, its portrait and its eBird
+ * link, because someone arriving here is usually waiting on exactly this
+ * species rather than recovering from a typo.
+ */
+function UndetectedSpecies({
+	comName,
+	sciName,
+}: {
+	comName: string;
+	sciName: string;
+}) {
+	const illustration = illustrationUrlFor(sciName, "flight");
+
+	return (
+		<div className="page-wrap space-y-4 py-4">
+			<PageHeaderCard
+				title={SPECIES_SECTION}
+				description={SPECIES_SECTION_DESCRIPTION}
+			/>
+			<section className="feature-card rounded-md p-5">
+				<div className="flex flex-wrap items-start gap-5">
+					{illustration ? (
+						<img
+							src={illustration}
+							alt=""
+							className="size-32 shrink-0 object-contain"
+						/>
+					) : null}
+					<div className="min-w-0 flex-1">
+						<h2 className="display-title font-semibold text-xl">{comName}</h2>
+						<p className="mt-0.5 text-muted-foreground text-sm italic">
+							{sciName}
+						</p>
+						<p className="mt-3 max-w-2xl text-muted-foreground text-sm leading-relaxed">
+							Not detected at this station yet. The installed model can
+							recognise this bird, so it will appear here the first time it is
+							heard.
+						</p>
+						<div className="mt-4 flex flex-wrap items-center gap-2">
+							<SpeciesActions
+								ebirdUrl={ebirdUrlFor(sciName, comName)}
+								comName={comName}
+							/>
+							<Button variant="ghost" size="sm" asChild>
+								<Link to="/species">All species</Link>
+							</Button>
+						</div>
+					</div>
+				</div>
+			</section>
+		</div>
+	);
+}
+
+/** The slug matched no bird the installed classifier can even emit. */
+function SpeciesNotFound() {
+	const { comName } = Route.useParams();
+
+	return (
+		<StatusPage
+			section={SPECIES_SECTION}
+			sectionDescription={SPECIES_SECTION_DESCRIPTION}
+			tone="missing"
+			title="No such species"
+			actions={
+				<Button variant="outline" size="sm" asChild>
+					<Link to="/species">Browse all species</Link>
+				</Button>
+			}
+		>
+			“{comName}” doesn’t match any bird this station’s classifier knows about.
+			The address may be mistyped.
+		</StatusPage>
+	);
+}
+
+function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	const { year } = Route.useSearch();
 	const navigate = Route.useNavigate();
-	// Before the early return: hooks cannot sit behind a conditional.
-	const offsetMs = useAgeOffset(detail?.generatedAt ?? "");
+	const offsetMs = useAgeOffset(detail.generatedAt);
 	// The same flight illustration the hero draws, so the browser serves it from
 	// cache rather than pulling a second half-megabyte PNG. The wings lose their
 	// detail at 16px, but the silhouette still reads. Species without a bundled
 	// illustration keep the nest.
-	useFavicon(detail ? illustrationUrlFor(detail.sciName, "flight") : null);
-
-	if (!detail) {
-		return (
-			<div className="page-wrap pt-4">
-				<p className="mt-4 text-muted-foreground">
-					No detections recorded for this species.
-				</p>
-			</div>
-		);
-	}
+	useFavicon(illustrationUrlFor(detail.sciName, "flight"));
 
 	const { weeks, maximum } = buildHeatMap(detail.history);
 	const availableYears = [...detail.availableYears].sort((a, b) => a - b);

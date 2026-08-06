@@ -6,6 +6,11 @@ import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import {
+	type CatalogSpecies,
+	findCatalogSpeciesBySlug,
+} from "~/lib/species-catalog.ts";
+import { loadInstalledSpeciesCatalog } from "~/lib/species-control.server.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { buildHourActivity, type HourActivity } from "~/lib/stats-data.ts";
 import {
@@ -88,14 +93,59 @@ async function getHourActivity(
 	);
 }
 
+/**
+ * What a `/species/$comName` slug turned out to name.
+ *
+ * `undetected` is the interesting one: a bird the installed classifier knows
+ * about but this station has never heard. That is a legitimate page -- you can
+ * reasonably go looking for a bird you are still waiting on -- and reporting it
+ * as an error would be a lie.
+ */
+export type SpeciesDetailResult =
+	| { status: "detected"; detail: SpeciesDetail }
+	| { status: "undetected"; comName: string; sciName: string }
+	| { status: "unknown" };
+
+/**
+ * The bird a slug names according to the model's labels, or null.
+ *
+ * `loadInstalledSpeciesCatalog` throws when the model directory or the
+ * localisation file cannot be read. That is swallowed on purpose: a station
+ * with a broken model install should still tell someone their species URL
+ * matched nothing, rather than escalating a typo into a claim that the whole
+ * station is down. Species Control is the page that reports a broken catalog.
+ */
+export async function resolveCatalogSpecies(
+	slug: string,
+): Promise<CatalogSpecies | null> {
+	try {
+		const catalog = await loadInstalledSpeciesCatalog();
+		return findCatalogSpeciesBySlug(slug, catalog);
+	} catch {
+		return null;
+	}
+}
+
+/** Both misses -- an unresolvable name and a name with zero rows -- ask the
+ * catalog the same question, so they share one path. */
+async function missToResult(slug: string): Promise<SpeciesDetailResult> {
+	const known = await resolveCatalogSpecies(slug);
+	if (!known) return { status: "unknown" };
+	return {
+		status: "undetected",
+		comName: known.comName,
+		sciName: known.sciName,
+	};
+}
+
 export type SpeciesDetailInput = { comNameSlug: string; year: number };
 
 export const getSpeciesDetail = createServerFn({ method: "GET" })
 	.validator((input: SpeciesDetailInput) => input)
 	.handler(
-		async ({ data: { comNameSlug, year } }): Promise<SpeciesDetail | null> => {
+		async ({ data: { comNameSlug, year } }): Promise<SpeciesDetailResult> => {
 			const resolved = await resolveComName(comNameSlug);
-			if (!resolved) return null;
+			if (!resolved) return missToResult(comNameSlug);
 
 			const filter = byComName(resolved);
 			const generatedAtDate = new Date();
@@ -112,7 +162,9 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				.where(filter)
 				.groupBy(detections.Com_Name, detections.Sci_Name);
 
-			if (!totals || totals.totalDetections === 0) return null;
+			if (!totals || totals.totalDetections === 0) {
+				return missToResult(comNameSlug);
+			}
 			const comName = totals.comName;
 
 			const [
@@ -172,7 +224,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				getSpeciesInfo(comName),
 			]);
 
-			return {
+			const detail: SpeciesDetail = {
 				comName,
 				sciName: totals.sciName,
 				imageUrl: illustrationUrlFor(totals.sciName, "flight") ?? wikiImageUrl,
@@ -197,5 +249,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				})),
 				generatedAt: localTimestamp(generatedAtDate),
 			};
+
+			return { status: "detected", detail };
 		},
 	);
