@@ -18,6 +18,7 @@ import { z } from "zod";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
@@ -212,7 +213,13 @@ function UndetectedSpecies({
 						<p className="mt-0.5 text-muted-foreground text-sm italic">
 							{sciName}
 						</p>
-						<p className="mt-3 max-w-2xl text-muted-foreground text-sm leading-relaxed">
+						{/* No measure cap here, unlike the diagnostic prose in
+						    `PageStatus`: this is one sentence, and capping it at 42rem
+						    inside a much wider card broke the line nowhere near any edge
+						    you could see, which read as an accident. Left alone it sets on
+						    one line and wraps against the card itself when the column is
+						    narrow. */}
+						<p className="mt-3 text-muted-foreground text-sm leading-relaxed">
 							Not detected at this station yet. The installed model can
 							recognise this bird, so it will appear here the first time it is
 							heard.
@@ -551,9 +558,7 @@ function RecentVisitsCard({
 			<div className="island-kicker">Visit log</div>
 
 			{visits.length === 0 ? (
-				<p className="mt-4 text-muted-foreground text-sm">
-					No visits recorded yet.
-				</p>
+				<EmptyNote>No visits recorded yet.</EmptyNote>
 			) : (
 				<ul className="mt-4 space-y-1">
 					{visits.map((visit) => {
