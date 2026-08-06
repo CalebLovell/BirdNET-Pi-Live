@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge } from "~/components/ui/badge.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
+	SELECT_COLUMN_WIDTH,
 	Table,
 	TableBody,
 	TableCell,
@@ -62,30 +63,13 @@ export function sortSpeciesControlRows(
 	});
 }
 
-// Same scheme as the detections table -- see the long note there. Three tiers,
-// sized from what the content measures plus the 16px cell padding, dropping the
-// least essential column left: scientific name goes first, then the count.
-// Status stays at every width because setting it is the point of the page.
-//
-//   under 26rem  species, status            -- min 20rem
-//   26rem+       + count                    -- min 26rem
-//   46rem+       + scientific name          -- min 44rem
-//
-// Container queries rather than viewport breakpoints: the sidebar means the
-// window is never what this table actually has to work with. Widths sit on the
-// header cells rather than a <colgroup> because a display:none cell leaves the
-// table and the remaining <col> elements would slide onto the wrong columns.
+// Same scheme as the detections table -- see the note there. Only the two ends
+// are pinned: the shared selection column, and Status, held to the width of its
+// widest badge. The columns between divide up the rest of the table under auto
+// layout, in proportion to what they hold.
 const HEADER_CLASSES: Record<string, string> = {
-	select: "w-[9.4%] @min-[26rem]:w-[7.2%] @min-[46rem]:w-[4.4%]",
-	species: "w-[62.5%] @min-[26rem]:w-[52.4%] @min-[46rem]:w-[27.8%]",
-	scientific: "hidden @min-[46rem]:table-cell @min-[46rem]:w-[35.8%]",
-	count:
-		"hidden @min-[26rem]:table-cell @min-[26rem]:w-[18.8%] @min-[46rem]:w-[12%]",
-	status: "w-[28.1%] @min-[26rem]:w-[21.6%] @min-[46rem]:w-[20%]",
-};
-const CELL_CLASSES: Record<string, string> = {
-	scientific: "hidden @min-[46rem]:table-cell",
-	count: "hidden @min-[26rem]:table-cell",
+	select: SELECT_COLUMN_WIDTH,
+	status: "w-36 min-w-36",
 };
 
 const STATUS_PRESENTATION: Record<
@@ -184,10 +168,10 @@ export function SpeciesControlTable({
 		// No gap between the rows and the pager: the footer reads as the edge of
 		// the scrollport rather than floating above it.
 		<div className="@container flex min-h-0 flex-1 flex-col">
-			<Table
-				className="@min-[26rem]:min-w-[26rem] @min-[46rem]:min-w-[44rem] min-w-[20rem] table-fixed"
-				containerClassName="min-h-0 flex-1 overflow-y-auto"
-			>
+			{/* No `table-fixed` and no min width: auto layout already refuses to go
+			    below what the row needs, since nothing in a cell wraps, and the
+			    scrollport takes over from there. */}
+			<Table containerClassName="min-h-0 flex-1 overflow-y-auto">
 				{/* Sticky per-`th`: with collapsed borders the row's own border stays
 				    behind instead of travelling with the pinned header, so the rule is
 				    an inset shadow and the base `[&_tr]:border-b` is switched off --
@@ -218,7 +202,7 @@ export function SpeciesControlTable({
 							sort={sort}
 							direction={direction}
 							onSortChange={onSortChange}
-							className={`pl-0 ${HEADER_CLASSES.species}`}
+							className="pl-0"
 						/>
 						<SortHeader
 							label="Scientific name"
@@ -226,7 +210,7 @@ export function SpeciesControlTable({
 							sort={sort}
 							direction={direction}
 							onSortChange={onSortChange}
-							className={`pl-1 ${HEADER_CLASSES.scientific}`}
+							className="pl-1"
 						/>
 						<SortHeader
 							label="Count"
@@ -235,7 +219,6 @@ export function SpeciesControlTable({
 							direction={direction}
 							onSortChange={onSortChange}
 							align="right"
-							className={HEADER_CLASSES.count}
 						/>
 						<SortHeader
 							label="Status"
@@ -275,13 +258,13 @@ export function SpeciesControlTable({
 									{row.comName}
 								</Link>
 							</TableCell>
-							<TableCell className={`pl-1 ${CELL_CLASSES.scientific}`}>
+							<TableCell className="pl-1">
 								<em className="text-[var(--bark)]">{row.sciName}</em>
 							</TableCell>
 							{/* Most of a 6,000-row catalogue has never been heard, so a
 							    zero is muted rather than competing with real counts. */}
 							<TableCell
-								className={`tabular-data text-right ${CELL_CLASSES.count} ${row.history.detections ? "" : "text-muted-foreground"}`}
+								className={`tabular-data text-right ${row.history.detections ? "" : "text-muted-foreground"}`}
 							>
 								{row.history.detections.toLocaleString()}
 							</TableCell>

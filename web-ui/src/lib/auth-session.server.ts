@@ -17,7 +17,9 @@ const TOKEN_VERSION = "1";
  *  the nonce, so changing either one silently invalidates every cookie in
  *  existence. That is the whole revocation mechanism. */
 function signingKey(auth: AuthFile) {
-	return createHash("sha256").update(`${auth.hash}\u0000${auth.nonce}`).digest();
+	return createHash("sha256")
+		.update(`${auth.hash}\u0000${auth.nonce}`)
+		.digest();
 }
 
 function sign(auth: AuthFile, payload: string) {

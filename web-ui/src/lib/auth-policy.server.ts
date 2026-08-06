@@ -19,8 +19,7 @@ export function isPrivateAddress(ip: string | undefined) {
 	if (octets.length !== 4) return false;
 	if (!octets.every((part) => /^\d{1,3}$/.test(part))) return false;
 	const values = octets.map(Number);
-	if (values.some((value) => Number.isNaN(value) || value > 255))
-		return false;
+	if (values.some((value) => Number.isNaN(value) || value > 255)) return false;
 	const [a, b] = values;
 
 	if (a === 127 || a === 10) return true;

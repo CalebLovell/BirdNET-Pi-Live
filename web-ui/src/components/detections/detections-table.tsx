@@ -23,6 +23,7 @@ import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { SearchInput } from "~/components/ui/search-input.tsx";
 import {
+	SELECT_COLUMN_WIDTH,
 	Table,
 	TableBody,
 	TableCell,
@@ -53,34 +54,24 @@ type DetectionsFiltersProps = Pick<
 	"search" | "onSearchChange"
 >;
 
-// Three tiers, each sized from what the content actually measures plus the 16px
-// cell padding, and each dropping the least essential column left:
+// Every column shows at every width -- none is dropped or restyled per width.
+// Below what the row needs the scrollport scrolls sideways instead.
 //
-//   under 34rem  species, recorded, audio      -- min 26rem
-//   34rem+       + confidence                  -- min 34rem
-//   64rem+       + scientific name             -- min 62rem
+// Only the two ends are pinned: the shared selection column, and Recording,
+// held to the width of the button it carries so it stays a tidy right edge
+// rather than a widening gutter. Everything between them is left to the table's
+// auto layout, which hands each column the full width in proportion to what it
+// holds -- species and scientific name measure within a few pixels of each
+// other, so they land near-equal without being told to.
 //
-// Container queries, not viewport breakpoints: the sidebar takes ~345px, so a
-// 1280px window leaves the table barely 935px and a viewport-based rule would
-// bring a column back into a space that cannot hold it.
-//
-// Widths live on the header cells rather than a <colgroup> because columns drop
-// out: a display:none cell leaves the table, so the remaining <col> elements
-// would slide onto the wrong columns. Class names are spelled out in full --
-// Tailwind scans for literal strings, so a composed `${WIDE}:w-[4.2%]` would
-// compile to nothing. Each tier's percentages sum to 100.
+// The pinned widths sit on the header cells rather than a <colgroup> to keep a
+// column's sizing next to the header that names it.
 const HEADER_CLASSES: Record<string, string> = {
-	select: "w-[7.2%] @min-[34rem]:w-[5.5%] @min-[64rem]:w-[4.2%]",
-	species: "w-[44.1%] @min-[34rem]:w-[35%] @min-[64rem]:w-[24%]",
-	recorded: "w-[38.2%] @min-[34rem]:w-[29.5%] @min-[64rem]:w-[22%]",
-	scientificName: "hidden w-[24%] @min-[64rem]:table-cell",
-	confidence:
-		"hidden @min-[34rem]:table-cell @min-[34rem]:w-[22%] @min-[64rem]:w-[14%]",
-	audio: "w-[10.5%] pr-0 text-right @min-[34rem]:w-[8%] @min-[64rem]:w-[11.8%]",
+	select: SELECT_COLUMN_WIDTH,
+	confidence: "text-right",
+	audio: "w-32 min-w-32 pr-0 text-right",
 };
 const CELL_CLASSES: Record<string, string> = {
-	scientificName: "hidden @min-[64rem]:table-cell",
-	confidence: "hidden @min-[34rem]:table-cell",
 	audio: "pr-0",
 };
 
@@ -115,12 +106,7 @@ function RecordingButton({ row }: { row: DetectionTableRow }) {
 				loading={isLoading}
 				onClick={togglePlay}
 			>
-				{/* The word only returns in the widest tier, where the audio column is
-				    11.8% (117px+) and can hold the 90px button -- below that it is 8%
-				    and the label would burst the column. `hidden` takes the span out
-				    of the flex flow so the button's gap collapses with it, and the
-				    aria-label carries the full name either way. */}
-				<span className="@min-[64rem]:inline hidden">Recording</span>
+				Recording
 			</Button>
 			<audio
 				ref={audioRef}
@@ -349,6 +335,23 @@ export function DetectionsTable({
 			),
 		},
 		{
+			accessorKey: "Sci_Name",
+			id: "scientificName",
+			header: () => (
+				<SortButton
+					label="Scientific name"
+					sort="scientific"
+					search={search}
+					onSort={sortBy}
+				/>
+			),
+			// Not a link: the common name in the row already goes to the species
+			// page, and two links to the same place in one row is just noise.
+			cell: ({ row }) => (
+				<em className="text-[var(--bark)]">{row.original.Sci_Name}</em>
+			),
+		},
+		{
 			id: "recorded",
 			header: () => (
 				<SortButton
@@ -366,23 +369,6 @@ export function DetectionsTable({
 				>
 					{recordedLabel(row.original)}
 				</Link>
-			),
-		},
-		{
-			accessorKey: "Sci_Name",
-			id: "scientificName",
-			header: () => (
-				<SortButton
-					label="Scientific name"
-					sort="scientific"
-					search={search}
-					onSort={sortBy}
-				/>
-			),
-			// Not a link: the common name in the row already goes to the species
-			// page, and two links to the same place in one row is just noise.
-			cell: ({ row }) => (
-				<em className="text-[var(--bark)]">{row.original.Sci_Name}</em>
 			),
 		},
 		{
@@ -410,11 +396,7 @@ export function DetectionsTable({
 		},
 		{
 			id: "audio",
-			// Stays in the accessibility tree when compact hides it: an unlabelled
-			// column is a worse trade than the ~88px the word costs.
-			header: () => (
-				<span className="sr-only @min-[64rem]:not-sr-only">Recording</span>
-			),
+			header: () => "Recording",
 			cell: ({ row }) => (
 				<div className="flex justify-end">
 					<RecordingButton row={row.original} />
@@ -449,10 +431,10 @@ export function DetectionsTable({
 		// No gap: the rows scroll directly beneath the pager's top rule, so the
 		// footer reads as the edge of the scrollport rather than floating over it.
 		<div className="@container flex min-h-0 flex-1 flex-col">
-			<Table
-				className="@min-[34rem]:min-w-[34rem] @min-[64rem]:min-w-[62rem] min-w-[26rem] table-fixed"
-				containerClassName="min-h-0 flex-1 overflow-y-auto"
-			>
+			{/* No `table-fixed` and no min width: auto layout already refuses to go
+			    below what the row needs, since nothing in a cell wraps, and the
+			    scrollport takes over from there. */}
+			<Table containerClassName="min-h-0 flex-1 overflow-y-auto">
 				{/* Sticky per-`th` rather than on the `thead`: with the collapsed
 				    borders Tailwind's preflight sets, the row's own border stays
 				    behind with the row instead of travelling with the pinned header,

@@ -116,14 +116,29 @@ test("renders Installed species with five sortable, unified columns", async () =
 		markup,
 		/<a href="\/species\/coyote" class="font-medium no-underline hover:underline">Coyote<\/a>/,
 	);
-	// Column widths sit on the header cells rather than a <colgroup>: the
-	// narrower tiers hide columns outright, and a display:none cell leaves the
-	// table, which would slide the remaining <col> elements onto the wrong
-	// columns. The selection column still holds its narrow fixed share.
+	// Every column renders at every width -- no column is dropped or restyled
+	// per container width.
 	assert.doesNotMatch(markup, /<colgroup/);
+	assert.doesNotMatch(markup, /data-slot="table-(head|cell)"[^>]*@min-\[/);
+	assert.doesNotMatch(
+		markup,
+		/data-slot="table-(head|cell)"[^>]*class="hidden/,
+	);
+	// Only the two ends are pinned -- the shared selection column and status --
+	// and both are pinned by min-width, not just width, so they hold when the
+	// table overflows. Everything between divides up the rest under auto layout,
+	// so no middle column carries a width of its own.
 	assert.match(
 		markup,
-		/data-slot="table-head"[^>]*class="[^"]*@min-\[46rem\]:w-\[4\.4%\][^"]*"/,
+		/data-slot="table-head" class="[^"]*\bw-10 min-w-10\b[^"]*"[^>]*><input aria-label="Select all species/,
+	);
+	assert.match(
+		markup,
+		/data-slot="table-head" class="[^"]*\bw-36 min-w-36\b[^"]*" aria-sort="none"[^>]*><button[^>]*>Status/,
+	);
+	assert.doesNotMatch(
+		markup,
+		/data-slot="table-head" class="[^"]*\bw-\d+[^"]*" aria-sort="ascending"/,
 	);
 	assert.match(
 		markup,

@@ -2,6 +2,25 @@ import type * as React from "react";
 
 import { cn } from "~/lib/utils.ts";
 
+/**
+ * The selection column, pinned to the same width on every table that has one so
+ * the rows start on the same line across pages. 2.5rem is the 14px checkbox in
+ * the cell's 16px padding, rounded up to the grid.
+ *
+ * It is the only column that is pinned by width. The tables use auto layout, so
+ * everything between this and the trailing column divides up the full width of
+ * the table in proportion to what it holds -- no column is left carrying the
+ * slack as a gutter.
+ *
+ * The `min-w` is what makes it a pin rather than a preference: auto layout
+ * treats a plain width as a hint and squeezes past it once the table is over
+ * its container and scrolling anyway.
+ *
+ * Spelled out in full rather than composed, because Tailwind scans for literal
+ * class strings.
+ */
+const SELECT_COLUMN_WIDTH = "w-10 min-w-10";
+
 function Table({
 	className,
 	containerClassName,
@@ -66,7 +85,12 @@ function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
 		<tr
 			data-slot="table-row"
 			className={cn(
-				"border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
+				// A floor, not a cap -- a `tr` grows past its height for taller content.
+				// The detections row is the default the others match: its xs Button (24px)
+				// inside the cell's 8px padding makes a 40px content box, and border-box
+				// sizing means the row's own 1px rule has to be added on top or a row
+				// carrying only text or a badge lands a pixel short of one with a control.
+				"h-[calc(2.5rem+1px)] border-b transition-colors hover:bg-muted/50 has-aria-expanded:bg-muted/50 data-[state=selected]:bg-muted",
 				className,
 			)}
 			{...props}
@@ -114,6 +138,7 @@ function TableCaption({
 }
 
 export {
+	SELECT_COLUMN_WIDTH,
 	Table,
 	TableHeader,
 	TableBody,

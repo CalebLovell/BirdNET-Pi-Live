@@ -2,8 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const read = (file: string) =>
-	readFile(new URL(file, import.meta.url), "utf8");
+const read = (file: string) => readFile(new URL(file, import.meta.url), "utf8");
 
 /**
  * The rule this file guards: a page with nothing on it at all gets the card
