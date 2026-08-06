@@ -35,5 +35,8 @@ test("navigation places Control immediately after Species", async () => {
 	const control = source.indexOf('to="/species-control"');
 	const detections = source.indexOf('to="/detections"');
 	assert.ok(species >= 0 && control > species && detections > control);
-	assert.match(source.slice(control, detections), />\s*Control\s*</);
+	assert.match(
+		source.slice(control, detections),
+		/>\s*Control\s*(?:\{lock\}\s*)?</,
+	);
 });
