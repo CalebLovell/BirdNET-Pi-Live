@@ -1,8 +1,13 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	useRouteContext,
+	useRouter,
+} from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert } from "lucide-react";
 
 import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
+import { SessionCard } from "~/components/settings/session-card.tsx";
 import { SettingsPage } from "~/components/settings/settings-page.tsx";
 import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -65,31 +70,35 @@ function SettingsContent({
 	const reset = useServerFn(resetSettingsFn);
 	const restart = useServerFn(restartStationFn);
 	const router = useRouter();
+	const { auth } = useRouteContext({ from: "__root__" });
 
 	return (
-		<SettingsPage
-			data={data}
-			health={health}
-			onRestart={(card) => restart({ data: { card } })}
-			onReset={async () => {
-				const result = await reset({});
-				// The cards remount against this reload, so it has to land before
-				// the page reports the reset as done.
-				await router.invalidate();
-				return {
-					message: result.message,
-					needsRestart: result.status !== "reset",
-				};
-			}}
-			savers={{
-				station: (values) => saveStation({ data: values }),
-				detection: (values) => saveDetection({ data: values }),
-				privacy: (values) => savePrivacy({ data: values }),
-				audio: (values) => saveAudio({ data: values }),
-				recording: (values) => saveRecording({ data: values }),
-				storage: (values) => saveStorage({ data: values }),
-			}}
-		/>
+		<>
+			<SessionCard isDefaultPassword={auth.isDefaultPassword} />
+			<SettingsPage
+				data={data}
+				health={health}
+				onRestart={(card) => restart({ data: { card } })}
+				onReset={async () => {
+					const result = await reset({});
+					// The cards remount against this reload, so it has to land before
+					// the page reports the reset as done.
+					await router.invalidate();
+					return {
+						message: result.message,
+						needsRestart: result.status !== "reset",
+					};
+				}}
+				savers={{
+					station: (values) => saveStation({ data: values }),
+					detection: (values) => saveDetection({ data: values }),
+					privacy: (values) => savePrivacy({ data: values }),
+					audio: (values) => saveAudio({ data: values }),
+					recording: (values) => saveRecording({ data: values }),
+					storage: (values) => saveStorage({ data: values }),
+				}}
+			/>
+		</>
 	);
 }
 
