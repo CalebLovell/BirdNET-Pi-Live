@@ -88,7 +88,7 @@ export class UnlockThrottle {
 		const failures = (state.ips[ip]?.failures ?? 0) + 1;
 		const over = failures - FREE_ATTEMPTS;
 		const until =
-			over >= 0 ? now + Math.min(MAX_BACKOFF_MS, 30_000 * 2 ** (over - 1)) : 0;
+			over >= 0 ? now + Math.min(MAX_BACKOFF_MS, 30_000 * 2 ** over) : 0;
 		state.ips[ip] = { failures, until };
 
 		await this.#save(state);
