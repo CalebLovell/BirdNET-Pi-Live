@@ -18,6 +18,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { z } from "zod";
+import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
@@ -284,19 +285,21 @@ function Species() {
 			)}
 
 			{pageItems.length === 0 ? (
-				<section
-					aria-label="Species recorded"
-					className="feature-card rounded-md p-4"
-				>
-					<div className="island-kicker">Species recorded</div>
-					<p className="mt-4 text-muted-foreground text-sm">
-						{cards.length === 0 ? (
-							"No species recorded yet."
-						) : (
-							<>No species match &ldquo;{search}&rdquo;.</>
-						)}
-					</p>
-				</section>
+				cards.length === 0 ? (
+					// Nothing has ever been recorded: the page itself is empty, so it
+					// carries the card rather than a line inside one.
+					<EmptyState icon={Bird} title="No species recorded yet.">
+						Every species the station hears will be listed here.
+					</EmptyState>
+				) : (
+					<section
+						aria-label="Species recorded"
+						className="feature-card rounded-md p-4"
+					>
+						<div className="island-kicker">Species recorded</div>
+						<EmptyNote>No species match &ldquo;{search}&rdquo;.</EmptyNote>
+					</section>
+				)
 			) : (
 				<div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">
 					{pageItems.map((card) => (

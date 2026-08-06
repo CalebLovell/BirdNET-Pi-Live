@@ -20,6 +20,7 @@ import {
 import { useMemo } from "react";
 import { z } from "zod";
 
+import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
@@ -143,10 +144,6 @@ const PICKER_LABELS: Record<Exclude<TimelinePeriod, "all">, string> = {
 	year: "Year",
 };
 
-function EmptyNote({ children }: { children: React.ReactNode }) {
-	return <p className="mt-4 text-muted-foreground text-sm">{children}</p>;
-}
-
 function Timeline() {
 	const {
 		rows,
@@ -163,13 +160,13 @@ function Timeline() {
 	const anchor = resolveAnchor(period, search.date);
 	const navigate = Route.useNavigate();
 	const isEmpty = rows.length === 0;
-	// Naming the window only makes sense while the picker is on screen to
-	// explain it; a station with nothing recorded just says so.
-	const emptyMessage = !hasAnyDetections
-		? "No detections recorded yet."
-		: activeWindow
-			? `No detections recorded for ${activeWindow.label}.`
-			: "No detections recorded yet.";
+	// Only ever read when the station has detections but this window has none --
+	// a station with nothing at all is handled by the page-level empty below,
+	// before this card renders. Naming the window makes sense here precisely
+	// because the picker that chose it is on screen to explain it.
+	const emptyMessage = activeWindow
+		? `No detections recorded for ${activeWindow.label}.`
+		: "No detections recorded in this window.";
 
 	const show = (next: Partial<{ period: TimelinePeriod; date: string }>) =>
 		navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
@@ -322,56 +319,66 @@ function Timeline() {
 				</div>
 			)}
 
-			<TooltipProvider>
-				<section
-					aria-label="Detections by hour"
-					className="feature-card rounded-md p-4"
-				>
-					<div className={kickerClass}>Detections by hour</div>
-					{isEmpty ? (
-						<EmptyNote>{emptyMessage}</EmptyNote>
-					) : (
-						<div className="-m-1 overflow-x-auto p-1">
-							{/* p-1/-m-1 cancel out visually, but the padding gives the first
+			{/* A station with nothing recorded has no window picker and no figures,
+			    so the hour card would be an empty shell with one line in it. The
+			    page-level treatment replaces it outright rather than nesting a card
+			    inside a card. */}
+			{!hasAnyDetections ? (
+				<EmptyState icon={Bird} title="No detections recorded yet.">
+					Once the station hears something, its daily rhythm will show up here.
+				</EmptyState>
+			) : (
+				<TooltipProvider>
+					<section
+						aria-label="Detections by hour"
+						className="feature-card rounded-md p-4"
+					>
+						<div className={kickerClass}>Detections by hour</div>
+						{isEmpty ? (
+							<EmptyNote>{emptyMessage}</EmptyNote>
+						) : (
+							<div className="-m-1 overflow-x-auto p-1">
+								{/* p-1/-m-1 cancel out visually, but the padding gives the first
 							    column's focus ring somewhere to draw: the row links sit flush
 							    against the scrollport, so a 2px offset outline would be
 							    clipped on its left edge without the slack. */}
-							<div className="w-max min-w-full">
-								<div
-									className={`grid items-center ${HEADER_HEIGHT}`}
-									style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
-								>
-									<div className="sticky top-0 left-0 z-20 bg-[var(--paper-raised)]" />
-									{HOURS.map((hour) => {
-										const { number, meridiem } = hourTickParts(hour);
-										return (
-											<div
-												key={`tick-${hour}`}
-												className="sticky top-0 z-10 flex items-baseline justify-center gap-px bg-[var(--paper-raised)] leading-none"
-											>
-												<span className="font-semibold text-[10px] text-foreground">
-													{number}
-												</span>
-												<span className="text-[7px] text-muted-foreground">
-													{meridiem}
-												</span>
-											</div>
-										);
-									})}
-								</div>
+								<div className="w-max min-w-full">
+									<div
+										className={`grid items-center ${HEADER_HEIGHT}`}
+										style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
+									>
+										<div className="sticky top-0 left-0 z-20 bg-[var(--paper-raised)]" />
+										{HOURS.map((hour) => {
+											const { number, meridiem } = hourTickParts(hour);
+											return (
+												<div
+													key={`tick-${hour}`}
+													className="sticky top-0 z-10 flex items-baseline justify-center gap-px bg-[var(--paper-raised)] leading-none"
+												>
+													<span className="font-semibold text-[10px] text-foreground">
+														{number}
+													</span>
+													<span className="text-[7px] text-muted-foreground">
+														{meridiem}
+													</span>
+												</div>
+											);
+										})}
+									</div>
 
-								{rows.map((row) => (
-									<HourRow
-										key={row.comName}
-										row={row}
-										windowLabel={activeWindow?.label ?? null}
-									/>
-								))}
+									{rows.map((row) => (
+										<HourRow
+											key={row.comName}
+											row={row}
+											windowLabel={activeWindow?.label ?? null}
+										/>
+									))}
+								</div>
 							</div>
-						</div>
-					)}
-				</section>
-			</TooltipProvider>
+						)}
+					</section>
+				</TooltipProvider>
+			)}
 		</div>
 	);
 }

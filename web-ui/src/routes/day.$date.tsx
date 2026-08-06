@@ -19,6 +19,7 @@ import {
 } from "recharts";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { EmptyState } from "~/components/empty-state.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
@@ -275,15 +276,11 @@ function ordinal(value: number): string {
 
 function QuietDay({ day }: { day: DayReview }) {
 	return (
-		<section className="feature-card mt-4 flex flex-col items-start gap-2 rounded-md p-4">
-			<Bird className="size-8 text-muted-foreground" />
-			<p className="font-semibold">No detections recorded on this day.</p>
-			<p className="text-muted-foreground text-sm">
-				{day.previousDate
-					? "Step back to the last day with detections."
-					: "There are no earlier recordings either."}
-			</p>
-		</section>
+		<EmptyState icon={Bird} title="No detections recorded on this day.">
+			{day.previousDate
+				? "Step back to the last day with detections."
+				: "There are no earlier recordings either."}
+		</EmptyState>
 	);
 }
 

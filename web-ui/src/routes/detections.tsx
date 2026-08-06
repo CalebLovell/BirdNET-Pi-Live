@@ -1,13 +1,14 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
-import { CircleAlert, Trash2 } from "lucide-react";
+import { Bird, CircleAlert, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { DeleteDetectionsDialog } from "~/components/detections/delete-detections-dialog.tsx";
 import {
 	DetectionsFilters,
 	DetectionsTable,
 } from "~/components/detections/detections-table.tsx";
+import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
@@ -149,11 +150,17 @@ function Detections() {
 					)}
 				</div>
 				{isEmpty ? (
-					<p className="mt-4 text-muted-foreground text-sm">
-						{isFiltered
-							? "No detections match these filters."
-							: "No detections recorded yet."}
-					</p>
+					// A filter that matched nothing is a quiet aside -- the control that
+					// emptied the table is right there. A station that has never
+					// recorded anything is the whole page being empty, and gets the
+					// weight to match.
+					isFiltered ? (
+						<EmptyNote>No detections match these filters.</EmptyNote>
+					) : (
+						<EmptyState icon={Bird} title="No detections recorded yet.">
+							Detections will appear here once the station hears something.
+						</EmptyState>
+					)
 				) : (
 					<DetectionsTable
 						page={page}

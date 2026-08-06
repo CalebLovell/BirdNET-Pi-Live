@@ -4,9 +4,10 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { Headphones, ListChecks } from "lucide-react";
+import { Bird, Headphones, ListChecks } from "lucide-react";
 import { z } from "zod";
 
+import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { LearnGame } from "~/components/learn/learn-game.tsx";
 import {
 	LEARN_POOL_ICONS,
@@ -132,24 +133,22 @@ function EmptyPool({
 	// someone around a loop of empty pools.
 	if (!hasAnyDetections) {
 		return (
-			<section className="feature-card rounded-md p-4">
-				<div className="island-kicker">Learn</div>
-				<p className="mt-4 text-muted-foreground text-sm">
-					No detections recorded yet.
-				</p>
-			</section>
+			<EmptyState icon={Bird} title="No detections recorded yet.">
+				A round needs recordings to play, so this page waits until the station
+				has heard something.
+			</EmptyState>
 		);
 	}
 
 	return (
 		<section className="feature-card rounded-md p-4">
 			<div className="island-kicker">Not enough to go on</div>
-			<p className="mt-4 text-muted-foreground text-sm">
+			<EmptyNote>
 				A round needs {CHOICES_PER_QUESTION} species with clear recordings still
 				on disk, and this selection has{" "}
 				{speciesInPool === 0 ? "none" : speciesInPool}. Try a wider selection —
 				All Time always has the most to work with.
-			</p>
+			</EmptyNote>
 		</section>
 	);
 }

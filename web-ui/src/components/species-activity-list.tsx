@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Info } from "lucide-react";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { EmptyNote } from "~/components/empty-state.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import {
@@ -75,7 +76,7 @@ export function SpeciesActivityList({
 			</div>
 
 			{species.length === 0 ? (
-				<p className="mt-4 text-muted-foreground text-sm">{emptyMessage}</p>
+				<EmptyNote>{emptyMessage}</EmptyNote>
 			) : (
 				<ol className="mt-4 space-y-1">
 					{species.map((item) => (
