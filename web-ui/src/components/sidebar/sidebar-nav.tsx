@@ -33,6 +33,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 		<Lock
 			className="ml-auto size-3 text-muted-foreground"
 			aria-label="Locked"
+			role="img"
 		/>
 	);
 
