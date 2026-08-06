@@ -21,6 +21,7 @@ import {
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
+import { StatusPage } from "~/components/status-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import {
 	Tooltip,
@@ -31,12 +32,12 @@ import {
 import { useShareCard } from "~/components/use-share-card.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import {
+	DAY_PATTERN,
 	type DayMoment,
 	type DayReview,
 	type DaySpeciesRow,
 	type DayStanding,
-	getDayReview,
-	isDayId,
+	getDayPage,
 } from "~/lib/day.ts";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
@@ -46,16 +47,15 @@ import { rankingBarPercent } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
 export const Route = createFileRoute("/day/$date")({
-	loader: ({ params }) =>
-		isDayId(params.date) ? getDayReview({ data: params.date }) : null,
+	loader: ({ params }) => getDayPage({ data: params.date }),
 	// Reads off the param rather than the loader so the tab is right before the
-	// day's data lands; a junk date falls back to the section name, matching the
-	// message the page itself shows.
+	// day's data lands. A parameter that is not even shaped like a date falls
+	// back to the section name, matching what the page itself will show.
 	head: ({ params }) => ({
 		meta: [
 			{
 				title: pageTitle(
-					isDayId(params.date) ? formatDayTitle(params.date) : "Day",
+					DAY_PATTERN.test(params.date) ? formatDayTitle(params.date) : "Day",
 				),
 			},
 		],
@@ -100,19 +100,52 @@ function hourTickParts(hour: number): { number: string; meridiem: string } {
 	return { number: String(hour - 12), meridiem: "p" };
 }
 
+const DAY_SECTION = "Day in review";
+const DAY_SECTION_DESCRIPTION = "One day at this station, hour by hour.";
+
 function DayPage() {
-	const day = Route.useLoaderData();
+	const result = Route.useLoaderData();
 	const { date } = Route.useParams();
 
-	if (!day) {
-		return (
-			<div className="page-wrap py-4">
-				<p className="mt-4 text-muted-foreground">
+	switch (result.status) {
+		case "malformed":
+			return (
+				<StatusPage
+					section={DAY_SECTION}
+					sectionDescription={DAY_SECTION_DESCRIPTION}
+					tone="missing"
+					title="That isn't a date"
+				>
 					“{date}” isn’t a valid date. Dates look like 2025-04-19.
-				</p>
-			</div>
-		);
+				</StatusPage>
+			);
+		case "future":
+			return (
+				<StatusPage
+					section={DAY_SECTION}
+					sectionDescription={DAY_SECTION_DESCRIPTION}
+					tone="missing"
+					title="That day hasn't happened yet"
+				>
+					{formatDayTitle(date)} is still ahead. There is nothing to review
+					until the station has heard it.
+				</StatusPage>
+			);
+		case "before-station":
+			return (
+				<StatusPage
+					section={DAY_SECTION}
+					sectionDescription={DAY_SECTION_DESCRIPTION}
+					tone="missing"
+					title="Before this station started listening"
+				>
+					{formatDayTitle(date)} predates the first recording. This station has
+					been listening since {formatDayTitle(result.firstRecorded)}.
+				</StatusPage>
+			);
 	}
+
+	const day = result.day;
 
 	return (
 		<TooltipProvider>

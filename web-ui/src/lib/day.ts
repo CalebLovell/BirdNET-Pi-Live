@@ -1,9 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import { count, countDistinct, sql } from "drizzle-orm";
+import { count, countDistinct, min, sql } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
+import { classifyDay } from "~/lib/day-range.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { countVisits, localTimestamp } from "~/lib/visits.ts";
@@ -15,7 +16,11 @@ export const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 export function isDayId(value: string): boolean {
 	if (!DAY_PATTERN.test(value)) return false;
 	const parsed = new Date(`${value}T00:00:00`);
-	return !Number.isNaN(parsed.getTime());
+	if (Number.isNaN(parsed.getTime())) return false;
+	// A Date rolls an impossible day forward rather than refusing it -- the 30th
+	// of February parses happily as the 1st or 2nd of March. Comparing the
+	// parsed date back to the input is what catches that.
+	return dayIdFor(parsed) === value;
 }
 
 export function dayIdFor(date: Date): string {
@@ -341,4 +346,37 @@ export const getDayReview = createServerFn({ method: "GET" })
 				.sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0))
 				.slice(0, 6),
 		};
+	});
+
+/**
+ * A `/day/$date` request, already judged. The route renders a page only for
+ * `ok`; every other status is a date that does not describe a day this station
+ * could have recorded, and gets the standard not-found card instead.
+ */
+export type DayPageResult =
+	| { status: "ok"; day: DayReview }
+	| { status: "malformed" }
+	| { status: "future" }
+	| { status: "before-station"; firstRecorded: string };
+
+export const getDayPage = createServerFn({ method: "GET" })
+	.validator((date: string) => date)
+	.handler(async ({ data: date }): Promise<DayPageResult> => {
+		// Cheap enough not to bother short-circuiting on the format check first:
+		// one indexed min() against the table's leading index key.
+		const [range] = await db
+			.select({ firstRecorded: min(detections.Date) })
+			.from(detections);
+		const firstRecorded = range?.firstRecorded ?? null;
+
+		const verdict = classifyDay(date, dayIdFor(new Date()), firstRecorded);
+		if (verdict === "malformed") return { status: "malformed" };
+		if (verdict === "future") return { status: "future" };
+		if (verdict === "before-station") {
+			// Only ever reached with a non-null firstRecorded, but the compiler
+			// cannot know that from the verdict alone.
+			return { status: "before-station", firstRecorded: firstRecorded ?? date };
+		}
+
+		return { status: "ok", day: await getDayReview({ data: date }) };
 	});
