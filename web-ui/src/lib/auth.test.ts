@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 // Importing these confirms every gated symbol still exists and type-checks as
 // a server function -- if a name below gets renamed or removed, this file
 // fails to load before the assertions even run.
-import { requireUnlocked } from "./auth.ts";
+import { requireUnlocked, signOutAllDevicesFn } from "./auth.ts";
 import {
 	confirmReviewDetection,
 	deleteReviewDetection,
@@ -61,6 +61,7 @@ test("every gated server function carries requireUnlocked", () => {
 	// Referenced so the imports above are not flagged as unused -- their
 	// presence is itself part of the assertion (see comment above).
 	void requireUnlocked;
+	void signOutAllDevicesFn;
 	void saveSpeciesControl;
 	void resetSettingsFn;
 	void restartStationFn;
@@ -109,5 +110,10 @@ test("every gated server function carries requireUnlocked", () => {
 		"getReviewSpecies",
 	]) {
 		assertGated(reviewSource, name);
+	}
+
+	const authSource = sourceOf("./auth.ts");
+	for (const name of ["signOutAllDevicesFn"]) {
+		assertGated(authSource, name);
 	}
 });
