@@ -1,6 +1,7 @@
 import "@tanstack/react-start/server-only";
 
 import { readFile, writeFile } from "node:fs/promises";
+import { isPrivateAddress } from "./auth-policy.server";
 
 export const FREE_ATTEMPTS = 5;
 export const MAX_BACKOFF_MS = 900_000;
@@ -61,8 +62,19 @@ export class UnlockThrottle {
 		const state = await this.#load();
 		const now = this.#now();
 
+		// The global ceiling exists to stop an attacker who rotates source
+		// addresses from evading the per-address backoff -- but that attacker is
+		// necessarily coming from off-LAN. Applying the shared counter to local
+		// clients too would hand any remote attacker a trivial way to lock the
+		// station owner out of their own Pi: keep failing from rotating public
+		// addresses and the owner's home-network requests get refused right
+		// alongside them.
 		const inWindow = now - state.global.windowStart < GLOBAL_WINDOW_MS;
-		if (inWindow && state.global.failures >= GLOBAL_CEILING) {
+		if (
+			!isPrivateAddress(ip) &&
+			inWindow &&
+			state.global.failures >= GLOBAL_CEILING
+		) {
 			return {
 				allowed: false,
 				retryAfterMs: state.global.windowStart + GLOBAL_WINDOW_MS - now,
@@ -80,10 +92,15 @@ export class UnlockThrottle {
 		const state = await this.#load();
 		const now = this.#now();
 
-		if (now - state.global.windowStart >= GLOBAL_WINDOW_MS) {
-			state.global = { failures: 0, windowStart: now };
+		// Only off-LAN failures feed the shared counter -- the owner mistyping
+		// their own password on the home network must never push the global
+		// ceiling closer to locking the whole station out.
+		if (!isPrivateAddress(ip)) {
+			if (now - state.global.windowStart >= GLOBAL_WINDOW_MS) {
+				state.global = { failures: 0, windowStart: now };
+			}
+			state.global.failures += 1;
 		}
-		state.global.failures += 1;
 
 		const failures = (state.ips[ip]?.failures ?? 0) + 1;
 		const over = failures - FREE_ATTEMPTS;

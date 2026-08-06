@@ -76,9 +76,30 @@ test("address rotation still hits the global ceiling", async () => {
 	const { throttle } = await makeThrottle(clock);
 
 	for (let attempt = 0; attempt < GLOBAL_CEILING; attempt += 1) {
-		await throttle.recordFailure(`10.0.1.${attempt}`);
+		await throttle.recordFailure(`203.0.113.${attempt}`);
 	}
-	assert.equal((await throttle.check("10.0.9.9")).allowed, false);
+	assert.equal((await throttle.check("203.0.113.200")).allowed, false);
+});
+
+test("a local client is still allowed after the global ceiling has been tripped by remote addresses", async () => {
+	const clock = { value: 1_000 };
+	const { throttle } = await makeThrottle(clock);
+
+	for (let attempt = 0; attempt < GLOBAL_CEILING; attempt += 1) {
+		await throttle.recordFailure(`203.0.113.${attempt}`);
+	}
+	assert.equal((await throttle.check("192.168.1.50")).allowed, true);
+	assert.equal((await throttle.check("203.0.113.200")).allowed, false);
+});
+
+test("failures from local addresses do not count toward the global ceiling", async () => {
+	const clock = { value: 1_000 };
+	const { throttle } = await makeThrottle(clock);
+
+	for (let attempt = 0; attempt < GLOBAL_CEILING; attempt += 1) {
+		await throttle.recordFailure(`192.168.1.${attempt}`);
+	}
+	assert.equal((await throttle.check("203.0.113.1")).allowed, true);
 });
 
 test("counters survive a restart", async () => {
