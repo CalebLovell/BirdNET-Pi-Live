@@ -73,32 +73,30 @@ function SettingsContent({
 	const { auth } = useRouteContext({ from: "__root__" });
 
 	return (
-		<>
-			<SessionCard isDefaultPassword={auth.isDefaultPassword} />
-			<SettingsPage
-				data={data}
-				health={health}
-				onRestart={(card) => restart({ data: { card } })}
-				onReset={async () => {
-					const result = await reset({});
-					// The cards remount against this reload, so it has to land before
-					// the page reports the reset as done.
-					await router.invalidate();
-					return {
-						message: result.message,
-						needsRestart: result.status !== "reset",
-					};
-				}}
-				savers={{
-					station: (values) => saveStation({ data: values }),
-					detection: (values) => saveDetection({ data: values }),
-					privacy: (values) => savePrivacy({ data: values }),
-					audio: (values) => saveAudio({ data: values }),
-					recording: (values) => saveRecording({ data: values }),
-					storage: (values) => saveStorage({ data: values }),
-				}}
-			/>
-		</>
+		<SettingsPage
+			data={data}
+			health={health}
+			access={<SessionCard isDefaultPassword={auth.isDefaultPassword} />}
+			onRestart={(card) => restart({ data: { card } })}
+			onReset={async () => {
+				const result = await reset({});
+				// The cards remount against this reload, so it has to land before
+				// the page reports the reset as done.
+				await router.invalidate();
+				return {
+					message: result.message,
+					needsRestart: result.status !== "reset",
+				};
+			}}
+			savers={{
+				station: (values) => saveStation({ data: values }),
+				detection: (values) => saveDetection({ data: values }),
+				privacy: (values) => savePrivacy({ data: values }),
+				audio: (values) => saveAudio({ data: values }),
+				recording: (values) => saveRecording({ data: values }),
+				storage: (values) => saveStorage({ data: values }),
+			}}
+		/>
 	);
 }
 

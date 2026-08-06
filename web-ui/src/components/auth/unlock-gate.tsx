@@ -1,21 +1,29 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Lock } from "lucide-react";
+import { AlertTriangle, KeyRound, LockKeyhole } from "lucide-react";
 import { useState } from "react";
 
+import { Button } from "~/components/ui/button.tsx";
+import { Input } from "~/components/ui/input.tsx";
 import { unlockFn } from "~/lib/auth.ts";
 
 const MESSAGES = {
 	invalid: "That password is not right.",
 	throttled: "Too many attempts. Wait a few minutes and try again.",
 	"default-password-remote":
-		"This station still uses its default password, so it can only be unlocked from the local network. Set a password with scripts/set_web_ui_password.sh.",
+		"This station still uses its default password, so it can only be unlocked from its own network. Run scripts/set_web_ui_password.sh on the Pi to set your own.",
 } as const;
 
 /**
  * Rendered in place of a gated page's content rather than as a redirect or a
- * modal: the URL stays put, so unlocking simply turns the page into itself and
- * a bookmark to /settings still lands on /settings.
+ * modal: the URL stays put, so unlocking turns the page into itself and a
+ * bookmark to /settings still lands on /settings.
+ *
+ * Shaped like the page-level cards a route falls back to when it cannot render
+ * -- `SettingsUnavailable` and friends -- because that is what this is: the
+ * page, reporting why it is not showing you anything. Narrower than those,
+ * since a lone password field in a full-width card reads as a form nobody
+ * finished.
  */
 export function UnlockGate({ title }: { title: string }) {
 	const unlock = useServerFn(unlockFn);
@@ -36,45 +44,84 @@ export function UnlockGate({ title }: { title: string }) {
 				return;
 			}
 			setError(MESSAGES[result.reason]);
+		} catch (cause) {
+			console.error(cause);
+			setError("The station could not be reached.");
 		} finally {
 			setPending(false);
 		}
 	}
 
 	return (
-		<div className="mx-auto flex w-full max-w-sm flex-col items-center px-4 py-16">
-			<Lock className="mb-4 size-6 text-muted-foreground" aria-hidden="true" />
-			<h1 className="display-title mb-1 font-semibold text-xl">
-				{title} is locked
-			</h1>
-			<p className="mb-6 text-center text-muted-foreground text-sm">
-				Enter the station password to continue.
-			</p>
-			<form onSubmit={onSubmit} className="flex w-full flex-col gap-3">
-				<label className="sr-only" htmlFor="station-password">
-					Station password
-				</label>
-				<input
-					id="station-password"
-					type="password"
-					autoComplete="current-password"
-					value={password}
-					onChange={(event) => setPassword(event.target.value)}
-					className="w-full rounded-md border border-[var(--line)] bg-transparent px-3 py-2 text-sm"
-				/>
-				{error ? (
-					<p role="alert" className="text-destructive text-sm">
-						{error}
-					</p>
-				) : null}
-				<button
-					type="submit"
-					disabled={pending || password.length === 0}
-					className="rounded-md bg-primary px-3 py-2 font-medium text-primary-foreground text-sm disabled:opacity-50"
-				>
-					{pending ? "Unlocking…" : "Unlock"}
-				</button>
-			</form>
-		</div>
+		<main className="page-wrap py-4">
+			<section
+				aria-labelledby="unlock-title"
+				className="feature-card mx-auto max-w-md overflow-hidden rounded-md border-l-4 border-l-[var(--sand)]"
+			>
+				<header className="flex items-center gap-3 border-b p-4">
+					<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sand)_35%,var(--paper-raised))]">
+						<LockKeyhole
+							aria-hidden="true"
+							className="size-4 text-[var(--bark)]"
+						/>
+					</div>
+					<div className="min-w-0">
+						<h1
+							id="unlock-title"
+							className="display-title font-semibold text-lg leading-tight"
+						>
+							{title} is locked
+						</h1>
+						<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
+							This part of the station is only for whoever runs it. Detections,
+							species and stats stay open to everyone.
+						</p>
+					</div>
+				</header>
+
+				<form className="flex flex-col gap-4 p-4" onSubmit={onSubmit}>
+					<div className="space-y-2">
+						<label className="island-kicker block" htmlFor="station-password">
+							Station password
+						</label>
+						<Input
+							id="station-password"
+							type="password"
+							autoComplete="current-password"
+							// The reason anyone is on this screen is to type in this box.
+							// biome-ignore lint/a11y/noAutofocus: the field is the page's only purpose
+							autoFocus
+							value={password}
+							onChange={(event) => setPassword(event.target.value)}
+						/>
+					</div>
+
+					<div className="flex items-center justify-between gap-4">
+						<p
+							aria-live="polite"
+							role="alert"
+							className="flex min-w-0 items-start gap-2 text-destructive text-xs"
+						>
+							{error ? (
+								<>
+									<AlertTriangle
+										aria-hidden="true"
+										className="mt-px size-3.5 shrink-0"
+									/>
+									<span>{error}</span>
+								</>
+							) : null}
+						</p>
+						<Button
+							type="submit"
+							icon={KeyRound}
+							disabled={pending || password.length === 0}
+						>
+							{pending ? "Unlocking…" : "Unlock"}
+						</Button>
+					</div>
+				</form>
+			</section>
+		</main>
 	);
 }
