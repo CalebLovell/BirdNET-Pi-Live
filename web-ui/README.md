@@ -17,6 +17,22 @@ To build this application for production:
 npm run build
 ```
 
+## Environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `BIRDNET_CONF` | `/etc/birdnet/birdnet.conf` | Station configuration read and written by the Settings page. |
+| `BIRDNET_DB_PATH` | `../scripts/birds.db` | The detections database. |
+| `BIRDNET_AUTH_CONF` | `/etc/birdnet/web-ui-auth.conf` | Where the web UI password hash lives. Point this at a scratch file in development so you never touch a real station's credential. |
+| `WEB_UI_TRUSTED_PROXY` | unset | When set, `X-Forwarded-For` is trusted for identifying the client address. Set it only when something you control actually terminates TLS in front of the app -- trusting the header without a proxy lets a client spoof its own address and evade unlock throttling. |
+
+The auth file self-creates on first read with the default password `birdnet`, so a fresh
+checkout needs no setup:
+
+```bash
+BIRDNET_AUTH_CONF=/tmp/birdnet-auth.conf npm run dev
+```
+
 ## Styling
 
 This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
