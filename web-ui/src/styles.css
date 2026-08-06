@@ -168,10 +168,17 @@ code {
   font-family: 'Georgia', 'Times New Roman', serif;
 }
 
-.island-shell,
-.feature-card {
-  border: 1px solid var(--line);
-  background: linear-gradient(165deg, var(--surface-strong), var(--surface));
+/* In `components` rather than unlayered, so Tailwind utilities outrank it.
+   Unlayered CSS beats every layered utility regardless of specificity, which
+   meant a card asking for a thicker or tinted edge silently got the flat 1px
+   line instead -- the settings cards' whole save-state stripe (`border-l-4`
+   plus a colour) rendered as nothing at all for exactly that reason. */
+@layer components {
+  .island-shell,
+  .feature-card {
+    border: 1px solid var(--line);
+    background: linear-gradient(165deg, var(--surface-strong), var(--surface));
+  }
 }
 
 /* Only cards that are actually links get the hover lift -- plain

@@ -62,7 +62,7 @@ export function UnlockGate({ title }: { title: string }) {
 	}
 
 	return (
-		<main className="page-wrap py-4">
+		<div className="page-wrap py-4">
 			<section
 				aria-labelledby="unlock-title"
 				className="feature-card overflow-hidden rounded-md border-l-4 border-l-[var(--sand)]"
@@ -154,6 +154,6 @@ export function UnlockGate({ title }: { title: string }) {
 					</div>
 				</form>
 			</section>
-		</main>
+		</div>
 	);
 }

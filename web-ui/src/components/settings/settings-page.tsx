@@ -56,7 +56,7 @@ export function SettingsPage({
 	]);
 
 	return (
-		<main className="page-wrap space-y-4 py-4">
+		<div className="page-wrap space-y-4 py-4">
 			<PageHeaderCard
 				title="Settings"
 				description="Configure this station without editing birdnet.conf. Each card validates and saves independently."
@@ -120,6 +120,6 @@ export function SettingsPage({
 				restarter={onRestart}
 			/>
 			{access}
-		</main>
+		</div>
 	);
 }

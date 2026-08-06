@@ -51,7 +51,7 @@ function SpeciesControlContent({
 
 function SpeciesControlUnavailable() {
 	return (
-		<main className="page-wrap py-4">
+		<div className="page-wrap py-4">
 			<section className="feature-card rounded-md p-5">
 				<div className="flex items-start gap-3">
 					<CircleAlert
@@ -70,6 +70,6 @@ function SpeciesControlUnavailable() {
 					</div>
 				</div>
 			</section>
-		</main>
+		</div>
 	);
 }
