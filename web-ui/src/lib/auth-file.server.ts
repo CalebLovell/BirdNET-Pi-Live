@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { chmod, readFile, rename, writeFile } from "node:fs/promises";
+import { readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseBirdnetConfig } from "~/lib/settings-config.server.ts";
@@ -78,8 +78,12 @@ export async function writeAuthFile(
 		path.dirname(authPath),
 		`.${path.basename(authPath)}.${process.pid}.tmp`,
 	);
-	await writeFile(temporaryPath, serialize(next), "utf8");
-	await chmod(temporaryPath, 0o600);
+	// The password hash must never exist on disk world-readable, so the file is
+	// created with restricted permissions rather than tightened afterwards.
+	await writeFile(temporaryPath, serialize(next), {
+		encoding: "utf8",
+		mode: 0o600,
+	});
 	await rename(temporaryPath, authPath);
 }
 
