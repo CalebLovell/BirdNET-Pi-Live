@@ -35,6 +35,25 @@ test("treats public and unknown addresses as not private", () => {
 	}
 });
 
+test("rejects addresses with an out-of-range octet, even in a private-looking prefix", () => {
+	for (const ip of [
+		"192.168.1.256",
+		"10.0.0.999",
+		"172.16.0.256",
+		"8.8.256.8",
+		"203.0.113.999",
+	]) {
+		assert.equal(isPrivateAddress(ip), false, ip);
+	}
+});
+
+test("accepts .0 and .255 boundary octets where the prefix is private", () => {
+	assert.equal(isPrivateAddress("10.0.0.0"), true);
+	assert.equal(isPrivateAddress("10.255.255.255"), true);
+	assert.equal(isPrivateAddress("192.168.0.0"), true);
+	assert.equal(isPrivateAddress("192.168.255.255"), true);
+});
+
 test("the default password may only be used from the local network", () => {
 	assert.equal(
 		defaultPasswordBlocksUnlock({ isDefault: true }, "192.168.1.20"),

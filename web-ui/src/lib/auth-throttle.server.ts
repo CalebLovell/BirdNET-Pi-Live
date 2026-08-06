@@ -15,7 +15,32 @@ export type ThrottleState = {
 };
 
 function emptyState(): ThrottleState {
-	return { ips: {}, global: { failures: 0, windowStart: 0 } };
+	return { ips: Object.create(null), global: { failures: 0, windowStart: 0 } };
+}
+
+/** `JSON.parse` (and object literals) produce plain objects backed by
+ *  `Object.prototype`, so a client address of `__proto__` would otherwise
+ *  write to the prototype instead of creating an own property. Rebuild the
+ *  map onto a `null`-prototype object and drop any dangerous key names --
+ *  including ones from a state file already on disk -- so the address
+ *  string can never reach the prototype chain. */
+function sanitizeIps(ips: unknown): Record<string, IpState> {
+	const safe: Record<string, IpState> = Object.create(null);
+	if (!ips || typeof ips !== "object") return safe;
+	for (const key of Object.keys(ips)) {
+		if (key === "__proto__" || key === "constructor" || key === "prototype")
+			continue;
+		const value = (ips as Record<string, unknown>)[key];
+		if (
+			value &&
+			typeof value === "object" &&
+			typeof (value as IpState).failures === "number" &&
+			typeof (value as IpState).until === "number"
+		) {
+			safe[key] = value as IpState;
+		}
+	}
+	return safe;
 }
 
 /**
@@ -36,10 +61,14 @@ export class UnlockThrottle {
 	async #load(): Promise<ThrottleState> {
 		if (this.#state) return this.#state;
 		try {
-			const parsed = JSON.parse(
-				await readFile(this.#statePath, "utf8"),
-			) as ThrottleState;
-			this.#state = parsed.ips && parsed.global ? parsed : emptyState();
+			const parsed = JSON.parse(await readFile(this.#statePath, "utf8")) as {
+				ips?: unknown;
+				global?: ThrottleState["global"];
+			};
+			this.#state =
+				parsed.ips && parsed.global
+					? { ips: sanitizeIps(parsed.ips), global: parsed.global }
+					: emptyState();
 		} catch {
 			// Missing or unreadable state must not lock anyone out; the worst case
 			// is that an attacker gets one fresh window.

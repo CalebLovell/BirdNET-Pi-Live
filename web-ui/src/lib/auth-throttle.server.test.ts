@@ -102,6 +102,21 @@ test("failures from local addresses do not count toward the global ceiling", asy
 	assert.equal((await throttle.check("203.0.113.1")).allowed, true);
 });
 
+test("an address named __proto__ throttles only itself and leaves Object.prototype clean", async () => {
+	const clock = { value: 1_000 };
+	const { throttle } = await makeThrottle(clock);
+
+	for (let attempt = 0; attempt <= FREE_ATTEMPTS; attempt += 1) {
+		await throttle.recordFailure("__proto__");
+	}
+
+	assert.equal((await throttle.check("__proto__")).allowed, false);
+	assert.equal((await throttle.check("10.0.0.5")).allowed, true);
+	assert.equal(Object.prototype.hasOwnProperty("failures"), false);
+	assert.equal(Object.prototype.hasOwnProperty("until"), false);
+	assert.equal(({} as { until?: number }).until, undefined);
+});
+
 test("counters survive a restart", async () => {
 	const clock = { value: 1_000 };
 	const { statePath, throttle } = await makeThrottle(clock);
