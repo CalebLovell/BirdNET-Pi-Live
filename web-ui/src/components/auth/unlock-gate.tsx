@@ -15,17 +15,15 @@ const MESSAGES = {
 } as const;
 
 /**
- * Rendered in place of a gated page's content rather than as a redirect or a
- * modal: the URL stays put, so unlocking turns the page into itself and a
- * bookmark to /settings still lands on /settings.
+ * The one locked card, used by every gated page. Rendered in place of a page's
+ * content rather than as a redirect or a modal: the URL stays put, so unlocking
+ * turns the page into itself and a bookmark to /settings still lands there.
  *
- * Shaped like the page-level cards a route falls back to when it cannot render
- * -- `SettingsUnavailable` and friends -- because that is what this is: the
- * page, reporting why it is not showing you anything. Narrower than those,
- * since a lone password field in a full-width card reads as a form nobody
- * finished.
+ * It carries no page name of its own -- `LockedPage` puts the page's real
+ * masthead above it, so this card only ever has to explain the lock. That also
+ * means adding a gate to a new page needs nothing from this file.
  */
-export function UnlockGate({ title }: { title: string }) {
+export function UnlockGate() {
 	const unlock = useServerFn(unlockFn);
 	const router = useRouter();
 	const [password, setPassword] = useState("");
@@ -62,98 +60,99 @@ export function UnlockGate({ title }: { title: string }) {
 	}
 
 	return (
-		<div className="page-wrap py-4">
-			<section
-				aria-labelledby="unlock-title"
-				className="feature-card overflow-hidden rounded-md border-l-4 border-l-[var(--sand)]"
-			>
-				<header className="flex items-center gap-3 border-b p-4">
-					<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sand)_35%,var(--paper-raised))]">
-						<LockKeyhole
-							aria-hidden="true"
-							className="size-4 text-[var(--bark)]"
-						/>
-					</div>
-					<div className="min-w-0">
-						<h1
-							id="unlock-title"
-							className="display-title font-semibold text-lg leading-tight"
-						>
-							{title} is locked
-						</h1>
-						<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-							This part of the station is only for whoever runs it. Detections,
-							species and stats stay open to everyone.
-						</p>
-					</div>
-				</header>
+		<section
+			aria-labelledby="unlock-title"
+			className="feature-card overflow-hidden rounded-md"
+		>
+			<header className="flex items-center gap-3 border-b p-4">
+				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
+					<LockKeyhole
+						aria-hidden="true"
+						className="size-4 text-[var(--moss)]"
+					/>
+				</div>
+				<div className="min-w-0">
+					{/* Deliberately not "Settings is locked": the page's own masthead
+					    sits directly above this card and has already said which page
+					    you are on. Naming it again read as a second, competing title. */}
+					<h2
+						id="unlock-title"
+						className="display-title font-semibold text-lg leading-tight"
+					>
+						This page is locked
+					</h2>
+					<p className="mt-1 text-muted-foreground text-sm leading-relaxed">
+						This part of the station is only for whoever runs it. Detections,
+						species and stats stay open to everyone.
+					</p>
+				</div>
+			</header>
 
-				<form className="flex flex-col gap-4 p-4" onSubmit={onSubmit}>
-					{/* The same two-column field grid the settings cards use, so the
+			<form className="flex flex-col gap-4 p-4" onSubmit={onSubmit}>
+				{/* The same two-column field grid the settings cards use, so the
 					    field is the width of a Station or Storage field rather than a
 					    password box stretched across the whole content column. */}
-					<div className="grid gap-4 sm:grid-cols-2">
-						{/* Laid out like the settings cards' `Field`, but with the hint
+				<div className="grid gap-4 sm:grid-cols-2">
+					{/* Laid out like the settings cards' `Field`, but with the hint
 						    outside the label and referenced by `aria-describedby`. Nesting
 						    it, as `Field` does, folds the whole hint into the field's
 						    accessible name -- a screen reader would announce "Station
 						    password Set on the Pi with scripts/set_web_ui_password.sh"
 						    as the name of the box. */}
-						<div className="space-y-1.5">
-							<label
-								htmlFor="station-password"
-								className="block font-medium text-sm"
-							>
-								Station password
-							</label>
-							<Input
-								ref={field}
-								id="station-password"
-								aria-describedby="station-password-hint"
-								type="password"
-								autoComplete="current-password"
-								value={password}
-								onChange={(event) => setPassword(event.target.value)}
-							/>
-							<p
-								id="station-password-hint"
-								className="text-muted-foreground text-xs leading-relaxed"
-							>
-								Set on the Pi with{" "}
-								<code className="tabular-data">
-									scripts/set_web_ui_password.sh
-								</code>
-								.
-							</p>
-						</div>
-					</div>
-
-					<div className="flex flex-wrap items-center justify-between gap-3">
+					<div className="space-y-1.5">
+						<label
+							htmlFor="station-password"
+							className="block font-medium text-sm"
+						>
+							Station password
+						</label>
+						<Input
+							ref={field}
+							id="station-password"
+							aria-describedby="station-password-hint"
+							type="password"
+							autoComplete="current-password"
+							value={password}
+							onChange={(event) => setPassword(event.target.value)}
+						/>
 						<p
-							aria-live="polite"
-							role="alert"
-							className="flex min-w-0 items-start gap-2 text-destructive text-xs"
+							id="station-password-hint"
+							className="text-muted-foreground text-xs leading-relaxed"
 						>
-							{error ? (
-								<>
-									<AlertTriangle
-										aria-hidden="true"
-										className="mt-px size-3.5 shrink-0"
-									/>
-									<span>{error}</span>
-								</>
-							) : null}
+							Set on the Pi with{" "}
+							<code className="tabular-data">
+								scripts/set_web_ui_password.sh
+							</code>
+							.
 						</p>
-						<Button
-							type="submit"
-							icon={KeyRound}
-							disabled={pending || password.length === 0}
-						>
-							{pending ? "Unlocking…" : "Unlock"}
-						</Button>
 					</div>
-				</form>
-			</section>
-		</div>
+				</div>
+
+				<div className="flex flex-wrap items-center justify-between gap-3">
+					<p
+						aria-live="polite"
+						role="alert"
+						className="flex min-w-0 items-start gap-2 text-destructive text-xs"
+					>
+						{error ? (
+							<>
+								<AlertTriangle
+									aria-hidden="true"
+									className="mt-px size-3.5 shrink-0"
+								/>
+								<span>{error}</span>
+							</>
+						) : null}
+					</p>
+					<Button
+						type="submit"
+						icon={KeyRound}
+						disabled={pending || password.length === 0}
+					>
+						{pending ? "Unlocking…" : "Unlock"}
+					</Button>
+				</div>
+			</form>
+		</section>
 	);
 }

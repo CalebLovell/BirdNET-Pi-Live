@@ -6,9 +6,13 @@ import {
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert } from "lucide-react";
 
-import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
+import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { SessionCard } from "~/components/settings/session-card.tsx";
-import { SettingsPage } from "~/components/settings/settings-page.tsx";
+import {
+	SETTINGS_PAGE_DESCRIPTION,
+	SETTINGS_PAGE_TITLE,
+	SettingsPage,
+} from "~/components/settings/settings-page.tsx";
 import { getStationHealth } from "~/lib/health.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
@@ -46,7 +50,13 @@ export const Route = createFileRoute("/settings")({
 
 function SettingsRoute() {
 	const loaded = Route.useLoaderData();
-	if (!loaded) return <UnlockGate title="Settings" />;
+	if (!loaded)
+		return (
+			<LockedPage
+				title={SETTINGS_PAGE_TITLE}
+				description={SETTINGS_PAGE_DESCRIPTION}
+			/>
+		);
 	return <SettingsContent loaded={loaded} />;
 }
 

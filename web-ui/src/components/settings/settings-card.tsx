@@ -7,14 +7,6 @@ import { ConfirmDialog } from "~/components/ui/confirm-dialog.tsx";
 
 export type CardSaveState = "idle" | "saving" | "saved" | "warning" | "error";
 
-const edgeClasses: Record<CardSaveState, string> = {
-	idle: "border-l-[var(--sage)]",
-	saving: "border-l-[var(--sand)]",
-	saved: "border-l-[var(--moss)]",
-	warning: "border-l-[var(--sand)]",
-	error: "border-l-destructive",
-};
-
 /**
  * What saving a card actually costs the reader. Every card's save writes the
  * configuration and then bounces the services so BirdNET reads it, which drops
@@ -71,7 +63,10 @@ export function SettingsCard({
 	return (
 		<section
 			aria-labelledby={headingId}
-			className={`feature-card overflow-hidden rounded-md border-l-4 ${edgeClasses[state]}`}
+			// A plain card. The save state is already spoken by the message beside
+			// the Save button; a coloured stripe down the edge said the same thing
+			// again, in a shape no other card on the site has.
+			className="feature-card overflow-hidden rounded-md"
 		>
 			<form
 				className="flex h-full flex-col"

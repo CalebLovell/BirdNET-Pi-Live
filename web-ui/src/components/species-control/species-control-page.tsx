@@ -33,6 +33,12 @@ import {
 } from "./species-control-table.tsx";
 import { SpeciesControlTools } from "./species-control-tools.tsx";
 
+/** Exported so the locked view of this page shows the same masthead as the
+ *  unlocked one, rather than a second copy of the words that drifts. */
+export const SPECIES_CONTROL_PAGE_TITLE = "Species control";
+export const SPECIES_CONTROL_PAGE_DESCRIPTION =
+	"Decide which installed species BirdNET may detect. Every change is confirmed before it takes effect.";
+
 type PageAdapters = {
 	search: SpeciesControlWorkspaceSearch;
 	onSearchChange: (search: SpeciesControlWorkspaceSearch) => void;
@@ -322,8 +328,8 @@ export function SpeciesControlPage({
 		<div className="page-wrap flex h-full min-h-0 flex-col gap-4 py-4">
 			<div className="@container shrink-0 space-y-4">
 				<PageHeaderCard
-					title="Species control"
-					description="Decide which installed species BirdNET may detect. Every change is confirmed before it takes effect."
+					title={SPECIES_CONTROL_PAGE_TITLE}
+					description={SPECIES_CONTROL_PAGE_DESCRIPTION}
 				/>
 
 				<div

@@ -2,8 +2,12 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert } from "lucide-react";
 
-import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
-import { SpeciesControlPage } from "~/components/species-control/species-control-page.tsx";
+import { LockedPage } from "~/components/auth/locked-page.tsx";
+import {
+	SPECIES_CONTROL_PAGE_DESCRIPTION,
+	SPECIES_CONTROL_PAGE_TITLE,
+	SpeciesControlPage,
+} from "~/components/species-control/species-control-page.tsx";
 import { pageTitle } from "~/lib/page-title.ts";
 import {
 	getSpeciesControlPage,
@@ -22,7 +26,13 @@ export const Route = createFileRoute("/species-control")({
 
 function SpeciesControlRoute() {
 	const initialData = Route.useLoaderData();
-	if (!initialData) return <UnlockGate title="Species control" />;
+	if (!initialData)
+		return (
+			<LockedPage
+				title={SPECIES_CONTROL_PAGE_TITLE}
+				description={SPECIES_CONTROL_PAGE_DESCRIPTION}
+			/>
+		);
 	return <SpeciesControlContent initialData={initialData} />;
 }
 

@@ -2,7 +2,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { CircleAlert, Feather, ListChecks } from "lucide-react";
 import { useState } from "react";
-import { UnlockGate } from "~/components/auth/unlock-gate.tsx";
+import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { ReviewQueueSettings } from "~/components/review/review-queue-settings.tsx";
 import { ReviewWorkflow } from "~/components/review/review-workflow.tsx";
@@ -20,6 +20,14 @@ import {
 	type SpeciesOption,
 } from "~/lib/review-data.ts";
 import { saveReviewSettingsFn } from "~/lib/settings.ts";
+
+const REVIEW_PAGE_TITLE = "Review detections";
+
+/** The unlocked masthead counts the queue against the station's own rarity
+ *  threshold, and both of those come from a gated server function. This says
+ *  the same thing without the numbers, for someone who cannot fetch them. */
+const REVIEW_PAGE_LOCKED_DESCRIPTION =
+	"Recordings BirdNET was unsure about, for species this station has rarely heard.";
 
 export const Route = createFileRoute("/review")({
 	head: () => ({ meta: [{ title: pageTitle("Review") }] }),
@@ -43,7 +51,13 @@ export const Route = createFileRoute("/review")({
 
 function Review() {
 	const loaded = Route.useLoaderData();
-	if (!loaded) return <UnlockGate title="Review" />;
+	if (!loaded)
+		return (
+			<LockedPage
+				title={REVIEW_PAGE_TITLE}
+				description={REVIEW_PAGE_LOCKED_DESCRIPTION}
+			/>
+		);
 	return <ReviewContent loaded={loaded} />;
 }
 
@@ -79,7 +93,7 @@ function ReviewContent({
 	return (
 		<div className="page-wrap space-y-4 py-4">
 			<PageHeaderCard
-				title="Review detections"
+				title={REVIEW_PAGE_TITLE}
 				description={`Species the station has heard fewer than ${page.rareSpeciesMax} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}
 				stats={[
 					{

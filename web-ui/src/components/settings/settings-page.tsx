@@ -16,6 +16,12 @@ import { healthStats } from "./station-health.tsx";
 /** A reset that stored its values without getting BirdNET onto them. */
 type ResetOutcome = { message: string; needsRestart: boolean };
 
+/** Exported so the locked view of this page shows the same masthead as the
+ *  unlocked one, rather than a second copy of the words that drifts. */
+export const SETTINGS_PAGE_TITLE = "Settings";
+export const SETTINGS_PAGE_DESCRIPTION =
+	"Configure this station without editing birdnet.conf. Each card validates and saves independently.";
+
 export function SettingsPage({
 	data,
 	savers = {},
@@ -58,8 +64,8 @@ export function SettingsPage({
 	return (
 		<div className="page-wrap space-y-4 py-4">
 			<PageHeaderCard
-				title="Settings"
-				description="Configure this station without editing birdnet.conf. Each card validates and saves independently."
+				title={SETTINGS_PAGE_TITLE}
+				description={SETTINGS_PAGE_DESCRIPTION}
 				stats={health ? healthStats(health) : []}
 				action={
 					onReset ? (

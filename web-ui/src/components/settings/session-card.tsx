@@ -60,12 +60,7 @@ export function SessionCard({
 	return (
 		<section
 			aria-labelledby="settings-access"
-			// The warning edge is the same `--sand` the cards use for a save that
-			// wants attention, not `--destructive`: a default password is a thing
-			// left undone, not an error.
-			className={`feature-card overflow-hidden rounded-md border-l-4 ${
-				isDefaultPassword ? "border-l-[var(--sand)]" : "border-l-[var(--sage)]"
-			}`}
+			className="feature-card overflow-hidden rounded-md"
 		>
 			<header className="flex items-center gap-3 border-b p-4">
 				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">

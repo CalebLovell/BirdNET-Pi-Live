@@ -169,10 +169,11 @@ code {
 }
 
 /* In `components` rather than unlayered, so Tailwind utilities outrank it.
-   Unlayered CSS beats every layered utility regardless of specificity, which
-   meant a card asking for a thicker or tinted edge silently got the flat 1px
-   line instead -- the settings cards' whole save-state stripe (`border-l-4`
-   plus a colour) rendered as nothing at all for exactly that reason. */
+   Unlayered CSS beats every layered utility regardless of specificity, so a
+   card that asked for a different border or background quietly got this one
+   instead and no amount of staring at the utility class explained why. Nothing
+   currently overrides either property -- this is here so that the next thing
+   which tries to simply works. */
 @layer components {
   .island-shell,
   .feature-card {
