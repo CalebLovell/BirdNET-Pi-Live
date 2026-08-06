@@ -1,7 +1,7 @@
 import { useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { AlertTriangle, KeyRound, LockKeyhole } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
@@ -31,6 +31,15 @@ export function UnlockGate({ title }: { title: string }) {
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState<string | undefined>();
 	const [pending, setPending] = useState(false);
+	const field = useRef<HTMLInputElement>(null);
+
+	// Focused from an effect rather than with `autoFocus`, which React does not
+	// apply when hydrating a server-rendered page -- the attribute alone worked
+	// on a client-side transition to this screen and silently did nothing on a
+	// full page load, which is the more common way to arrive here.
+	useEffect(() => {
+		field.current?.focus();
+	}, []);
 
 	async function onSubmit(event: React.FormEvent) {
 		event.preventDefault();
@@ -84,30 +93,39 @@ export function UnlockGate({ title }: { title: string }) {
 					    field is the width of a Station or Storage field rather than a
 					    password box stretched across the whole content column. */}
 					<div className="grid gap-4 sm:grid-cols-2">
-						{/* The control is nested, so the label association is native HTML
-						    even though Biome cannot see through `Input`'s boundary --
-						    same as `Field` in the settings cards. */}
-						{/* biome-ignore lint/a11y/noLabelWithoutControl: nested labeled control */}
-						<label className="block space-y-1.5">
-							<span className="flex items-center gap-1.5 font-medium text-sm">
+						{/* Laid out like the settings cards' `Field`, but with the hint
+						    outside the label and referenced by `aria-describedby`. Nesting
+						    it, as `Field` does, folds the whole hint into the field's
+						    accessible name -- a screen reader would announce "Station
+						    password Set on the Pi with scripts/set_web_ui_password.sh"
+						    as the name of the box. */}
+						<div className="space-y-1.5">
+							<label
+								htmlFor="station-password"
+								className="block font-medium text-sm"
+							>
 								Station password
-							</span>
+							</label>
 							<Input
+								ref={field}
+								id="station-password"
+								aria-describedby="station-password-hint"
 								type="password"
 								autoComplete="current-password"
-								// The reason anyone is on this screen is to type in this box.
-								autoFocus
 								value={password}
 								onChange={(event) => setPassword(event.target.value)}
 							/>
-							<span className="block text-muted-foreground text-xs leading-relaxed">
+							<p
+								id="station-password-hint"
+								className="text-muted-foreground text-xs leading-relaxed"
+							>
 								Set on the Pi with{" "}
 								<code className="tabular-data">
 									scripts/set_web_ui_password.sh
 								</code>
 								.
-							</span>
-						</label>
+							</p>
+						</div>
 					</div>
 
 					<div className="flex flex-wrap items-center justify-between gap-3">

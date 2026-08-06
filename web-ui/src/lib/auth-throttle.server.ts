@@ -8,7 +8,7 @@ export const MAX_BACKOFF_MS = 900_000;
 export const GLOBAL_CEILING = 50;
 export const GLOBAL_WINDOW_MS = 900_000;
 
-type IpState = { failures: number; until: number };
+type IpState = { failures: number; until: number; seen: number };
 export type ThrottleState = {
 	ips: Record<string, IpState>;
 	global: { failures: number; windowStart: number };
@@ -16,6 +16,28 @@ export type ThrottleState = {
 
 function emptyState(): ThrottleState {
 	return { ips: Object.create(null), global: { failures: 0, windowStart: 0 } };
+}
+
+/**
+ * Drops addresses that have gone quiet. Without this the map only ever grows:
+ * the very attacker the global ceiling anticipates -- one rotating through
+ * source addresses -- would add a permanent entry per address, in memory and in
+ * the state file on disk, forever.
+ *
+ * An address is kept while it is still serving a backoff, or while its last
+ * failure is recent enough that the escalating ladder should still apply to it.
+ * Past that it is indistinguishable from a first-time caller, which is what it
+ * effectively is.
+ */
+function prune(ips: Record<string, IpState>, now: number) {
+	const kept: Record<string, IpState> = Object.create(null);
+	for (const key of Object.keys(ips)) {
+		const entry = ips[key];
+		if (entry.until > now || now - entry.seen < GLOBAL_WINDOW_MS) {
+			kept[key] = entry;
+		}
+	}
+	return kept;
 }
 
 /** `JSON.parse` (and object literals) produce plain objects backed by
@@ -30,14 +52,21 @@ function sanitizeIps(ips: unknown): Record<string, IpState> {
 	for (const key of Object.keys(ips)) {
 		if (key === "__proto__" || key === "constructor" || key === "prototype")
 			continue;
-		const value = (ips as Record<string, unknown>)[key];
+		const value = (ips as Record<string, unknown>)[key] as Partial<IpState>;
 		if (
 			value &&
 			typeof value === "object" &&
-			typeof (value as IpState).failures === "number" &&
-			typeof (value as IpState).until === "number"
+			Number.isFinite(value.failures) &&
+			Number.isFinite(value.until)
 		) {
-			safe[key] = value as IpState;
+			// `seen` was added after the first release of this file; an entry
+			// without it is treated as last seen now, so it ages out from here
+			// rather than being dropped or kept forever.
+			safe[key] = {
+				failures: value.failures as number,
+				until: value.until as number,
+				seen: Number.isFinite(value.seen) ? (value.seen as number) : Date.now(),
+			};
 		}
 	}
 	return safe;
@@ -65,10 +94,23 @@ export class UnlockThrottle {
 				ips?: unknown;
 				global?: ThrottleState["global"];
 			};
-			this.#state =
-				parsed.ips && parsed.global
-					? { ips: sanitizeIps(parsed.ips), global: parsed.global }
-					: emptyState();
+			// `global` is validated field by field rather than trusted for being
+			// present: a state file holding `{"global":"x"}` would otherwise turn
+			// every counter into NaN and silently disable the ceiling.
+			const global = parsed.global as Partial<ThrottleState["global"]>;
+			this.#state = {
+				ips: sanitizeIps(parsed.ips),
+				global:
+					global &&
+					typeof global === "object" &&
+					Number.isFinite(global.failures) &&
+					Number.isFinite(global.windowStart)
+						? {
+								failures: global.failures as number,
+								windowStart: global.windowStart as number,
+							}
+						: { failures: 0, windowStart: 0 },
+			};
 		} catch {
 			// Missing or unreadable state must not lock anyone out; the worst case
 			// is that an attacker gets one fresh window.
@@ -141,7 +183,8 @@ export class UnlockThrottle {
 		const over = failures - FREE_ATTEMPTS;
 		const until =
 			over >= 0 ? now + Math.min(MAX_BACKOFF_MS, 30_000 * 2 ** over) : 0;
-		state.ips[ip] = { failures, until };
+		state.ips[ip] = { failures, until, seen: now };
+		state.ips = prune(state.ips, now);
 
 		await this.#save(state);
 	}

@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 
 import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
-import { readFile, rename, writeFile } from "node:fs/promises";
+import { readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parseBirdnetConfig } from "~/lib/settings-config.server.ts";
@@ -38,6 +38,11 @@ export function verifyPassword(password: string, stored: string) {
 	const [, n, r, p, saltB64, expectedB64] = parts;
 	const cost = { N: Number(n), r: Number(r), p: Number(p) };
 	if (!Object.values(cost).every(Number.isSafeInteger)) return false;
+	// Bounded rather than left to Node's `maxmem` to reject: a tampered file
+	// naming a cost just under that limit would have us burn real CPU on a Pi
+	// for every attempt. These are generous next to the values we write.
+	if (cost.N > 1 << 20 || cost.r > 16 || cost.p > 4) return false;
+	if (cost.N < 2 || cost.r < 1 || cost.p < 1) return false;
 
 	const expected = Buffer.from(expectedB64, "base64");
 	if (expected.length !== KEY_LENGTH) return false;
@@ -84,7 +89,15 @@ export async function writeAuthFile(
 		encoding: "utf8",
 		mode: 0o600,
 	});
-	await rename(temporaryPath, authPath);
+	try {
+		await rename(temporaryPath, authPath);
+	} catch (error) {
+		// A failed rename would otherwise leave the temp file behind on every
+		// attempt. It is 0600 so nothing leaks, but they would accumulate in
+		// /etc/birdnet forever.
+		await rm(temporaryPath, { force: true });
+		throw error;
+	}
 }
 
 export function newNonce() {
@@ -108,7 +121,16 @@ export async function readAuthFile(
 			isDefault: true,
 			nonce: newNonce(),
 		};
-		await writeAuthFile(created, authPath);
+		try {
+			await writeAuthFile(created, authPath);
+		} catch (cause) {
+			// An unwritable directory would otherwise throw a bare fs error out of
+			// a function whose callers only know to expect AuthConfigError, and
+			// would re-run scrypt on every single request while never succeeding.
+			throw new AuthConfigError(
+				`Cannot create ${authPath}: ${(cause as Error).message}`,
+			);
+		}
 		return created;
 	}
 
@@ -127,4 +149,42 @@ export async function readAuthFile(
 	}
 
 	return { hash, isDefault: values.WEB_UI_PWD_IS_DEFAULT === "1", nonce };
+}
+
+/**
+ * Both password mutations live here rather than in `auth.server.ts` so the
+ * command-line tool that sets the password can reach them without importing the
+ * request and cookie helpers, which mean nothing outside a live HTTP request.
+ *
+ * Neither reads the existing file first. They replace it wholesale, and a
+ * corrupt file is exactly when the owner most needs to be able to set a
+ * password -- refusing to overwrite it would make the recovery tool useless in
+ * the one situation it exists for.
+ */
+export async function changePassword(
+	password: string,
+	authPath = resolveAuthPath(),
+) {
+	if (password.length < MIN_PASSWORD_LENGTH) {
+		throw new Error(
+			`Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+		);
+	}
+	await writeAuthFile(
+		{ hash: hashPassword(password), isDefault: false, nonce: newNonce() },
+		authPath,
+	);
+}
+
+/** Restores the shipped default, which also re-imposes the local-network-only
+ *  restriction on unlocking. */
+export async function resetPasswordToDefault(authPath = resolveAuthPath()) {
+	await writeAuthFile(
+		{
+			hash: hashPassword(DEFAULT_PASSWORD),
+			isDefault: true,
+			nonce: newNonce(),
+		},
+		authPath,
+	);
 }

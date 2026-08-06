@@ -33,6 +33,12 @@ export const Route = createFileRoute("/review")({
 		};
 	},
 	component: Review,
+	// Gating this route gave its loader a second way to fail: the unlock status
+	// resolved in the root's `beforeLoad` can go stale -- another device rotating
+	// the session nonce, say -- between that check and the loader's call, and the
+	// gated server function then refuses. A narrow window, but without a boundary
+	// it surfaces raw.
+	errorComponent: ReviewUnavailable,
 });
 
 function Review() {
@@ -121,5 +127,29 @@ function ReviewContent({
 				}
 			/>
 		</div>
+	);
+}
+
+function ReviewUnavailable() {
+	return (
+		<main className="page-wrap py-4">
+			<section className="feature-card rounded-md p-5">
+				<div className="flex items-start gap-3">
+					<CircleAlert
+						aria-hidden="true"
+						className="mt-0.5 size-5 text-destructive"
+					/>
+					<div>
+						<h1 className="display-title font-semibold text-xl">
+							Review is unavailable
+						</h1>
+						<p className="mt-2 max-w-2xl text-muted-foreground text-sm leading-relaxed">
+							The detection queue could not be read, or this browser's session
+							expired while the page was open. Reload to sign in again.
+						</p>
+					</div>
+				</div>
+			</section>
+		</main>
 	);
 }
