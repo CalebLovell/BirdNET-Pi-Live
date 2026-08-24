@@ -112,7 +112,8 @@ test("keeps page tools outside the table and bulk status in its header", async (
 	const installed = markup.slice(installedStart);
 	assert.match(installed, /data-layout="installed-species-header"/);
 	assert.match(installed, />Installed species</);
-	assert.doesNotMatch(installed, /<select/);
+	assert.equal(installed.match(/<select/g)?.length, 1);
+	assert.match(installed, /<select[^>]*aria-label="Sort species by"/);
 	assert.doesNotMatch(installed, />Import lists</);
 	assert.doesNotMatch(installed, />Export lists</);
 	assert.doesNotMatch(installed, />Reset lists</);
@@ -163,7 +164,10 @@ test("offers four explicit bulk status actions", async () => {
 			`expected the ${status} action to use its tinted border`,
 		);
 	}
-	assert.doesNotMatch(markup, /<select/);
+	assert.doesNotMatch(
+		markup,
+		/<select[^>]*aria-label="Set selected species status"/,
+	);
 });
 
 test("the four statuses are explained on demand rather than above the table", async () => {

@@ -76,6 +76,7 @@ async function renderTable(
 
 test("renders Installed species with five sortable, unified columns", async () => {
 	const markup = await renderTable();
+	const desktopTable = markup.match(/<table[\s\S]*<\/table>/)?.[0] ?? "";
 
 	for (const slot of [
 		"table",
@@ -86,13 +87,13 @@ test("renders Installed species with five sortable, unified columns", async () =
 		"table-cell",
 		"badge",
 	]) {
-		assert.match(markup, new RegExp(`data-slot="${slot}"`));
+		assert.match(desktopTable, new RegExp(`data-slot="${slot}"`));
 	}
-	assert.equal(markup.match(/data-slot="table-head"/g)?.length, 5);
-	assert.equal(markup.match(/data-slot="table-cell"/g)?.length, 20);
-	assert.equal(markup.match(/font-semibold/g)?.length, 5);
+	assert.equal(desktopTable.match(/data-slot="table-head"/g)?.length, 5);
+	assert.equal(desktopTable.match(/data-slot="table-cell"/g)?.length, 20);
+	assert.equal(desktopTable.match(/font-semibold/g)?.length, 5);
 	for (const heading of ["Species", "Scientific name", "Count", "Status"]) {
-		assert.match(markup, new RegExp(`>${heading}(?:<|$)`));
+		assert.match(desktopTable, new RegExp(`>${heading}(?:<|$)`));
 	}
 	for (const status of [
 		"Automatic",
@@ -106,7 +107,7 @@ test("renders Installed species with five sortable, unified columns", async () =
 	assert.match(markup, /var\(--sage\)/);
 	assert.match(markup, /var\(--sand\)/);
 	assert.match(markup, /var\(--clay\)/);
-	assert.doesNotMatch(markup, /<select/);
+	assert.doesNotMatch(desktopTable, /<select/);
 	assert.doesNotMatch(markup, />Policy</);
 	assert.match(markup, /aria-sort="none"[^>]*><button[^>]*>Scientific name/);
 	assert.match(markup, /aria-sort="none"[^>]*><button[^>]*>Status/);
@@ -116,12 +117,15 @@ test("renders Installed species with five sortable, unified columns", async () =
 		markup,
 		/<a href="\/species\/coyote" class="font-medium no-underline hover:underline">Coyote<\/a>/,
 	);
-	// Every column renders at every width -- no column is dropped or restyled
-	// per container width.
-	assert.doesNotMatch(markup, /<colgroup/);
-	assert.doesNotMatch(markup, /data-slot="table-(head|cell)"[^>]*@min-\[/);
+	// The complete desktop table remains available; narrow containers switch
+	// the whole presentation rather than dropping individual columns.
+	assert.doesNotMatch(desktopTable, /<colgroup/);
 	assert.doesNotMatch(
-		markup,
+		desktopTable,
+		/data-slot="table-(head|cell)"[^>]*@min-\[/,
+	);
+	assert.doesNotMatch(
+		desktopTable,
 		/data-slot="table-(head|cell)"[^>]*class="hidden/,
 	);
 	// Only the two ends are pinned -- the shared selection column and status --
@@ -129,27 +133,51 @@ test("renders Installed species with five sortable, unified columns", async () =
 	// table overflows. Everything between divides up the rest under auto layout,
 	// so no middle column carries a width of its own.
 	assert.match(
-		markup,
+		desktopTable,
 		/data-slot="table-head" class="[^"]*\bw-10 min-w-10\b[^"]*"[^>]*><input aria-label="Select all species/,
 	);
 	assert.match(
-		markup,
+		desktopTable,
 		/data-slot="table-head" class="[^"]*\bw-36 min-w-36\b[^"]*" aria-sort="none"[^>]*><button[^>]*>Status/,
 	);
 	assert.doesNotMatch(
-		markup,
+		desktopTable,
 		/data-slot="table-head" class="[^"]*\bw-\d+[^"]*" aria-sort="ascending"/,
 	);
 	assert.match(
-		markup,
+		desktopTable,
 		/data-slot="table-head" class="[^"]*pl-0[^"]*" aria-sort="ascending"/,
 	);
 	assert.match(
 		markup,
 		/data-slot="table-head" class="[^"]*pl-1[^"]*" aria-sort="none"/,
 	);
-	assert.match(markup, /data-slot="table-cell" class="[^"]*pl-0[^"]*"/);
-	assert.match(markup, /data-slot="table-cell" class="[^"]*pl-1[^"]*"/);
+	assert.match(desktopTable, /data-slot="table-cell" class="[^"]*pl-0[^"]*"/);
+	assert.match(desktopTable, /data-slot="table-cell" class="[^"]*pl-1[^"]*"/);
+});
+
+test("renders every species field and selection in a vertical small-screen list", async () => {
+	const markup = await renderTable();
+
+	// `lg:`, the width the sidebar leaves at, so the two changes land together --
+	// and the same width the detections table uses.
+	assert.match(
+		markup,
+		/data-slot="species-control-list" class="[^"]*lg:hidden[^"]*"/,
+	);
+	assert.match(
+		markup,
+		/data-slot="table-container" class="[^"]*hidden[^"]*lg:block[^"]*"/,
+	);
+	assert.match(markup, /aria-label="Select Coyote"/);
+	assert.match(markup, />Coyote</);
+	assert.match(markup, />Canis latrans</);
+	assert.match(markup, />Scientific name</);
+	assert.match(markup, />Count</);
+	assert.match(markup, />4</);
+	assert.match(markup, />Automatic</);
+	assert.match(markup, /aria-label="Sort species by"/);
+	assert.match(markup, /aria-label="Sort species descending"/);
 });
 
 test("left-aligns selection controls within their column", async () => {
