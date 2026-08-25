@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { useId } from "react";
 import {
 	Area,
@@ -11,8 +10,10 @@ import {
 	YAxis,
 } from "recharts";
 
-import { chartTooltipStyle } from "~/lib/chart-style.ts";
-import { type HourActivity, hourLabel } from "~/lib/stats-data.ts";
+import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
+import { CHART_ANIMATION_MS } from "~/lib/chart-style.ts";
+import type { HourActivity } from "~/lib/stats-data.ts";
+import { hourLabel } from "~/lib/time-ago.ts";
 
 /**
  * The detections-by-hour chart, shared by the stats page (every detection) and
@@ -78,23 +79,32 @@ export function DetectionsByHourCard({
 							fontSize={12}
 							tickLine={false}
 							allowDecimals={false}
-							width={32}
+							// Auto rather than a fixed width: a busy station's five-digit
+							// counts were being clipped to their trailing digits.
+							width="auto"
 						/>
 						<ChartTooltip
-							{...chartTooltipStyle}
-							labelFormatter={(hour: ReactNode) => hourLabel(Number(hour))}
+							content={(props) => (
+								<ChartValueTooltip
+									{...props}
+									formatLabel={(hour) => hourLabel(Number(hour))}
+								/>
+							)}
 							cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
 						/>
+						{/* The wash under the line, not a series of its own: it plots the
+						    same counts, so left in the tooltip it listed every value twice. */}
 						<Area
 							dataKey="count"
-							name="Detections"
+							tooltipType="none"
+							animationDuration={CHART_ANIMATION_MS}
 							stroke="none"
 							fill={`url(#${fillId})`}
 						/>
 						<Line
 							type="monotone"
 							dataKey="count"
-							name="Detections"
+							animationDuration={CHART_ANIMATION_MS}
 							stroke="var(--moss)"
 							strokeWidth={2}
 							dot={false}

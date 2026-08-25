@@ -1,11 +1,6 @@
-/** Tooltip chrome shared by every recharts chart, so they all read as one set. */
-export const chartTooltipStyle = {
-	contentStyle: {
-		background: "var(--paper-raised)",
-		border: "1px solid var(--line)",
-		borderRadius: "var(--radius-sm)",
-		color: "var(--ink)",
-		fontSize: 13,
-	},
-	labelStyle: { color: "var(--ink)", fontWeight: 600 },
-};
+/**
+ * How long a series takes to redraw, shared by every recharts chart. Well under
+ * recharts' 1500ms default: stepping a year selector is a repeated action, and
+ * at the default the chart was still settling when you pressed again.
+ */
+export const CHART_ANIMATION_MS = 500;
