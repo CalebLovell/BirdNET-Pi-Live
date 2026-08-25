@@ -4,6 +4,7 @@
 // Pure by design -- the caller supplies the numbers, the clock and the window.
 // Every formatting rule lives here so it can be read and tested in one place.
 
+import { ordinal, plural } from "~/lib/number-format.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 
 /** Species heard this often all-time are too familiar to call rare. */
@@ -54,10 +55,6 @@ export function sparkline(counts: number[]): string {
 		.join("");
 }
 
-function plural(count: number, noun: string): string {
-	return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
-}
-
 /** "Jul 25", read off the date parts so no timezone can shift the day. */
 function dateLabel(date: string): string {
 	const [year, month, day] = date.split("-").map(Number);
@@ -68,16 +65,8 @@ function dateLabel(date: string): string {
 }
 
 /** The axis's compact hour: "12am", "9pm". */
-function axisHour(hour: number): string {
+export function axisHour(hour: number): string {
 	return hourLabel(hour).replace(" ", "").toLowerCase();
-}
-
-function ordinal(value: number): string {
-	const lastTwo = value % 100;
-	if (lastTwo >= 11 && lastTwo <= 13) return `${value}th`;
-
-	const suffix = ["th", "st", "nd", "rd"][value % 10] ?? "th";
-	return `${value}${suffix}`;
 }
 
 /**

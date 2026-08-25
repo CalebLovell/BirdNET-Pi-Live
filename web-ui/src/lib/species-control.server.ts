@@ -15,6 +15,7 @@ import { homedir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { resolveDetectionClipPath } from "./detection-file-path.server.ts";
+import { reviewsTableExists } from "./review.server.ts";
 import {
 	parseBirdnetConfig,
 	resolveSettingsPath,
@@ -537,16 +538,6 @@ export async function previewSpeciesHistoryDeletion(
 	} finally {
 		if (opened.owned) opened.database.close();
 	}
-}
-
-function reviewsTableExists(database: DatabaseSync) {
-	return (
-		database
-			.prepare(
-				"SELECT 1 AS present FROM sqlite_master WHERE type='table' AND name='reviews'",
-			)
-			.get() !== undefined
-	);
 }
 
 export async function deleteSpeciesHistory(

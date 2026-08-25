@@ -95,7 +95,7 @@ export function ensureReviewsTable(database: DatabaseSync) {
  * never reviewed anything, so the table is only joined once it exists rather
  * than being created on the read path.
  */
-function reviewsTableExists(database: DatabaseSync): boolean {
+export function reviewsTableExists(database: DatabaseSync): boolean {
 	return (
 		database
 			.prepare(

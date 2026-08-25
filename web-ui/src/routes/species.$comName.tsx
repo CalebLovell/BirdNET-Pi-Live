@@ -7,8 +7,6 @@ import {
 import {
 	CalendarDays,
 	ChartNoAxesColumnIncreasing,
-	ChevronLeft,
-	ChevronRight,
 	Clock3,
 	Gauge,
 	Sunrise,
@@ -17,7 +15,7 @@ import { z } from "zod";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
-import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
+import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
@@ -37,6 +35,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
+import { YearSelector } from "~/components/year-selector.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
@@ -273,14 +272,13 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 	useFavicon(illustrationUrlFor(detail.sciName, "flight"));
 
 	const { weeks, maximum } = buildHeatMap(detail.history);
-	const availableYears = [...detail.availableYears].sort((a, b) => a - b);
-	const yearIndex = availableYears.indexOf(year);
-	const previousYear = yearIndex > 0 ? availableYears[yearIndex - 1] : null;
-	const nextYear =
-		yearIndex >= 0 && yearIndex < availableYears.length - 1
-			? availableYears[yearIndex + 1]
-			: null;
-	const showYearSelector = availableYears.length > 1;
+	// Both year-scoped cards read and write the one `year` search param, so
+	// stepping either selector moves the whole page to that year at once.
+	const selectYear = (next: number) =>
+		navigate({
+			search: (prev) => ({ ...prev, year: next }),
+			replace: true,
+		});
 
 	return (
 		<TooltipProvider>
@@ -294,52 +292,19 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					>
 						<div className="flex flex-wrap items-center justify-between gap-4">
 							<div className="island-kicker">Detection history</div>
-							{showYearSelector ? (
-								<div className="flex items-center gap-2">
-									<Button
-										variant="outline"
-										size="icon-xs"
-										disabled={previousYear === null}
-										aria-label="Previous year"
-										onClick={() =>
-											navigate({
-												search: (prev) => ({
-													...prev,
-													year: previousYear ?? year,
-												}),
-												replace: true,
-											})
-										}
-									>
-										<ChevronLeft />
-									</Button>
-									<div className="tabular-data min-w-12 text-center font-semibold text-sm">
-										{year}
-									</div>
-									<Button
-										variant="outline"
-										size="icon-xs"
-										disabled={nextYear === null}
-										aria-label="Next year"
-										onClick={() =>
-											navigate({
-												search: (prev) => ({ ...prev, year: nextYear ?? year }),
-												replace: true,
-											})
-										}
-									>
-										<ChevronRight />
-									</Button>
-								</div>
-							) : null}
+							<YearSelector
+								year={year}
+								years={detail.availableYears}
+								onChange={selectYear}
+							/>
 						</div>
 
 						<div className="mt-4 overflow-x-auto pb-1">
 							<div className="w-full min-w-max">
 								<div className="mb-1 ml-9 flex w-max gap-1">
-									{weeks.map((week, index) => (
+									{weeks.map((week) => (
 										<div
-											key={`month-${index}`}
+											key={`month-${week.days[0].date.toISOString()}`}
 											className="w-3 shrink-0 whitespace-nowrap text-[10px] text-muted-foreground"
 										>
 											{week.monthLabel}
@@ -357,9 +322,9 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 										<span>Sat</span>
 									</div>
 									<div className="flex w-max gap-1">
-										{weeks.map((week, weekIndex) => (
+										{weeks.map((week) => (
 											<div
-												key={`week-${weekIndex}`}
+												key={`week-${week.days[0].date.toISOString()}`}
 												className="flex shrink-0 flex-col gap-1"
 											>
 												{week.days.map(({ date, point }) => (
@@ -378,9 +343,9 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 						</div>
 						<div className="mt-3 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
 							<span>Less</span>
-							{HEAT_COLORS.map((color, index) => (
+							{HEAT_COLORS.map((color) => (
 								<span
-									key={`legend-${index}`}
+									key={color}
 									className="size-3 rounded-[3px] border border-[var(--line)]"
 									style={{ backgroundColor: color }}
 								/>
@@ -397,8 +362,11 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 							className="lg:min-h-0"
 						/>
 
-						<DetectionsOverTimeCard
+						<DetectionsByMonthCard
 							trend={detail.detectionTrend}
+							year={year}
+							years={detail.availableYears}
+							onYearChange={selectYear}
 							className="lg:min-h-0"
 						/>
 					</div>

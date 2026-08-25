@@ -7,7 +7,8 @@
 // Pure by design: every figure comes from the rows the page already has, so
 // sharing costs no extra round trip.
 
-import { sparkline } from "~/lib/share-card.ts";
+import { plural } from "~/lib/number-format.ts";
+import { axisHour, sparkline } from "~/lib/share-card.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 
@@ -50,15 +51,6 @@ export type TimelineShareCard = {
 };
 
 const MEDALS = ["🥇", "🥈", "🥉"] as const;
-
-function plural(count: number, noun: string): string {
-	return `${count.toLocaleString()} ${noun}${count === 1 ? "" : "s"}`;
-}
-
-/** The axis's compact hour: "12am", "11pm". */
-function axisHour(hour: number): string {
-	return hourLabel(hour).replace(" ", "").toLowerCase();
-}
 
 /**
  * The axis under the sparkline, stretched so its right-hand label lands beneath

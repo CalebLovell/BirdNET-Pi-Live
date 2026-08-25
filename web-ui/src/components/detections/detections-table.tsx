@@ -7,18 +7,11 @@ import {
 	type RowSelectionState,
 	useReactTable,
 } from "@tanstack/react-table";
-import {
-	ArrowDown,
-	ArrowUp,
-	ChevronLeft,
-	ChevronRight,
-	Pause,
-	Volume2,
-	X,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { RecordingButton } from "~/components/recording-button.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import { Button } from "~/components/ui/button.tsx";
 import { Input } from "~/components/ui/input.tsx";
@@ -41,7 +34,6 @@ import {
 import type { DetectionPage, DetectionTableRow } from "~/lib/detections.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
-import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 
 type DetectionsTableProps = {
 	page: DetectionPage;
@@ -121,46 +113,6 @@ function dayLabel(row: DetectionTableRow): string {
 // repeated down the page and the speaker glyph already says it. It takes the
 // larger square rather than the matching `xs` one: this is the only real tap
 // target in a list row, and a 24px box is under any sane thumb.
-function RecordingButton({
-	row,
-	iconOnly = false,
-}: {
-	row: DetectionTableRow;
-	iconOnly?: boolean;
-}) {
-	const audioUrl = audioUrlFor(row.Date, row.Com_Name, row.File_Name);
-	const {
-		audioRef,
-		isLoading,
-		isPlaying,
-		onEnded,
-		onPause,
-		onPlay,
-		togglePlay,
-	} = usePlayableAudio(audioUrl);
-
-	return (
-		<>
-			<Button
-				aria-label={`${isPlaying ? "Pause" : "Play"} ${row.Com_Name} recording`}
-				size={iconOnly ? "icon-lg" : "xs"}
-				variant="outline"
-				icon={isPlaying ? Pause : Volume2}
-				loading={isLoading}
-				onClick={togglePlay}
-			>
-				{iconOnly ? null : "Recording"}
-			</Button>
-			{/* biome-ignore lint/a11y/useMediaCaption: Bird calls have no spoken dialogue to caption. */}
-			<audio
-				ref={audioRef}
-				onEnded={onEnded}
-				onPause={onPause}
-				onPlay={onPlay}
-			/>
-		</>
-	);
-}
 
 function SortButton({
 	label,
@@ -446,7 +398,15 @@ export function DetectionsTable({
 			header: () => "Recording",
 			cell: ({ row }) => (
 				<div className="flex justify-end">
-					<RecordingButton row={row.original} />
+					<RecordingButton
+						audioUrl={audioUrlFor(
+							row.original.Date,
+							row.original.Com_Name,
+							row.original.File_Name,
+						)}
+						label="Recording"
+						speciesName={row.original.Com_Name}
+					/>
 				</div>
 			),
 			enableHiding: false,
@@ -638,7 +598,16 @@ export function DetectionsTable({
 							    36px it set that line's height, so every row paid 12px for it.
 							    Beside the block it costs nothing -- the illustration and the
 							    text are already taller. */}
-							<RecordingButton row={row.original} iconOnly />
+							<RecordingButton
+								audioUrl={audioUrlFor(
+									row.original.Date,
+									row.original.Com_Name,
+									row.original.File_Name,
+								)}
+								speciesName={row.original.Com_Name}
+								iconOnly
+								iconSize="icon-lg"
+							/>
 						</li>
 					);
 				})}

@@ -50,6 +50,7 @@ export function formatClockTimeWithSeconds(timestamp: string): string {
 	});
 }
 
+/** An hour of the day on a 12-hour clock, e.g. "5 PM". */
 export function hourLabel(hour: number): string {
 	if (hour === 0) return "12 AM";
 	if (hour < 12) return `${hour} AM`;

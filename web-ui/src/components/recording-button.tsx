@@ -12,9 +12,20 @@ import { usePlayableAudio } from "~/lib/use-playable-audio.ts";
 export function RecordingButton({
 	audioUrl,
 	iconOnly = false,
+	label = "Bird Call",
+	speciesName,
+	iconSize = "icon-xs",
 }: {
 	audioUrl: string | null;
 	iconOnly?: boolean;
+	/** The visible text, dropped entirely when `iconOnly`. */
+	label?: string;
+	/** Names the bird in the accessible label. Worth passing from a list, where
+	 * a row of identical "Play bird call" buttons says nothing about which bird
+	 * each one belongs to. */
+	speciesName?: string;
+	/** Tap targets in a dense table want more than the default. */
+	iconSize?: "icon-xs" | "icon-lg";
 }) {
 	const {
 		audioRef,
@@ -30,15 +41,17 @@ export function RecordingButton({
 		<>
 			<Button
 				variant="outline"
-				size={iconOnly ? "icon-xs" : "xs"}
+				size={iconOnly ? iconSize : "xs"}
 				className="shrink-0"
 				icon={isPlaying ? Pause : Volume2}
 				loading={isLoading}
 				disabled={!audioUrl}
 				onClick={togglePlay}
-				aria-label={isPlaying ? "Pause bird call" : "Play bird call"}
+				aria-label={`${isPlaying ? "Pause" : "Play"} ${
+					speciesName ? `${speciesName} recording` : "bird call"
+				}`}
 			>
-				{iconOnly ? null : "Bird Call"}
+				{iconOnly ? null : label}
 			</Button>
 			{audioUrl && (
 				<audio
