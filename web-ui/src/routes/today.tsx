@@ -3,9 +3,11 @@ import { useEffect, useRef, useState } from "react";
 
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
+import { TodaysStoryCard } from "~/components/now/todays-story-card.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
+import { getTodaysStory } from "~/lib/story.ts";
 import { useAgeOffset } from "~/lib/use-age-offset.ts";
 import { useFavicon } from "~/lib/use-favicon.ts";
 import { usePolledData } from "~/lib/use-polled-data.ts";
@@ -16,7 +18,16 @@ const FLASH_DURATION_MS = 2_400;
 export const Route = createFileRoute("/today")({
 	head: () => ({ meta: [{ title: pageTitle("Today") }] }),
 	component: Today,
-	loader: () => getNowSnapshot(),
+	// The story rides the loader alone. It is judged against a fortnight of
+	// history and cannot change inside a ten-second poll, so pulling it here
+	// keeps its full-table scans off the polling path.
+	loader: async () => {
+		const [snapshot, story] = await Promise.all([
+			getNowSnapshot(),
+			getTodaysStory(),
+		]);
+		return { snapshot, story };
+	},
 });
 
 /**
@@ -47,10 +58,10 @@ function useFreshKeys(keys: string[]): Set<string> {
 }
 
 function Today() {
-	const initial = Route.useLoaderData();
+	const { snapshot: initialSnapshot, story } = Route.useLoaderData();
 	const { data: snapshot } = usePolledData(
 		() => getNowSnapshot(),
-		initial,
+		initialSnapshot,
 		POLL_INTERVAL_MS,
 	);
 	const offsetMs = useAgeOffset(snapshot.generatedAt);
@@ -77,6 +88,8 @@ function Today() {
 				offsetMs={offsetMs}
 				flash={heroIsNew}
 			/>
+
+			<TodaysStoryCard lines={story} className="mt-4" />
 
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
 			    fall back to is sized to max-content, so a long species name in the
