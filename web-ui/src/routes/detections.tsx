@@ -1,4 +1,8 @@
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import {
+	createFileRoute,
+	useRouteContext,
+	useRouter,
+} from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import type { RowSelectionState } from "@tanstack/react-table";
 import { Bird, CircleAlert, Trash2 } from "lucide-react";
@@ -36,6 +40,11 @@ function Detections() {
 	const search = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const router = useRouter();
+	// The delete path is gated on the server, so a locked visitor could only ever
+	// reach a refusal through it. The button and the checkboxes that feed it come
+	// off entirely rather than sitting there offering something that cannot work.
+	const { auth } = useRouteContext({ from: "__root__" });
+	const canDelete = auth.unlocked;
 	const runDeletion = useServerFn(deleteDetections);
 	const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 	const [deleteOpen, setDeleteOpen] = useState(false);
@@ -147,7 +156,7 @@ function Detections() {
 						<div className="island-kicker">All detections</div>
 						{/* With no rows there is nothing selectable, so the button would
 							    only ever sit disabled. */}
-						{!isEmpty && (
+						{!isEmpty && canDelete && (
 							<Button
 								disabled={selectedCount === 0}
 								size="xs"
@@ -170,6 +179,7 @@ function Detections() {
 							}
 							rowSelection={rowSelection}
 							onRowSelectionChange={setRowSelection}
+							canDelete={canDelete}
 						/>
 					)}
 				</section>

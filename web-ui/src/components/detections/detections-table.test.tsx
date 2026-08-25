@@ -26,7 +26,7 @@ const detection = {
 	File_Name: "Northern_Cardinal-94.wav",
 };
 
-async function renderTableWithDetection() {
+async function renderTableWithDetection(canDelete = true) {
 	const rootRoute = createRootRoute();
 	const indexRoute = createRoute({
 		getParentRoute: () => rootRoute,
@@ -43,6 +43,7 @@ async function renderTableWithDetection() {
 				rowSelection={{}}
 				onSearchChange={() => {}}
 				onRowSelectionChange={() => {}}
+				canDelete={canDelete}
 			/>
 		),
 	});
@@ -62,6 +63,7 @@ test("renders every detections column header semibold", () => {
 			rowSelection={{}}
 			onSearchChange={() => {}}
 			onRowSelectionChange={() => {}}
+			canDelete
 		/>,
 	);
 
@@ -80,6 +82,26 @@ test("renders every detections column header semibold", () => {
 	}
 });
 
+// The delete path behind these checkboxes is gated on the server, so a locked
+// visitor selecting rows could only ever arrive at a refusal.
+test("drops the selection checkboxes when the station is locked", async () => {
+	const markup = await renderTableWithDetection(false);
+
+	assert.doesNotMatch(markup, /type="checkbox"/);
+	assert.doesNotMatch(markup, /Select all detections on this page/);
+	assert.doesNotMatch(markup, /aria-label="Select /);
+	// The rest of the table is untouched -- only the column comes off.
+	assert.match(markup, />Species(?:<|$)/);
+	assert.match(markup, />Recording(?:<|$)/);
+});
+
+test("keeps the selection checkboxes when the station is unlocked", async () => {
+	const markup = await renderTableWithDetection();
+
+	assert.match(markup, /Select all detections on this page/);
+	assert.match(markup, /aria-label="Select /);
+});
+
 test("keeps the complete table for containers wide enough to fit it", () => {
 	const markup = renderToStaticMarkup(
 		<DetectionsTable
@@ -88,6 +110,7 @@ test("keeps the complete table for containers wide enough to fit it", () => {
 			rowSelection={{}}
 			onSearchChange={() => {}}
 			onRowSelectionChange={() => {}}
+			canDelete
 		/>,
 	);
 	const desktopTable = markup.match(/<table[\s\S]*<\/table>/)?.[0] ?? "";

@@ -49,6 +49,12 @@ type DetectionsTableProps = {
 	onSearchChange: (search: DetectionWorkspaceSearch) => void;
 	rowSelection: RowSelectionState;
 	onRowSelectionChange: OnChangeFn<RowSelectionState>;
+	/**
+	 * Whether the station is unlocked. Selection exists only to feed the delete
+	 * button, and deleting is gated on the server -- so a locked visitor gets no
+	 * checkboxes rather than a column that leads to a refusal.
+	 */
+	canDelete: boolean;
 };
 
 type DetectionsFiltersProps = Pick<
@@ -311,6 +317,7 @@ export function DetectionsTable({
 	onSearchChange,
 	rowSelection,
 	onRowSelectionChange,
+	canDelete,
 }: DetectionsTableProps) {
 	function updateSearch(change: Partial<DetectionWorkspaceSearch>) {
 		onSearchChange({ ...search, ...change });
@@ -326,29 +333,31 @@ export function DetectionsTable({
 		});
 	}
 
+	const selectColumn: ColumnDef<DetectionTableRow> = {
+		id: "select",
+		header: ({ table }) => (
+			<input
+				aria-label="Select all detections on this page"
+				checked={table.getIsAllPageRowsSelected()}
+				className="block size-3.5 accent-[var(--moss)]"
+				type="checkbox"
+				onChange={table.getToggleAllPageRowsSelectedHandler()}
+			/>
+		),
+		cell: ({ row }) => (
+			<input
+				aria-label={`Select ${row.original.Com_Name}`}
+				checked={row.getIsSelected()}
+				className="block size-3.5 accent-[var(--moss)]"
+				type="checkbox"
+				onChange={row.getToggleSelectedHandler()}
+			/>
+		),
+		enableHiding: false,
+	};
+
 	const columns: ColumnDef<DetectionTableRow>[] = [
-		{
-			id: "select",
-			header: ({ table }) => (
-				<input
-					aria-label="Select all detections on this page"
-					checked={table.getIsAllPageRowsSelected()}
-					className="block size-3.5 accent-[var(--moss)]"
-					type="checkbox"
-					onChange={table.getToggleAllPageRowsSelectedHandler()}
-				/>
-			),
-			cell: ({ row }) => (
-				<input
-					aria-label={`Select ${row.original.Com_Name}`}
-					checked={row.getIsSelected()}
-					className="block size-3.5 accent-[var(--moss)]"
-					type="checkbox"
-					onChange={row.getToggleSelectedHandler()}
-				/>
-			),
-			enableHiding: false,
-		},
+		...(canDelete ? [selectColumn] : []),
 		{
 			accessorKey: "Com_Name",
 			id: "species",
@@ -476,16 +485,18 @@ export function DetectionsTable({
 			    reflowed the page twice. Tied to the viewport they fire together, at
 			    the cost of showing the list on a wide-but-sidebar-less window. */}
 			<div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-3 lg:hidden">
-				<label className="flex items-center gap-2 text-muted-foreground text-xs">
-					<input
-						aria-label="Select all detections on this page"
-						checked={table.getIsAllPageRowsSelected()}
-						className="block size-3.5 accent-[var(--moss)]"
-						type="checkbox"
-						onChange={table.getToggleAllPageRowsSelectedHandler()}
-					/>
-					Select page
-				</label>
+				{canDelete ? (
+					<label className="flex items-center gap-2 text-muted-foreground text-xs">
+						<input
+							aria-label="Select all detections on this page"
+							checked={table.getIsAllPageRowsSelected()}
+							className="block size-3.5 accent-[var(--moss)]"
+							type="checkbox"
+							onChange={table.getToggleAllPageRowsSelectedHandler()}
+						/>
+						Select page
+					</label>
+				) : null}
 				<div className="flex items-center gap-1">
 					<label className="flex items-center gap-2 text-muted-foreground text-xs">
 						<span>Sort</span>
@@ -551,13 +562,15 @@ export function DetectionsTable({
 									: "odd:bg-[var(--meadow)]"
 							}`}
 						>
-							<input
-								aria-label={`Select ${row.original.Com_Name}`}
-								checked={isSelected}
-								className="block size-3.5 shrink-0 accent-[var(--moss)]"
-								type="checkbox"
-								onChange={row.getToggleSelectedHandler()}
-							/>
+							{canDelete ? (
+								<input
+									aria-label={`Select ${row.original.Com_Name}`}
+									checked={isSelected}
+									className="block size-3.5 shrink-0 accent-[var(--moss)]"
+									type="checkbox"
+									onChange={row.getToggleSelectedHandler()}
+								/>
+							) : null}
 							<SpeciesThumbnail
 								imageUrl={illustrationUrlFor(row.original.Sci_Name)}
 								comName={row.original.Com_Name}

@@ -26,17 +26,29 @@ test("species control route loads data, adapts mutations, and invalidates commit
 	assert.match(source, /Species control is unavailable/);
 });
 
-test("navigation places Control immediately after Species", async () => {
+test("navigation groups Control with the other locked pages", async () => {
 	const source = await readFile(
 		new URL("../components/sidebar/sidebar-nav.tsx", import.meta.url),
 		"utf8",
 	);
-	const species = source.indexOf('to="/species"');
+	// Control sits in the second group, after every page a visitor can open,
+	// and between Review and Settings -- the three that carry a lock.
+	const explore = source.indexOf("Explore");
+	const manage = source.indexOf("Manage");
+	const review = source.indexOf('to="/review"');
 	const control = source.indexOf('to="/species-control"');
+	const settings = source.indexOf('to="/settings"');
+	const species = source.indexOf('to="/species"');
 	const detections = source.indexOf('to="/detections"');
-	assert.ok(species >= 0 && control > species && detections > control);
-	assert.match(
-		source.slice(control, detections),
-		/>\s*Control\s*(?:\{lock\}\s*)?</,
+
+	assert.ok(explore >= 0 && manage > explore, "both group labels are present");
+	assert.ok(
+		species > explore && detections > species && detections < manage,
+		"the open pages stay in the first group",
 	);
+	assert.ok(
+		review > manage && control > review && settings > control,
+		"the locked pages run Review, Control, Settings",
+	);
+	assert.match(source.slice(control, settings), />\s*Control\s*\{lock\}\s*</);
 });

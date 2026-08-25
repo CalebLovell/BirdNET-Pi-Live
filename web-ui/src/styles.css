@@ -239,10 +239,8 @@ a {
 
 /* The vertical counterpart to .nav-link. The underline that marks the active
    header link reads as an underline, not a selection, once the links are
-   stacked -- so the sidebar marks its active row with a filled pill and a rule
-   on the inner edge instead. */
+   stacked -- so the sidebar marks its active row with a filled pill instead. */
 .sidebar-link {
-  position: relative;
   display: flex;
   align-items: center;
   gap: 0.625rem;
@@ -253,29 +251,17 @@ a {
   color: color-mix(in oklab, var(--ink) 70%, var(--moss) 30%);
 }
 
-/* A separate element rather than an inset box-shadow: a shadow is clipped to
-   the pill's border radius, so the rule bows inward at both ends instead of
-   reading as a straight rule. This one keeps square ends whatever the pill
-   behind it does. */
-.sidebar-link.is-active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--moss);
-}
-
 .sidebar-link:hover {
   background: var(--meadow);
   color: var(--ink);
 }
 
+/* The active row is marked by weight of background alone, not bolder text:
+   re-weighting the label reflows the row on every navigation. Its fill sits a
+   step deeper than the hover fill so the two never read as the same state. */
 .sidebar-link.is-active {
-  background: var(--meadow);
+  background: color-mix(in oklab, var(--moss) 10%, var(--meadow));
   color: var(--ink);
-  font-weight: 700;
 }
 
 .sidebar-icon {

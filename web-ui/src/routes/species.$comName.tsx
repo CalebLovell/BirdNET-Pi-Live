@@ -284,7 +284,7 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 
 	return (
 		<TooltipProvider>
-			<div className="page-wrap">
+			<div className="page-wrap pb-4">
 				<SummaryCard detail={detail} offsetMs={offsetMs} />
 
 				<div className="mt-4">

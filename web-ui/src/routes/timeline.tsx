@@ -110,6 +110,17 @@ const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 // (scrolling the card) once the viewport can't afford that.
 const HOUR_GRID_COLUMNS = "16rem repeat(24, minmax(26px, 1fr))";
 
+// Ink for the count sitting inside each cell, indexed the same way as
+// HEAT_COLORS. The first four grounds are pale enough to take dark text; the
+// busiest one is 70% moss, where only paper reads.
+const HEAT_TEXT_COLORS = [
+	"var(--muted-foreground)",
+	"var(--foreground)",
+	"var(--foreground)",
+	"var(--foreground)",
+	"var(--paper)",
+] as const;
+
 const HEADER_HEIGHT = "mb-2 h-4";
 const ROW_HEIGHT = "h-8";
 
@@ -543,21 +554,25 @@ function HourRow({
 				</span>
 			</Link>
 
-			{row.hourCounts.map((count, hour) => (
-				<Tooltip key={hour}>
-					<TooltipTrigger asChild>
-						<div
-							role="img"
-							aria-label={`${row.comName} — ${hourLabel(hour)}: ${count} detections`}
-							className="mx-0.5 my-1 h-4.5 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1"
-							style={{ backgroundColor: HEAT_COLORS[heatLevel(count, rowMax)] }}
-						/>
-					</TooltipTrigger>
-					<TooltipContent>
-						{row.comName} — {count}
-					</TooltipContent>
-				</Tooltip>
-			))}
+			{row.hourCounts.map((count, hour) => {
+				const level = heatLevel(count, rowMax);
+				return (
+					<div
+						key={hour}
+						role="img"
+						aria-label={`${row.comName} — ${hourLabel(hour)}: ${count} detections`}
+						className="tabular-data mx-0.5 my-1 flex h-6 items-center justify-center overflow-hidden rounded-[3px] border border-[var(--line)] text-[10px] leading-none"
+						style={{
+							backgroundColor: HEAT_COLORS[level],
+							color: HEAT_TEXT_COLORS[level],
+						}}
+					>
+						{/* A zero reads as an empty cell: printing the digit 24 times a
+						    row would bury the counts that matter under noise. */}
+						{count > 0 ? count.toLocaleString() : ""}
+					</div>
+				);
+			})}
 		</div>
 	);
 }
