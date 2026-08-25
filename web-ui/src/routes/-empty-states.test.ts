@@ -69,8 +69,9 @@ test("section-level empties stay quiet lines", async () => {
 	const species = await read("./species.index.tsx");
 	assert.match(species, /<EmptyNote>/);
 
-	const timeline = await read("./timeline.tsx");
-	assert.match(timeline, /<EmptyNote>\{emptyMessage\}<\/EmptyNote>/);
+	// The timeline's quiet line lives in the card it shares with the day page.
+	const speciesByHour = await read("../components/species-by-hour-card.tsx");
+	assert.match(speciesByHour, /<EmptyNote>\{emptyMessage\}<\/EmptyNote>/);
 });
 
 test("no route hand-rolls the empty paragraph any more", async () => {

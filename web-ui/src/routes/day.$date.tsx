@@ -7,29 +7,16 @@ import {
 	Sunrise,
 	Sunset,
 } from "lucide-react";
-import {
-	Area,
-	AreaChart,
-	CartesianGrid,
-	Tooltip as ChartTooltip,
-	Line,
-	ResponsiveContainer,
-	XAxis,
-	YAxis,
-} from "recharts";
 
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
+import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
+import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
 import { LIST_ROW, SpeciesThumbnail } from "~/components/species-row.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
 import { Button } from "~/components/ui/button.tsx";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "~/components/ui/tooltip.tsx";
+import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
 import { formatConfidence } from "~/lib/confidence.ts";
 import {
@@ -41,7 +28,7 @@ import {
 	getDayPage,
 } from "~/lib/day.ts";
 import { getDayShareCard } from "~/lib/day-share.ts";
-import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
+import { ordinal } from "~/lib/number-format.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
 import { rankingBarPercent } from "~/lib/stats-data.ts";
@@ -64,20 +51,6 @@ export const Route = createFileRoute("/day/$date")({
 	component: DayPage,
 });
 
-const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
-const HOUR_GRID_COLUMNS = "13rem repeat(24, minmax(18px, 1fr))";
-
-const chartTooltipStyle = {
-	contentStyle: {
-		background: "var(--paper-raised)",
-		border: "1px solid var(--line)",
-		borderRadius: "var(--radius-sm)",
-		color: "var(--ink)",
-		fontSize: 13,
-	},
-	labelStyle: { color: "var(--ink)", fontWeight: 600 },
-};
-
 function formatDayTitle(date: string): string {
 	return new Date(`${date}T00:00:00`).toLocaleDateString([], {
 		weekday: "long",
@@ -92,13 +65,6 @@ function formatTime(time: string): string {
 		hour: "numeric",
 		minute: "2-digit",
 	});
-}
-
-function hourTickParts(hour: number): { number: string; meridiem: string } {
-	if (hour === 0) return { number: "12", meridiem: "a" };
-	if (hour < 12) return { number: String(hour), meridiem: "a" };
-	if (hour === 12) return { number: "12", meridiem: "p" };
-	return { number: String(hour - 12), meridiem: "p" };
 }
 
 const DAY_SECTION = "Day in review";
@@ -166,12 +132,23 @@ function DayPage() {
 						<div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
 							<SpeciesHeardCard species={day.species} />
 							<div className="grid gap-4 lg:sticky lg:top-4">
-								<HourlyActivityCard activity={day.hourActivity} />
+								<DetectionsByHourCard activity={day.hourActivity} />
 								<BookendsCard summary={day.summary} />
 							</div>
 						</div>
 
-						<HourGridCard species={day.species} />
+						<SpeciesByHourCard
+							rows={day.species.map((row) => ({
+								comName: row.comName,
+								imageUrl: row.imageUrl,
+								hourCounts: row.hourCounts,
+								totalDetections: row.count,
+								isNew: row.isFirstEver,
+							}))}
+							newLabel={formatDayTitle(day.date)}
+							emptyMessage="No species heard on this day."
+							className="mt-4"
+						/>
 
 						<BestRecordingsCard recordings={day.bestRecordings} />
 					</>
@@ -265,13 +242,6 @@ function standingLabel(standing: DayStanding, day: DayReview): string {
 	return delta > 0
 		? `${delta}% busier than a typical day`
 		: `${Math.abs(delta)}% quieter than a typical day`;
-}
-
-function ordinal(value: number): string {
-	const remainder = value % 100;
-	if (remainder >= 11 && remainder <= 13) return `${value}th`;
-	const suffix = ["th", "st", "nd", "rd"][value % 10] ?? "th";
-	return `${value}${suffix}`;
 }
 
 function QuietDay({ day }: { day: DayReview }) {
@@ -466,72 +436,6 @@ function FirstHeardBadge({ row }: { row: DaySpeciesRow }) {
 	);
 }
 
-function HourlyActivityCard({
-	activity,
-}: {
-	activity: { hour: number; count: number }[];
-}) {
-	return (
-		<section
-			aria-label="Detections through the day"
-			className="feature-card flex h-72 flex-col rounded-md p-4"
-		>
-			<div className="island-kicker">Through the day</div>
-
-			<div className="mt-4 min-h-0 flex-1">
-				<ResponsiveContainer width="100%" height="100%">
-					<AreaChart data={activity}>
-						<defs>
-							<linearGradient id="dayHourFill" x1="0" y1="0" x2="0" y2="1">
-								<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
-								<stop offset="100%" stopColor="var(--moss)" stopOpacity={0} />
-							</linearGradient>
-						</defs>
-						<CartesianGrid stroke="var(--line)" vertical={false} />
-						<XAxis
-							dataKey="hour"
-							tickFormatter={(hour: number) => hourLabel(hour)}
-							stroke="var(--muted-foreground)"
-							fontSize={12}
-							tickLine={false}
-							interval={3}
-						/>
-						<YAxis
-							stroke="var(--muted-foreground)"
-							fontSize={12}
-							tickLine={false}
-							allowDecimals={false}
-							width={32}
-						/>
-						<ChartTooltip
-							{...chartTooltipStyle}
-							labelFormatter={(hour: React.ReactNode) =>
-								hourLabel(Number(hour))
-							}
-							cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
-						/>
-						<Area
-							dataKey="count"
-							name="Detections"
-							stroke="none"
-							fill="url(#dayHourFill)"
-						/>
-						<Line
-							type="monotone"
-							dataKey="count"
-							name="Detections"
-							stroke="var(--moss)"
-							strokeWidth={2}
-							dot={false}
-							activeDot={{ r: 3, fill: "var(--moss)" }}
-						/>
-					</AreaChart>
-				</ResponsiveContainer>
-			</div>
-		</section>
-	);
-}
-
 /** How the day opened and how it closed -- the two moments a log can't show. */
 function BookendsCard({ summary }: { summary: DayReview["summary"] }) {
 	return (
@@ -586,107 +490,6 @@ function Bookend({
 			</div>
 			<RecordingButton audioUrl={moment.audioUrl} iconOnly />
 		</div>
-	);
-}
-
-/**
- * The timeline page's species × hour grid, narrowed to one calendar day. Each
- * row is scaled against its own busiest hour so a quiet species still shows the
- * shape of when it was around.
- */
-function HourGridCard({ species }: { species: DaySpeciesRow[] }) {
-	return (
-		<section
-			aria-label="Detections by hour"
-			className="feature-card mt-4 rounded-md p-4"
-		>
-			<div className="island-kicker mb-4">Detections by hour</div>
-
-			{/* See HourRow on the timeline page: the padding keeps the first
-			    column's focus ring from being clipped by the scrollport, and the
-			    matching negative margin keeps the grid visually where it was. */}
-			<div className="-m-1 overflow-x-auto p-1">
-				<div className="w-max min-w-full">
-					<div
-						className="mb-2 grid h-4 items-center"
-						style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
-					>
-						<div />
-						{HOURS.map((hour) => {
-							const { number, meridiem } = hourTickParts(hour);
-							return (
-								<div
-									key={`tick-${hour}`}
-									className="flex items-baseline justify-center gap-px leading-none"
-								>
-									<span className="font-semibold text-[10px] text-foreground">
-										{number}
-									</span>
-									<span className="text-[7px] text-muted-foreground">
-										{meridiem}
-									</span>
-								</div>
-							);
-						})}
-					</div>
-
-					{species.map((row) => {
-						const rowMax = Math.max(...row.hourCounts, 0);
-						return (
-							<div
-								key={row.comName}
-								className="grid h-8 items-center border-[var(--line)] border-t"
-								style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
-							>
-								<Link
-									to="/species/$comName"
-									params={{ comName: row.speciesSlug }}
-									className="flex items-center gap-2 pr-3 no-underline"
-								>
-									<div className="flex size-6 shrink-0 items-center justify-center">
-										{row.imageUrl ? (
-											<img
-												src={row.imageUrl}
-												alt=""
-												className="max-h-full max-w-full object-contain"
-												loading="lazy"
-											/>
-										) : (
-											<Bird className="size-3.5 text-muted-foreground" />
-										)}
-									</div>
-									<span className="min-w-0 truncate font-semibold text-sm">
-										{row.comName}
-									</span>
-								</Link>
-
-								{HOURS.map((hour) => {
-									const count = row.hourCounts[hour];
-									return (
-										<Tooltip key={`hour-${hour}`}>
-											<TooltipTrigger asChild>
-												<div
-													role="img"
-													aria-label={`${row.comName} — ${hourLabel(hour)}: ${count} detections`}
-													className="m-1 h-4.5 rounded-[3px] border border-[var(--line)] transition-[outline] hover:z-10 hover:outline hover:outline-2 hover:outline-[var(--hover-line)] hover:outline-offset-1"
-													style={{
-														backgroundColor:
-															HEAT_COLORS[heatLevel(count, rowMax)],
-													}}
-												/>
-											</TooltipTrigger>
-											<TooltipContent>
-												{row.comName} — {hourLabel(hour)} · {count}
-											</TooltipContent>
-										</Tooltip>
-									);
-								})}
-							</div>
-						);
-					})}
-				</div>
-			</div>
-		</section>
 	);
 }
 

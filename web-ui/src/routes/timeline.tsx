@@ -1,8 +1,4 @@
-import {
-	createFileRoute,
-	Link,
-	stripSearchParams,
-} from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
 	Bird,
 	Calendar,
@@ -15,28 +11,21 @@ import {
 	Clock3,
 	Feather,
 	Infinity as InfinityIcon,
-	Sparkles,
 } from "lucide-react";
 import { useMemo } from "react";
 import { z } from "zod";
 
-import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
+import { EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
 } from "~/components/page-header-card.tsx";
+import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
 import { Input } from "~/components/ui/input.tsx";
 import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
-import { HEAT_COLORS, heatLevel } from "~/lib/heatmap.ts";
 import { pageTitle } from "~/lib/page-title.ts";
-import { comNameToSlug } from "~/lib/species-slug.ts";
+import { hourLabel } from "~/lib/time-ago.ts";
 import { getTimelineData, type TimelineRow } from "~/lib/timeline.ts";
 import {
 	TIMELINE_PERIOD_LABELS,
@@ -105,39 +94,6 @@ const PERIOD_ICONS: Record<
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
-// The hour columns share whatever the name column leaves over, so the cells
-// stretch into rectangles on a wide card and fall back to their 26px floor
-// (scrolling the card) once the viewport can't afford that.
-const HOUR_GRID_COLUMNS = "16rem repeat(24, minmax(26px, 1fr))";
-
-// Ink for the count sitting inside each cell, indexed the same way as
-// HEAT_COLORS. The first four grounds are pale enough to take dark text; the
-// busiest one is 70% moss, where only paper reads.
-const HEAT_TEXT_COLORS = [
-	"var(--muted-foreground)",
-	"var(--foreground)",
-	"var(--foreground)",
-	"var(--foreground)",
-	"var(--paper)",
-] as const;
-
-const HEADER_HEIGHT = "mb-2 h-4";
-const ROW_HEIGHT = "h-8";
-
-function hourTickParts(hour: number): { number: string; meridiem: string } {
-	if (hour === 0) return { number: "12", meridiem: "a" };
-	if (hour < 12) return { number: String(hour), meridiem: "a" };
-	if (hour === 12) return { number: "12", meridiem: "p" };
-	return { number: String(hour - 12), meridiem: "p" };
-}
-
-function hourLabel(hour: number): string {
-	if (hour === 0) return "12 AM";
-	if (hour < 12) return `${hour} AM`;
-	if (hour === 12) return "12 PM";
-	return `${hour - 12} PM`;
-}
-
 // The native input that fits each granularity. Chromium renders week and month
 // as real pickers; elsewhere they degrade to text fields holding the same
 // "2026-W31" / "2026-07" values, which still round-trip correctly.
@@ -170,7 +126,6 @@ function Timeline() {
 	const { period } = search;
 	const anchor = resolveAnchor(period, search.date);
 	const navigate = Route.useNavigate();
-	const isEmpty = rows.length === 0;
 	// Only ever read when the station has detections but this window has none --
 	// a station with nothing at all is handled by the page-level empty below,
 	// before this card renders. Naming the window makes sense here precisely
@@ -183,7 +138,6 @@ function Timeline() {
 		navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
 	// The chart bodies need the kicker's bottom margin; the empty note brings its
 	// own top margin, so keeping both would double the gap.
-	const kickerClass = isEmpty ? "island-kicker" : "island-kicker mb-4";
 
 	// Every figure is derived from the already period-scoped rows, so the
 	// header moves with the period toggle without a second round trip.
@@ -339,56 +293,11 @@ function Timeline() {
 					Once the station hears something, its daily rhythm will show up here.
 				</EmptyState>
 			) : (
-				<TooltipProvider>
-					<section
-						aria-label="Detections by hour"
-						className="feature-card rounded-md p-4"
-					>
-						<div className={kickerClass}>Detections by hour</div>
-						{isEmpty ? (
-							<EmptyNote>{emptyMessage}</EmptyNote>
-						) : (
-							<div className="-m-1 overflow-x-auto p-1">
-								{/* p-1/-m-1 cancel out visually, but the padding gives the first
-							    column's focus ring somewhere to draw: the row links sit flush
-							    against the scrollport, so a 2px offset outline would be
-							    clipped on its left edge without the slack. */}
-								<div className="w-max min-w-full">
-									<div
-										className={`grid items-center ${HEADER_HEIGHT}`}
-										style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
-									>
-										<div className="sticky top-0 left-0 z-20 bg-[var(--paper-raised)]" />
-										{HOURS.map((hour) => {
-											const { number, meridiem } = hourTickParts(hour);
-											return (
-												<div
-													key={`tick-${hour}`}
-													className="sticky top-0 z-10 flex items-baseline justify-center gap-px bg-[var(--paper-raised)] leading-none"
-												>
-													<span className="font-semibold text-[10px] text-foreground">
-														{number}
-													</span>
-													<span className="text-[7px] text-muted-foreground">
-														{meridiem}
-													</span>
-												</div>
-											);
-										})}
-									</div>
-
-									{rows.map((row) => (
-										<HourRow
-											key={row.comName}
-											row={row}
-											windowLabel={activeWindow?.label ?? null}
-										/>
-									))}
-								</div>
-							</div>
-						)}
-					</section>
-				</TooltipProvider>
+				<SpeciesByHourCard
+					rows={rows}
+					newLabel={activeWindow?.label ?? null}
+					emptyMessage={emptyMessage}
+				/>
 			)}
 		</div>
 	);
@@ -482,97 +391,5 @@ function StepButton({
 		>
 			<Icon className="size-4" />
 		</button>
-	);
-}
-
-/**
- * Marks a species the station had never recorded before the window opened, so
- * an arrival stands out from the residents it's stacked against. Matches the
- * day page's "First ever" badge, trimmed to fit a 2rem grid row.
- */
-function NewBadge({ windowLabel }: { windowLabel: string }) {
-	return (
-		<Tooltip>
-			<TooltipTrigger asChild>
-				<span
-					className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[9px] leading-none"
-					style={{
-						backgroundColor:
-							"color-mix(in oklab, var(--sand) 22%, var(--paper-raised))",
-						color: "var(--bark)",
-					}}
-				>
-					<Sparkles className="size-2.5" />
-					New
-				</span>
-			</TooltipTrigger>
-			<TooltipContent>First recorded here in {windowLabel}</TooltipContent>
-		</Tooltip>
-	);
-}
-
-function HourRow({
-	row,
-	windowLabel,
-}: {
-	row: TimelineRow;
-	/** Names the window in the "new species" tooltip; empty on all time. */
-	windowLabel: string | null;
-}) {
-	const rowMax = Math.max(...row.hourCounts, 0);
-
-	return (
-		<div
-			className={`grid items-center border-[var(--line)] border-t ${ROW_HEIGHT}`}
-			style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
-		>
-			<Link
-				to="/species/$comName"
-				params={{ comName: comNameToSlug(row.comName) }}
-				className="group sticky left-0 z-10 flex items-center gap-2 bg-[var(--paper-raised)] pr-3 no-underline"
-			>
-				<div className="flex size-6 shrink-0 items-center justify-center">
-					{row.imageUrl ? (
-						<img
-							src={row.imageUrl}
-							alt={row.comName}
-							className="max-h-full max-w-full object-contain"
-							loading="lazy"
-						/>
-					) : (
-						<Bird className="size-3.5 text-muted-foreground" />
-					)}
-				</div>
-				<div className="min-w-0 truncate font-semibold text-sm group-hover:underline">
-					{row.comName}
-				</div>
-				{row.isNew && windowLabel && <NewBadge windowLabel={windowLabel} />}
-				{/* Rides in the sticky name cell so the total stays on screen no
-				    matter how far the hour grid is scrolled. */}
-				<span className="tabular-data ml-auto shrink-0 pl-4 font-semibold text-muted-foreground text-xs">
-					{row.totalDetections.toLocaleString()}
-				</span>
-			</Link>
-
-			{row.hourCounts.map((count, hour) => {
-				const level = heatLevel(count, rowMax);
-				return (
-					<div
-						key={hour}
-						role="img"
-						aria-label={`${row.comName} — ${hourLabel(hour)}: ${count} detections`}
-						className="tabular-data mx-0.5 my-1 flex h-6 items-center justify-center overflow-hidden rounded-[3px] border border-[var(--line)] text-[10px] leading-none"
-						style={{
-							backgroundColor: HEAT_COLORS[level],
-							color: HEAT_TEXT_COLORS[level],
-						}}
-					>
-						{/* A zero reads as an empty cell: printing the digit 24 times a
-						    row would bury the counts that matter under noise. */}
-						{count > 0 ? count.toLocaleString() : ""}
-					</div>
-				);
-			})}
-		</div>
 	);
 }
