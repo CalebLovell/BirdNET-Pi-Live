@@ -114,6 +114,22 @@ function Detections() {
 							setRowSelection({});
 							navigate({ search: nextSearch, replace: true });
 						}}
+						// Delete moved here from the table's old header strip -- with rows
+						// present and the station unlocked. Nothing selectable while empty,
+						// so it would only ever sit disabled there.
+						actions={
+							!isEmpty && canDelete ? (
+								<Button
+									disabled={selectedCount === 0}
+									size="xs"
+									variant={selectedCount > 0 ? "destructive" : "outline"}
+									onClick={() => setDeleteOpen(true)}
+								>
+									<Trash2 />
+									{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
+								</Button>
+							) : undefined
+						}
 					/>
 				)}
 
@@ -148,26 +164,11 @@ function Detections() {
 				   rather than stretching a one-line message down the whole page. */
 				<section
 					aria-label="Detections"
-					className={`feature-card flex min-h-0 flex-col rounded-md p-4 ${isEmpty ? "shrink-0" : "flex-1"}`}
+					className={`feature-card flex min-h-0 flex-col rounded-md p-4 pt-2 pr-3 ${isEmpty ? "shrink-0" : "flex-1"}`}
 				>
-					<div
-						className={`flex shrink-0 items-center justify-between gap-2 ${isEmpty ? "" : "mb-3"}`}
-					>
-						<div className="island-kicker">All detections</div>
-						{/* With no rows there is nothing selectable, so the button would
-							    only ever sit disabled. */}
-						{!isEmpty && canDelete && (
-							<Button
-								disabled={selectedCount === 0}
-								size="xs"
-								variant={selectedCount > 0 ? "destructive" : "outline"}
-								onClick={() => setDeleteOpen(true)}
-							>
-								<Trash2 />
-								{selectedCount > 0 ? `Delete ${selectedCount}` : "Delete"}
-							</Button>
-						)}
-					</div>
+					{/* No header strip: the "All detections" kicker is gone and Delete
+					    moved up into the filter row, so the table starts at the top of
+					    the card and takes its full height. */}
 					{isEmpty ? (
 						<EmptyNote>No detections match these filters.</EmptyNote>
 					) : (

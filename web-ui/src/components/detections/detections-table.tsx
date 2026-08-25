@@ -8,7 +8,7 @@ import {
 	useReactTable,
 } from "@tanstack/react-table";
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { RecordingButton } from "~/components/recording-button.tsx";
@@ -52,7 +52,14 @@ type DetectionsTableProps = {
 type DetectionsFiltersProps = Pick<
 	DetectionsTableProps,
 	"search" | "onSearchChange"
->;
+> & {
+	/**
+	 * Right-aligned action rendered at the end of the filter row -- the page's
+	 * Delete button, moved here now the table has no header strip of its own to
+	 * carry it.
+	 */
+	actions?: ReactNode;
+};
 
 // Every column shows at every width -- none is dropped or restyled per width.
 // Below what the row needs the scrollport scrolls sideways instead.
@@ -66,13 +73,17 @@ type DetectionsFiltersProps = Pick<
 //
 // The pinned widths sit on the header cells rather than a <colgroup> to keep a
 // column's sizing next to the header that names it.
+// `pr-3` rather than `pr-0`: the body scrolls under a vertical scrollbar pinned
+// to the container's right edge, and flush-right the recording button sat hard
+// against it. The gap gives the column room to breathe without widening it into
+// a gutter -- it eats into the fixed 8rem, it does not add to it.
 const HEADER_CLASSES: Record<string, string> = {
 	select: SELECT_COLUMN_WIDTH,
 	confidence: "text-right",
-	audio: "w-32 min-w-32 pr-0 text-right",
+	audio: "w-32 min-w-32 pr-3 text-right",
 };
 const CELL_CLASSES: Record<string, string> = {
-	audio: "pr-0",
+	audio: "pr-3",
 };
 
 function recordedLabel(row: DetectionTableRow): string {
@@ -195,6 +206,7 @@ function DateFilter({
 export function DetectionsFilters({
 	search,
 	onSearchChange,
+	actions,
 }: DetectionsFiltersProps) {
 	function updateSearch(change: Partial<DetectionWorkspaceSearch>) {
 		onSearchChange({ ...search, ...change });
@@ -257,6 +269,10 @@ export function DetectionsFilters({
 						value={search.to ?? ""}
 						onChange={(to) => updateSearch({ page: 1, to })}
 					/>
+					{/* The Delete button rides at the right end of the same cluster,
+					    after the dates -- an action, not a filter, but this is the row
+					    that spans the top now the table's own header strip is gone. */}
+					{actions}
 				</div>
 			</div>
 		</div>
@@ -617,14 +633,11 @@ export function DetectionsTable({
 			    below what the row needs, since nothing in a cell wraps, and the
 			    scrollport takes over from there. */}
 			<Table containerClassName="hidden min-h-0 flex-1 overflow-y-auto lg:block">
-				{/* Sticky per-`th` rather than on the `thead`: with the collapsed
-				    borders Tailwind's preflight sets, the row's own border stays
-				    behind with the row instead of travelling with the pinned header,
-				    so the rule is drawn as an inset shadow on the cells. The base
-				    `[&_tr]:border-b` is switched off or the two stack into a visible
-				    double line. The card's background sits behind the fill -- both
-				    stops of that gradient resolve to --paper-raised, so flat matches. */}
-				<TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-[var(--surface-strong)] [&_th]:shadow-[inset_0_-1px_0_var(--line)] [&_tr]:border-none">
+				{/* Sticky per-`th` rather than on the `thead`: the pinned cells carry
+				    their own fill so scrolled rows never show through beneath them.
+				    No rule under the header -- the fill alone sets it off, matching
+				    the borderless rows. The base `[&_tr]:border-b` is switched off. */}
+				<TableHeader className="[&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-[var(--surface-strong)] [&_tr]:border-none">
 					{table.getHeaderGroups().map((headerGroup) => (
 						<TableRow key={headerGroup.id}>
 							{headerGroup.headers.map((header) => (
@@ -650,6 +663,16 @@ export function DetectionsTable({
 						<TableRow
 							key={row.id}
 							data-state={row.getIsSelected() && "selected"}
+							// Zebra fill in place of the shared row's hairline -- the same
+							// idiom the list above and the Now page use. `border-none` drops
+							// that rule; selection is a conditional class rather than stacking
+							// `data-[state=selected]:` over `odd:`, so intent wins over
+							// Tailwind's own ordering, matching the list's choice.
+							className={
+								row.getIsSelected()
+									? "border-none bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]"
+									: "border-none odd:bg-[var(--meadow)]"
+							}
 						>
 							{row.getVisibleCells().map((cell) => (
 								<TableCell
@@ -667,7 +690,7 @@ export function DetectionsTable({
 			{/* The two halves measure ~364px side by side, so 26rem is the real
 			    point where they stop fitting -- the old 38rem stacked them while
 			    there was still most of a row's worth of space going spare. */}
-			<div className="flex shrink-0 @min-[26rem]:flex-row flex-col @min-[26rem]:items-center @min-[26rem]:justify-between gap-3 border-t pt-3 text-sm">
+			<div className="flex shrink-0 @min-[26rem]:flex-row flex-col @min-[26rem]:items-center @min-[26rem]:justify-between gap-3 pt-3 text-sm">
 				<span className="tabular-data text-muted-foreground">
 					Showing {rangeStart}–{rangeEnd} of {page.total}
 				</span>
