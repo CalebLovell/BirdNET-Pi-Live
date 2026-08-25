@@ -2,12 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { SpeciesCount } from "./stats-data.ts";
 import {
-	buildDetectionTrend,
 	buildHourActivity,
-	hourLabel,
+	buildMonthlyTrend,
 	rankingBarPercent,
 	selectBusiestHour,
-	selectTrendGranularity,
 } from "./stats-data.ts";
 
 const speciesFixture: SpeciesCount = {
@@ -42,10 +40,7 @@ test("selects the earliest busiest hour and handles empty activity", () => {
 	assert.equal(selectBusiestHour(buildHourActivity([])), null);
 });
 
-test("formats friendly hours and visible proportional ranking widths", () => {
-	assert.equal(hourLabel(0), "12 AM");
-	assert.equal(hourLabel(12), "12 PM");
-	assert.equal(hourLabel(17), "5 PM");
+test("gives every ranking bar a visible proportional width", () => {
 	assert.equal(rankingBarPercent(1, 100), 2);
 	assert.equal(rankingBarPercent(50, 100), 50);
 });
@@ -55,68 +50,26 @@ test("species rankings carry navigation and artwork data", () => {
 	assert.match(speciesFixture.imageUrl ?? "", /cardinalis-cardinalis/);
 });
 
-test("selects adaptive trend granularity at inclusive day boundaries", () => {
-	assert.equal(selectTrendGranularity("2025-01-01", "2025-04-30"), "day");
-	assert.equal(selectTrendGranularity("2025-01-01", "2025-05-01"), "week");
-	assert.equal(selectTrendGranularity("2024-01-01", "2025-12-30"), "week");
-	assert.equal(selectTrendGranularity("2024-01-01", "2025-12-31"), "month");
-});
-
-test("builds ordered zero-filled daily detection buckets", () => {
-	assert.deepEqual(
-		buildDetectionTrend(
-			[
-				{ bucket: "2026-07-01", count: 2 },
-				{ bucket: "2026-07-03", count: 4 },
-			],
-			"2026-07-01",
-			"2026-07-03",
-			"day",
-		).map(({ bucket, count }) => ({ bucket, count })),
+test("builds twelve zero-filled months for the selected year", () => {
+	const result = buildMonthlyTrend(
 		[
-			{ bucket: "2026-07-01", count: 2 },
-			{ bucket: "2026-07-02", count: 0 },
-			{ bucket: "2026-07-03", count: 4 },
+			{ bucket: "2025-01", count: 2 },
+			{ bucket: "2025-05", count: 40 },
+			{ bucket: "2024-05", count: 99 },
 		],
-	);
-});
-
-test("builds Monday-based weekly and calendar-month buckets", () => {
-	assert.deepEqual(
-		buildDetectionTrend(
-			[
-				{ bucket: "2026-07-20", count: 3 },
-				{ bucket: "2026-08-03", count: 5 },
-			],
-			"2026-07-22",
-			"2026-08-04",
-			"week",
-		).map(({ bucket, count }) => ({ bucket, count })),
-		[
-			{ bucket: "2026-07-20", count: 3 },
-			{ bucket: "2026-07-27", count: 0 },
-			{ bucket: "2026-08-03", count: 5 },
-		],
+		2025,
 	);
 
-	assert.deepEqual(
-		buildDetectionTrend(
-			[
-				{ bucket: "2024-01", count: 2 },
-				{ bucket: "2024-03", count: 7 },
-			],
-			"2024-01-15",
-			"2024-03-02",
-			"month",
-		).map(({ bucket, count }) => ({ bucket, count })),
-		[
-			{ bucket: "2024-01", count: 2 },
-			{ bucket: "2024-02", count: 0 },
-			{ bucket: "2024-03", count: 7 },
-		],
-	);
+	assert.equal(result.length, 12);
+	assert.deepEqual(result[0], { bucket: "2025-01", label: "Jan", count: 2 });
+	assert.deepEqual(result[1], { bucket: "2025-02", label: "Feb", count: 0 });
+	assert.deepEqual(result[4], { bucket: "2025-05", label: "May", count: 40 });
+	assert.deepEqual(result[11], { bucket: "2025-12", label: "Dec", count: 0 });
 });
 
-test("returns an empty detection trend without valid bounds", () => {
-	assert.deepEqual(buildDetectionTrend([], null, null, "day"), []);
+test("a year with nothing on record is twelve zeroes, not an empty series", () => {
+	const result = buildMonthlyTrend([], 2019);
+
+	assert.equal(result.length, 12);
+	assert.ok(result.every((point) => point.count === 0));
 });

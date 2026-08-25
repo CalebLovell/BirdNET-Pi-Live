@@ -15,7 +15,7 @@ import {
 	selectBusiestHour,
 	type TrendPoint,
 } from "~/lib/stats-data.ts";
-import { getDetectionTrend } from "~/lib/trend.ts";
+import { getDetectionYears, getMonthlyTrend } from "~/lib/trend.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type StatsData = {
@@ -26,7 +26,10 @@ export type StatsData = {
 	topSpeciesList: SpeciesCount[];
 	rarestSpeciesList: SpeciesCount[];
 	hourActivity: HourActivity[];
+	/** The twelve months of the selected year. */
 	detectionTrend: TrendPoint[];
+	/** Years with detections, newest first, for the chart's year selector. */
+	availableYears: number[];
 	quietSpecies: QuietSpecies[];
 	newArrivals: ArrivalSpecies[];
 };
@@ -86,8 +89,11 @@ async function getBusiestDay(): Promise<BusiestDay | null> {
 	return row ?? null;
 }
 
-export const getStats = createServerFn({ method: "GET" }).handler(
-	async (): Promise<StatsData> => {
+export type StatsInput = { year: number };
+
+export const getStats = createServerFn({ method: "GET" })
+	.validator((input: StatsInput) => input)
+	.handler(async ({ data: { year } }): Promise<StatsData> => {
 		const [
 			[{ totalDetections }],
 			[{ uniqueSpecies }],
@@ -96,6 +102,7 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			rarestSpeciesList,
 			hourActivity,
 			detectionTrend,
+			availableYears,
 			quietSpecies,
 			newArrivals,
 		] = await Promise.all([
@@ -107,7 +114,8 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			getSpeciesRanking(10, "most"),
 			getSpeciesRanking(10, "least"),
 			getHourActivity(),
-			getDetectionTrend(),
+			getMonthlyTrend(year),
+			getDetectionYears(),
 			getQuietSpecies(),
 			getNewArrivals(),
 		]);
@@ -121,8 +129,8 @@ export const getStats = createServerFn({ method: "GET" }).handler(
 			rarestSpeciesList,
 			hourActivity,
 			detectionTrend,
+			availableYears,
 			quietSpecies,
 			newArrivals,
 		};
-	},
-);
+	});

@@ -14,7 +14,8 @@ import { loadInstalledSpeciesCatalog } from "~/lib/species-control.server.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import { buildHourActivity, type HourActivity } from "~/lib/stats-data.ts";
 import {
-	getDetectionTrend,
+	getDetectionYears,
+	getMonthlyTrend,
 	getYearTrend,
 	type TrendPoint,
 } from "~/lib/trend.ts";
@@ -47,7 +48,7 @@ export type SpeciesDetail = {
 	averageConfidence: number | null;
 	/** Per-day counts for the selected year, which the heat map draws. */
 	history: TrendPoint[];
-	/** First detection to last, bucketed like the stats page's trend. */
+	/** The twelve months of the selected year, like the stats page's chart. */
 	detectionTrend: TrendPoint[];
 	/** Every detection by hour of day, like the stats page's chart. */
 	hourActivity: HourActivity[];
@@ -171,7 +172,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				[first],
 				[last],
 				recentVisits,
-				availableYearRows,
+				availableYears,
 				history,
 				detectionTrend,
 				hourActivity,
@@ -208,18 +209,9 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 					.where(filter)
 					.orderBy(desc(detections.Date), desc(detections.Time))
 					.limit(9), // odd count so the visit log's zebra striping starts and ends on the tinted row
-				db
-					.select({
-						year: sql<number>`cast(substr(${detections.Date}, 1, 4) as integer)`,
-					})
-					.from(detections)
-					.where(filter)
-					.groupBy(sql`cast(substr(${detections.Date}, 1, 4) as integer)`)
-					.orderBy(
-						desc(sql`cast(substr(${detections.Date}, 1, 4) as integer)`),
-					),
+				getDetectionYears(filter),
 				getYearTrend(year, filter),
-				getDetectionTrend(filter),
+				getMonthlyTrend(year, filter),
 				getHourActivity(filter),
 				getSpeciesInfo(comName),
 			]);
@@ -230,7 +222,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				imageUrl: illustrationUrlFor(totals.sciName, "flight") ?? wikiImageUrl,
 				ebirdUrl: ebirdUrlFor(totals.sciName, comName),
 				totalDetections: totals.totalDetections,
-				availableYears: availableYearRows.map((row) => row.year),
+				availableYears,
 				firstDetected: first ?? { date: "", time: "", confidence: null },
 				lastDetected: last ?? { date: "", time: "", confidence: null },
 				averageConfidence: totals.averageConfidence

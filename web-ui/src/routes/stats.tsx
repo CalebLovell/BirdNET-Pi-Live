@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
 	Bird,
 	CalendarDays,
@@ -6,9 +6,10 @@ import {
 	Clock3,
 	Feather,
 } from "lucide-react";
+import { z } from "zod";
 
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
-import { DetectionsOverTimeCard } from "~/components/detections-over-time-card.tsx";
+import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
@@ -28,16 +29,40 @@ import {
 } from "~/lib/migration-data.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { getStats } from "~/lib/stats.ts";
-import { dayLabel, hourLabel } from "~/lib/stats-data.ts";
+import { dayLabel } from "~/lib/stats-data.ts";
+import { hourLabel } from "~/lib/time-ago.ts";
+
+// The by-month chart shows one calendar year at a time; the year lives in the
+// URL so a particular year is a link someone can keep.
+const CURRENT_YEAR = new Date().getFullYear();
+const MIN_YEAR = 2000;
+const DEFAULT_YEAR = CURRENT_YEAR;
+
+const statsSearchSchema = z.object({
+	year: z.coerce
+		.number()
+		.int()
+		.min(MIN_YEAR)
+		.max(CURRENT_YEAR)
+		.default(DEFAULT_YEAR)
+		.catch(DEFAULT_YEAR),
+});
 
 export const Route = createFileRoute("/stats")({
+	validateSearch: statsSearchSchema,
+	search: {
+		middlewares: [stripSearchParams({ year: DEFAULT_YEAR })],
+	},
+	loaderDeps: ({ search }) => ({ year: search.year }),
 	head: () => ({ meta: [{ title: pageTitle("Stats") }] }),
-	loader: () => getStats(),
+	loader: ({ deps }) => getStats({ data: { year: deps.year } }),
 	component: Stats,
 });
 
 function Stats() {
 	const stats = Route.useLoaderData();
+	const { year } = Route.useSearch();
+	const navigate = Route.useNavigate();
 
 	const isEmpty = stats.totalDetections === 0;
 
@@ -114,7 +139,17 @@ function Stats() {
 			) : (
 				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
 					<DetectionsByHourCard activity={stats.hourActivity} />
-					<DetectionsOverTimeCard trend={stats.detectionTrend} />
+					<DetectionsByMonthCard
+						trend={stats.detectionTrend}
+						year={year}
+						years={stats.availableYears}
+						onYearChange={(next) =>
+							navigate({
+								search: (prev) => ({ ...prev, year: next }),
+								replace: true,
+							})
+						}
+					/>
 					{/* No min-height: the two lists sit in the same grid row, so they
 				    already stretch to match each other. Reserving height instead only
 				    padded them with dead space until the lists were long enough. */}

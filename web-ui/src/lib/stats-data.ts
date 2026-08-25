@@ -1,7 +1,6 @@
 export type HourActivity = { hour: number; count: number };
 export type BusiestHour = HourActivity;
 export type BusiestDay = { date: string; count: number };
-export type TrendGranularity = "day" | "week" | "month";
 export type TrendBucketCount = { bucket: string; count: number };
 export type TrendPoint = TrendBucketCount & { label: string };
 export type SpeciesCount = {
@@ -11,43 +10,8 @@ export type SpeciesCount = {
 	imageUrl: string | null;
 };
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-
 function parseIsoDate(value: string): Date {
 	return new Date(`${value}T00:00:00Z`);
-}
-
-function isoDay(date: Date): string {
-	return date.toISOString().slice(0, 10);
-}
-
-function startOfWeek(date: Date): Date {
-	const result = new Date(date);
-	const daysSinceMonday = (result.getUTCDay() + 6) % 7;
-	result.setUTCDate(result.getUTCDate() - daysSinceMonday);
-	return result;
-}
-
-function bucketStart(date: Date, granularity: TrendGranularity): Date {
-	if (granularity === "week") return startOfWeek(date);
-	if (granularity === "month") {
-		return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
-	}
-	return new Date(date);
-}
-
-function nextBucket(date: Date, granularity: TrendGranularity): Date {
-	const result = new Date(date);
-	if (granularity === "month") {
-		result.setUTCMonth(result.getUTCMonth() + 1);
-	} else {
-		result.setUTCDate(result.getUTCDate() + (granularity === "week" ? 7 : 1));
-	}
-	return result;
-}
-
-function bucketKey(date: Date, granularity: TrendGranularity): string {
-	return granularity === "month" ? isoDay(date).slice(0, 7) : isoDay(date);
 }
 
 const DAY_LABEL = new Intl.DateTimeFormat("en-US", {
@@ -57,69 +21,36 @@ const DAY_LABEL = new Intl.DateTimeFormat("en-US", {
 	timeZone: "UTC",
 });
 
-const MONTH_LABEL = new Intl.DateTimeFormat("en-US", {
-	month: "long",
-	year: "numeric",
-	timeZone: "UTC",
-});
+const MONTH_LABELS = [
+	"Jan",
+	"Feb",
+	"Mar",
+	"Apr",
+	"May",
+	"Jun",
+	"Jul",
+	"Aug",
+	"Sep",
+	"Oct",
+	"Nov",
+	"Dec",
+];
 
-function bucketLabel(date: Date, granularity: TrendGranularity): string {
-	if (granularity === "month") return MONTH_LABEL.format(date);
-	const label = DAY_LABEL.format(date);
-	return granularity === "week" ? `Week of ${label}` : label;
-}
-
-export function selectTrendGranularity(
-	firstDate: string,
-	lastDate: string,
-): TrendGranularity {
-	const spanDays =
-		Math.floor(
-			(parseIsoDate(lastDate).getTime() - parseIsoDate(firstDate).getTime()) /
-				DAY_MS,
-		) + 1;
-
-	if (spanDays <= 120) return "day";
-	if (spanDays <= 730) return "week";
-	return "month";
-}
-
-export function buildDetectionTrend(
+/**
+ * The twelve months of one calendar year, zero-filled. A fixed twelve-point
+ * axis is the point of the chart: two years are comparable at a glance only if
+ * a quiet January still takes up as much room as a busy May.
+ */
+export function buildMonthlyTrend(
 	rows: TrendBucketCount[],
-	firstDate: string | null,
-	lastDate: string | null,
-	granularity: TrendGranularity,
+	year: number,
 ): TrendPoint[] {
-	if (!firstDate || !lastDate) return [];
-
-	const first = parseIsoDate(firstDate);
-	const last = parseIsoDate(lastDate);
-	if (
-		Number.isNaN(first.getTime()) ||
-		Number.isNaN(last.getTime()) ||
-		first > last
-	) {
-		return [];
-	}
-
 	const countByBucket = new Map(rows.map((row) => [row.bucket, row.count]));
-	const end = bucketStart(last, granularity);
-	const points: TrendPoint[] = [];
 
-	for (
-		let current = bucketStart(first, granularity);
-		current <= end;
-		current = nextBucket(current, granularity)
-	) {
-		const bucket = bucketKey(current, granularity);
-		points.push({
-			bucket,
-			label: bucketLabel(current, granularity),
-			count: countByBucket.get(bucket) ?? 0,
-		});
-	}
-
-	return points;
+	return MONTH_LABELS.map((label, index) => {
+		const bucket = `${year}-${(index + 1).toString().padStart(2, "0")}`;
+		return { bucket, label, count: countByBucket.get(bucket) ?? 0 };
+	});
 }
 
 export function buildHourActivity(rows: HourActivity[]): HourActivity[] {
@@ -146,13 +77,6 @@ export function selectBusiestHour(
 export function dayLabel(date: string): string {
 	const parsed = parseIsoDate(date);
 	return Number.isNaN(parsed.getTime()) ? date : DAY_LABEL.format(parsed);
-}
-
-export function hourLabel(hour: number): string {
-	if (hour === 0) return "12 AM";
-	if (hour < 12) return `${hour} AM`;
-	if (hour === 12) return "12 PM";
-	return `${hour - 12} PM`;
 }
 
 export function rankingBarPercent(count: number, maximum: number): number {

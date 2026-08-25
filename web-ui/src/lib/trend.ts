@@ -3,8 +3,7 @@ import { count, type SQL, sql } from "drizzle-orm";
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import {
-	buildDetectionTrend,
-	selectTrendGranularity,
+	buildMonthlyTrend,
 	type TrendBucketCount,
 	type TrendPoint,
 } from "~/lib/stats-data.ts";
@@ -137,47 +136,38 @@ export async function getCalendarYearTrend(
 }
 
 /**
- * The detections-over-time series: every day from the first detection to the
- * last, bucketed by day, week or month depending on how long that span is.
- * Passing a filter (e.g. a single species) scopes both the counts and the
- * span, so a species' chart starts the day that species first showed up.
+ * Detections by month for one calendar year, shared by the stats page (every
+ * detection) and the species page (one species). Passing a filter scopes the
+ * counts without narrowing the axis, so a species that only turns up in spring
+ * still shows the empty months it was absent for.
  */
-export async function getDetectionTrend(
+export async function getMonthlyTrend(
+	year: number,
 	extraFilter?: SQL,
 ): Promise<TrendPoint[]> {
-	const where = extraFilter ?? sql`1=1`;
-
-	const [bounds] = await db
-		.select({
-			firstDate: sql<string | null>`min(${detections.Date})`,
-			lastDate: sql<string | null>`max(${detections.Date})`,
-		})
-		.from(detections)
-		.where(where);
-
-	if (!bounds?.firstDate || !bounds.lastDate) return [];
-
-	const granularity = selectTrendGranularity(bounds.firstDate, bounds.lastDate);
-	const bucketExpr =
-		granularity === "day"
-			? sql<string>`${detections.Date}`
-			: granularity === "week"
-				? sql<string>`date(${detections.Date}, '-' || ((cast(strftime('%w', ${detections.Date}) as integer) + 6) % 7) || ' days')`
-				: sql<string>`substr(${detections.Date}, 1, 7)`;
+	const filter = calendarYearFilter(year);
+	const where = extraFilter ? sql`(${filter}) AND (${extraFilter})` : filter;
+	const bucketExpr = sql<string>`substr(${detections.Date}, 1, 7)`;
 
 	const rows = await db
 		.select({ bucket: bucketExpr, count: count() })
 		.from(detections)
 		.where(where)
-		.groupBy(bucketExpr)
-		.orderBy(bucketExpr);
+		.groupBy(bucketExpr);
 
-	return buildDetectionTrend(
-		rows satisfies TrendBucketCount[],
-		bounds.firstDate,
-		bounds.lastDate,
-		granularity,
-	);
+	return buildMonthlyTrend(rows satisfies TrendBucketCount[], year);
+}
+
+/** Every calendar year this station (or one species) recorded something in,
+ * newest first -- the years a year selector is allowed to offer. */
+export async function getDetectionYears(extraFilter?: SQL): Promise<number[]> {
+	const yearExpr = sql<number>`cast(substr(${detections.Date}, 1, 4) as integer)`;
+	const query = db.select({ year: yearExpr }).from(detections);
+	const rows = await (extraFilter ? query.where(extraFilter) : query)
+		.groupBy(yearExpr)
+		.orderBy(sql`${yearExpr} desc`);
+
+	return rows.map((row) => row.year);
 }
 
 export async function getYearTrend(
