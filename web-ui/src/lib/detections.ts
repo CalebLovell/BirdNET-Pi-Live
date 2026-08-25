@@ -17,6 +17,7 @@ import { db, openWritableDetectionsDb } from "~/db/index.ts";
 import { type Detection, detections } from "~/db/schema.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
 import { audioUrlFor } from "~/lib/audio.ts";
+import { requireUnlocked } from "~/lib/auth.ts";
 import {
 	type DetectionClipIdentity,
 	resolveDetectionClipPath,
@@ -305,7 +306,12 @@ async function deleteUnreferencedClips(
 	return { deletedFiles, missingFiles, failedFiles };
 }
 
+// Gated: this drops rows from the detections database and unlinks the audio
+// files behind them, which is as destructive as anything in Review or Settings.
+// The page it is called from is public -- browsing detections needs no password
+// -- so the boundary has to sit here on the mutation rather than on the route.
 export const deleteDetections = createServerFn({ method: "POST" })
+	.middleware([requireUnlocked])
 	.validator((input: DeletionRequest) => ({
 		rowIds: validRowIds(input.rowIds),
 	}))

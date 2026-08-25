@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 // a server function -- if a name below gets renamed or removed, this file
 // fails to load before the assertions even run.
 import { requireUnlocked, signOutAllDevicesFn } from "./auth.ts";
+import { deleteDetections } from "./detections.ts";
 import { getStationHealth } from "./health.ts";
 import {
 	confirmReviewDetection,
@@ -81,6 +82,7 @@ test("every gated server function carries requireUnlocked", () => {
 	void getSettingsPage;
 	void getSpeciesControlPage;
 	void getStationHealth;
+	void deleteDetections;
 
 	const settingsSource = sourceOf("./settings.ts");
 	for (const name of [
@@ -122,4 +124,8 @@ test("every gated server function carries requireUnlocked", () => {
 	// Lives outside the three gated feature modules, which is exactly how it
 	// was missed the first time round.
 	assertGated(sourceOf("./health.ts"), "getStationHealth");
+
+	// Same trap: detections.ts is mostly read paths for a public page, so its
+	// one destructive export shipped ungated.
+	assertGated(sourceOf("./detections.ts"), "deleteDetections");
 });
