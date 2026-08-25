@@ -77,7 +77,7 @@ function hourTotals(rows: TimelineShareRow[]): number[] {
 
 export function formatTimelineShareCard(card: TimelineShareCard): string {
 	const { period, rows } = card;
-	const header = "🐦 Birdbook · Timeline";
+	const header = "🐦 BirdNET-Book · Timeline";
 	const scope = `${PERIOD_EMOJI[period]} ${card.windowLabel ?? "All time"}`;
 
 	if (rows.length === 0) {

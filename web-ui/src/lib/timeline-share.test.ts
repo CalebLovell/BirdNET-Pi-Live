@@ -44,7 +44,7 @@ function cardWith(
 test("heads the card with the window and its totals", () => {
 	const lines = formatTimelineShareCard(cardWith()).split("\n");
 
-	assert.equal(lines[0], "🐦 Birdbook · Timeline");
+	assert.equal(lines[0], "🐦 BirdNET-Book · Timeline");
 	assert.equal(
 		lines[1],
 		"📅 Jul 21 – Jul 27, 2026 · 3 species · 100 detections",
@@ -131,7 +131,7 @@ test("says so plainly when the window holds nothing", () => {
 
 	assert.equal(
 		text,
-		"🐦 Birdbook · Timeline\n📅 Jul 21 – Jul 27, 2026\n🤫 Nothing heard that week.",
+		"🐦 BirdNET-Book · Timeline\n📅 Jul 21 – Jul 27, 2026\n🤫 Nothing heard that week.",
 	);
 });
 

@@ -15,7 +15,7 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 				onClick={onNavigate}
 				className="display-title px-4 pb-4 font-semibold text-xl no-underline"
 			>
-				Birdbook Pi
+				BirdNET-Book
 			</Link>
 
 			<SidebarNav onNavigate={onNavigate} />

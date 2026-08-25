@@ -53,7 +53,7 @@ export function MobileNav() {
 					to="/"
 					className="display-title font-semibold text-lg no-underline"
 				>
-					Birdbook Pi
+					BirdNET-Book
 				</Link>
 			</div>
 

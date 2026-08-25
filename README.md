@@ -1,7 +1,7 @@
 <h1 align="center"><a href="https://github.com/mcguirepr89/BirdNET-Pi/blob/main/LICENSE">Review the license!!</a></h1>
 <h1 align="center">You may not use BirdNET-Pi to develop a commercial product!!!!</h1>
 <h1 align="center">
-  BirdNET-Pi
+  BirdNET-Book
 </h1>
 <p align="center">
 A realtime acoustic bird classification system for the Raspberry Pi 5, 4B, 400, 3B+, and 0W2
