@@ -52,7 +52,7 @@ import {
 import { formatTimelineShareCard } from "~/lib/timeline-share.ts";
 import { currentAnchor, isValidAnchor } from "~/lib/timeline-window.ts";
 
-const DEFAULT_PERIOD: TimelinePeriod = "week";
+const DEFAULT_PERIOD: TimelinePeriod = "day";
 
 const timelineSearchSchema = z.object({
 	period: z

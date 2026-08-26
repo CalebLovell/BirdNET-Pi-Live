@@ -23,6 +23,10 @@ test("one loader serves every period", async () => {
 	// pages' parameters across.
 	assert.match(source, /period: z\s*\n?\s*\.enum\(TIMELINE_PERIODS\)/);
 	assert.match(source, /date: z\.coerce\.string\(\)\.optional\(\)/);
+	// Daily is the default: a bare /timeline shows today, and the middleware
+	// strips the param so only non-default periods carry ?period=.
+	assert.match(source, /const DEFAULT_PERIOD: TimelinePeriod = "day"/);
+	assert.match(source, /stripSearchParams\(\{ period: DEFAULT_PERIOD \}\)/);
 });
 
 test("each period gets the cards its window can support", async () => {
