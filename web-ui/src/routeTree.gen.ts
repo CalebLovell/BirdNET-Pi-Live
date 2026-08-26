@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as DetectionsRouteImport } from './routes/detections'
 import { Route as LearnRouteImport } from './routes/learn'
+import { Route as LiveRouteImport } from './routes/live'
 import { Route as ReviewRouteImport } from './routes/review'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SpeciesRouteImport } from './routes/species'
@@ -37,6 +38,11 @@ const DetectionsRoute = DetectionsRouteImport.update({
 const LearnRoute = LearnRouteImport.update({
   id: '/learn',
   path: '/learn',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiveRoute = LiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReviewRoute = ReviewRouteImport.update({
@@ -100,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
+  '/live': typeof LiveRoute
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
   '/species': typeof SpeciesRouteWithChildren
@@ -116,6 +123,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
+  '/live': typeof LiveRoute
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
   '/species-control': typeof SpeciesControlRoute
@@ -132,6 +140,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/detections': typeof DetectionsRoute
   '/learn': typeof LearnRoute
+  '/live': typeof LiveRoute
   '/review': typeof ReviewRoute
   '/settings': typeof SettingsRoute
   '/species': typeof SpeciesRouteWithChildren
@@ -150,6 +159,7 @@ export interface FileRouteTypes {
     | '/'
     | '/detections'
     | '/learn'
+    | '/live'
     | '/review'
     | '/settings'
     | '/species'
@@ -166,6 +176,7 @@ export interface FileRouteTypes {
     | '/'
     | '/detections'
     | '/learn'
+    | '/live'
     | '/review'
     | '/settings'
     | '/species-control'
@@ -181,6 +192,7 @@ export interface FileRouteTypes {
     | '/'
     | '/detections'
     | '/learn'
+    | '/live'
     | '/review'
     | '/settings'
     | '/species'
@@ -198,6 +210,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DetectionsRoute: typeof DetectionsRoute
   LearnRoute: typeof LearnRoute
+  LiveRoute: typeof LiveRoute
   ReviewRoute: typeof ReviewRoute
   SettingsRoute: typeof SettingsRoute
   SpeciesRoute: typeof SpeciesRouteWithChildren
@@ -230,6 +243,13 @@ declare module '@tanstack/react-router' {
       path: '/learn'
       fullPath: '/learn'
       preLoaderRoute: typeof LearnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/live': {
+      id: '/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof LiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/review': {
@@ -329,6 +349,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DetectionsRoute: DetectionsRoute,
   LearnRoute: LearnRoute,
+  LiveRoute: LiveRoute,
   ReviewRoute: ReviewRoute,
   SettingsRoute: SettingsRoute,
   SpeciesRoute: SpeciesRouteWithChildren,

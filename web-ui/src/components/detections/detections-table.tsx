@@ -378,8 +378,8 @@ export function DetectionsTable({
 			),
 			cell: ({ row }) => (
 				<Link
-					to="/day/$date"
-					params={{ date: row.original.Date }}
+					to="/timeline"
+					search={{ period: "day", date: row.original.Date }}
 					className="tabular-data text-sm no-underline hover:underline"
 				>
 					{recordedLabel(row.original)}
@@ -588,8 +588,8 @@ export function DetectionsTable({
 								    width that made long names wrap. */}
 								<div className="ml-auto flex items-center gap-2">
 									<Link
-										to="/day/$date"
-										params={{ date: row.original.Date }}
+										to="/timeline"
+										search={{ period: "day", date: row.original.Date }}
 										className="no-underline hover:underline"
 									>
 										<span className="tabular-data text-sm leading-tight">

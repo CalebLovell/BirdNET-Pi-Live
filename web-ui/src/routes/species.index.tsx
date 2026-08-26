@@ -12,8 +12,8 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Clock,
-	Clock3,
 	Feather,
+	Footprints,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
@@ -51,7 +51,9 @@ const DEFAULT_SEARCH = {
 // Search/sort/page all live in the URL (not component state), so filtering
 // is shareable/bookmarkable and survives back/forward navigation.
 const speciesSearchSchema = z.object({
-	q: z.string().default(DEFAULT_SEARCH.q).catch(DEFAULT_SEARCH.q),
+	// Coerced: search terms are not quoted in the URL, so a numeric one
+	// ("?q=1080") parses back as a number and a bare z.string() would drop it.
+	q: z.coerce.string().default(DEFAULT_SEARCH.q).catch(DEFAULT_SEARCH.q),
 	sort: z
 		.enum(SORT_KEYS)
 		.default(DEFAULT_SEARCH.sort)
@@ -84,15 +86,6 @@ function parseDetected(value: string): Date | null {
 	if (!value) return null;
 	const parsed = new Date(value.replace(" ", "T"));
 	return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
-function formatSpeciesDate(value: string): string {
-	const parsed = parseDetected(value);
-	if (!parsed) return value;
-	return new Intl.DateTimeFormat(undefined, {
-		month: "short",
-		day: "numeric",
-	}).format(parsed);
 }
 
 function Species() {
@@ -145,17 +138,25 @@ function Species() {
 		if (filtered.length === 0) return [];
 
 		const isSearching = search.trim().length > 0;
-		const recordings = filtered.reduce(
+		const detections = filtered.reduce(
 			(sum, card) => sum + card.allTimeCount,
 			0,
 		);
-		const mostRecent = filtered.reduce(
-			(latest, card) =>
-				card.lastDetected > latest ? card.lastDetected : latest,
-			"",
+		const visits = filtered.reduce((sum, card) => sum + card.visits, 0);
+		// Ranked by count regardless of the current sort, so this always names the
+		// most-detected species in the result rather than whatever the toggle put
+		// on top.
+		const mostActive = filtered.reduce(
+			(top, card) => (card.allTimeCount > top.allTimeCount ? card : top),
+			filtered[0],
 		);
 
 		return [
+			{
+				label: "Total detections",
+				value: detections,
+				icon: ChartNoAxesColumnIncreasing,
+			},
 			{
 				label: "Species",
 				value: filtered.length,
@@ -163,14 +164,15 @@ function Species() {
 				icon: Feather,
 			},
 			{
-				label: "Total recordings",
-				value: recordings,
-				icon: ChartNoAxesColumnIncreasing,
+				label: "Visits",
+				value: visits,
+				icon: Footprints,
+				hint: "Detection runs separated by 15+ minutes of silence",
 			},
 			{
-				label: "Most recently heard",
-				value: mostRecent ? formatSpeciesDate(mostRecent) : "—",
-				icon: Clock3,
+				label: "Most active",
+				value: mostActive.comName,
+				icon: Bird,
 			},
 		] satisfies PageHeaderStat[];
 	}, [cards.length, filtered, search]);

@@ -57,7 +57,13 @@ export function DetectionsByHourCard({
 			<div className="island-kicker">Detections by hour</div>
 
 			<div className="mt-4 min-h-0 flex-1">
-				<ResponsiveContainer width="100%" height="100%">
+				{/* `minHeight` is not decoration: ResponsiveContainer measures its own
+			    box, and `height: 100%` inside a card sized by `min-h-72` resolves
+			    against an indefinite height -- so it measures zero and draws
+			    nothing unless a parent grid row happens to stretch the card to a
+			    definite height. The floor makes the chart render wherever the card
+			    is put, and it still grows past it when a row does stretch. */}
+				<ResponsiveContainer width="100%" height="100%" minHeight={220}>
 					<AreaChart data={activity}>
 						<defs>
 							<linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">

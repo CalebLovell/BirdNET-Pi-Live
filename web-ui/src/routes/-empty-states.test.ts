@@ -17,7 +17,6 @@ test("a station that has never recorded anything gets the page-level card", asyn
 		"./timeline.tsx",
 		"./learn.tsx",
 		"./species.index.tsx",
-		"./stats.tsx",
 	]) {
 		const source = await read(file);
 		assert.match(source, /<EmptyState/, `${file} should use EmptyState`);
@@ -46,15 +45,19 @@ test("a page-level empty replaces its card rather than nesting inside one", asyn
 		"the station-empty branch must sit outside the table card",
 	);
 
-	const stats = await read("./stats.tsx");
+	// Same shape on the timeline page: with nothing recorded there is no window
+	// to scope and no figures to show, so the cards are replaced rather than
+	// rendered empty.
+	const timeline = await read("./timeline.tsx");
 	assert.ok(
-		stats.indexOf("{isEmpty ? (") < stats.indexOf("<DetectionsByHourCard"),
-		"the stats grid must sit inside the non-empty branch",
+		timeline.indexOf("data.hasAnyDetections ? (") <
+			timeline.indexOf("<TimelineCards"),
+		"the timeline cards must sit inside the has-detections branch",
 	);
 });
 
 test("a quiet day keeps the page-level card it already had", async () => {
-	const source = await read("./day.$date.tsx");
+	const source = await read("../components/timeline/day-review.tsx");
 	assert.match(source, /<EmptyState icon=\{Bird\}/);
 	assert.match(source, /No detections recorded on this day\./);
 });
@@ -69,7 +72,7 @@ test("section-level empties stay quiet lines", async () => {
 	const species = await read("./species.index.tsx");
 	assert.match(species, /<EmptyNote>/);
 
-	// The timeline's quiet line lives in the card it shares with the day page.
+	// The window periods' quiet line lives in the grid card they share.
 	const speciesByHour = await read("../components/species-by-hour-card.tsx");
 	assert.match(speciesByHour, /<EmptyNote>\{emptyMessage\}<\/EmptyNote>/);
 });
@@ -81,7 +84,7 @@ test("no route hand-rolls the empty paragraph any more", async () => {
 		"./learn.tsx",
 		"./species.index.tsx",
 		"./species.$comName.tsx",
-		"./day.$date.tsx",
+		"../components/timeline/day-review.tsx",
 	]) {
 		const source = await read(file);
 		assert.doesNotMatch(

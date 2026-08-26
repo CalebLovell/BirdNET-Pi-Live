@@ -1,10 +1,8 @@
-import { useId } from "react";
 import {
-	Area,
-	AreaChart,
+	Bar,
+	BarChart,
 	CartesianGrid,
 	Tooltip as ChartTooltip,
-	Line,
 	ResponsiveContainer,
 	XAxis,
 	YAxis,
@@ -12,13 +10,17 @@ import {
 
 import { ChartValueTooltip } from "~/components/chart-tooltip.tsx";
 import { YearSelector } from "~/components/year-selector.tsx";
-import { CHART_ANIMATION_MS } from "~/lib/chart-style.ts";
 import type { TrendPoint } from "~/lib/stats-data.ts";
 
 /**
- * The detections-by-month chart, shared by the stats page (every detection)
- * and the species page (one species). Only the data differs; the scoping,
- * bucketing and styling are deliberately identical in both places.
+ * The detections-by-month chart, shared by the timeline page's Yearly period
+ * (every detection) and the species page (one species). Only the data differs;
+ * the scoping, bucketing and styling are deliberately identical in both places.
+ *
+ * Bars rather than the line the by-hour card uses: twelve months are discrete
+ * buckets to be compared against each other, not a continuous cycle to trace
+ * the shape of. A line between them implies readings in the gaps that do not
+ * exist.
  */
 export function DetectionsByMonthCard({
 	trend,
@@ -30,13 +32,16 @@ export function DetectionsByMonthCard({
 	/** The twelve months of `year`, zero-filled. */
 	trend: TrendPoint[];
 	year: number;
-	years: number[];
-	onYearChange: (year: number) => void;
+	/**
+	 * The years the selector may step through. Omitted where the year is chosen
+	 * elsewhere -- the timeline page's window picker is already a year picker
+	 * under the Yearly period, and a second one in the card header would be
+	 * two controls for one value.
+	 */
+	years?: number[];
+	onYearChange?: (year: number) => void;
 	className?: string;
 }) {
-	// Two of these can share a page in principle; a scoped id keeps the
-	// gradients from colliding.
-	const fillId = useId();
 	const isEmpty = trend.every((point) => point.count === 0);
 
 	return (
@@ -48,7 +53,9 @@ export function DetectionsByMonthCard({
 		>
 			<div className="flex flex-wrap items-center justify-between gap-4">
 				<div className="island-kicker">Detections by month</div>
-				<YearSelector year={year} years={years} onChange={onYearChange} />
+				{years && onYearChange ? (
+					<YearSelector year={year} years={years} onChange={onYearChange} />
+				) : null}
 			</div>
 
 			{isEmpty ? (
@@ -57,19 +64,22 @@ export function DetectionsByMonthCard({
 				</p>
 			) : (
 				<div className="mt-4 min-h-0 flex-1">
-					<ResponsiveContainer width="100%" height="100%">
-						<AreaChart
+					{/* `minHeight` is not decoration: ResponsiveContainer measures its own
+				    box, and `height: 100%` inside a card sized by `min-h-72` resolves
+				    against an indefinite height -- so it measures zero and draws
+				    nothing unless a parent grid row happens to stretch the card to a
+				    definite height. The floor makes the chart render wherever the card
+				    is put, and it still grows past it when a row does stretch. */}
+					<ResponsiveContainer width="100%" height="100%" minHeight={220}>
+						<BarChart
 							data={trend}
 							// Every month gets a tick, and the last one is centred on the
 							// right edge -- without the extra room "Dec" loses its tail.
 							margin={{ top: 5, right: 16, bottom: 5, left: 5 }}
+							// Twelve discrete buckets, not a continuous signal: a fifth of
+							// each band goes to the gap so no two months' fills touch, and
+							// the cap keeps the bars from turning into slabs on a wide card.
 						>
-							<defs>
-								<linearGradient id={fillId} x1="0" y1="0" x2="0" y2="1">
-									<stop offset="0%" stopColor="var(--moss)" stopOpacity={0.2} />
-									<stop offset="100%" stopColor="var(--moss)" stopOpacity={0} />
-								</linearGradient>
-							</defs>
 							<CartesianGrid stroke="var(--line)" vertical={false} />
 							<XAxis
 								dataKey="label"
@@ -90,26 +100,30 @@ export function DetectionsByMonthCard({
 							/>
 							<ChartTooltip
 								content={(props) => <ChartValueTooltip {...props} />}
+								// The band, not the bar: a cursor sized to the mark makes the
+								// hover target smaller than the thing being pointed at.
+								cursor={{ fill: "var(--sage)", fillOpacity: 0.2 }}
 							/>
-							{/* The wash under the line, not a series of its own: it plots the
-							    same counts, so left in the tooltip it listed every value twice. */}
-							<Area
+							{/* One series, so no legend -- the kicker above names it. The
+							    rounded top is on the data end only; the baseline end stays
+							    square so the bar reads as sitting on zero. */}
+							{/* One series, so no legend -- the kicker above names it. The
+							    rounded corners are on the data end only; the baseline end
+							    stays square so each bar reads as sitting on zero.
+
+							    No enter animation: recharts 3.10 grows a bar from zero
+							    height and, in this chart, never finishes -- every bar stays
+							    at zero and the shape is dropped entirely, which is a blank
+							    card. The line charts animate because they interpolate along
+							    a path rather than out of a collapsed rectangle. */}
+							<Bar
 								dataKey="count"
-								tooltipType="none"
-								animationDuration={CHART_ANIMATION_MS}
-								stroke="none"
-								fill={`url(#${fillId})`}
+								isAnimationActive={false}
+								fill="var(--moss)"
+								radius={[4, 4, 0, 0]}
+								maxBarSize={48}
 							/>
-							<Line
-								type="monotone"
-								dataKey="count"
-								animationDuration={CHART_ANIMATION_MS}
-								stroke="var(--moss)"
-								strokeWidth={2}
-								dot={false}
-								activeDot={{ r: 3, fill: "var(--moss)" }}
-							/>
-						</AreaChart>
+						</BarChart>
 					</ResponsiveContainer>
 				</div>
 			)}

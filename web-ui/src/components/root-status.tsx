@@ -20,7 +20,7 @@ export function RouteNotFound() {
 				title="Page not found"
 				actions={
 					<Button variant="outline" size="sm" asChild>
-						<Link to="/today">Go to Today</Link>
+						<Link to="/live">Go to Live</Link>
 					</Button>
 				}
 			>
@@ -55,7 +55,7 @@ export function RouteError() {
 							Try again
 						</Button>
 						<Button variant="ghost" size="sm" asChild>
-							<Link to="/today">Go to Today</Link>
+							<Link to="/live">Go to Live</Link>
 						</Button>
 					</>
 				}

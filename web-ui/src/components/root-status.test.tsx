@@ -11,7 +11,7 @@ test("the root not-found names the path and offers a way out", async () => {
 	assert.match(source, /title="Page not found"/);
 	assert.match(source, /useRouterState/);
 	assert.match(source, /location\.pathname/);
-	assert.match(source, /to="\/today"/);
+	assert.match(source, /to="\/live"/);
 });
 
 test("the root error offers a retry that invalidates the router", async () => {

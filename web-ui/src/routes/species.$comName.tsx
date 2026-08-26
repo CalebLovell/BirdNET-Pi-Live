@@ -409,8 +409,8 @@ function HeatMapDay({
 	const swatch =
 		count > 0 ? (
 			<Link
-				to="/day/$date"
-				params={{ date: bucketForDate(date) }}
+				to="/timeline"
+				search={{ period: "day", date: bucketForDate(date) }}
 				aria-label={label}
 				className="block"
 			>

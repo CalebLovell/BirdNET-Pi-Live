@@ -1,4 +1,3 @@
-import { createServerFn } from "@tanstack/react-start";
 import { count, countDistinct, sql } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
@@ -13,9 +12,7 @@ import {
 	type HourActivity,
 	type SpeciesCount,
 	selectBusiestHour,
-	type TrendPoint,
 } from "~/lib/stats-data.ts";
-import { getDetectionYears, getMonthlyTrend } from "~/lib/trend.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 export type StatsData = {
@@ -26,10 +23,6 @@ export type StatsData = {
 	topSpeciesList: SpeciesCount[];
 	rarestSpeciesList: SpeciesCount[];
 	hourActivity: HourActivity[];
-	/** The twelve months of the selected year. */
-	detectionTrend: TrendPoint[];
-	/** Years with detections, newest first, for the chart's year selector. */
-	availableYears: number[];
 	quietSpecies: QuietSpecies[];
 	newArrivals: ArrivalSpecies[];
 };
@@ -89,48 +82,47 @@ async function getBusiestDay(): Promise<BusiestDay | null> {
 	return row ?? null;
 }
 
-export type StatsInput = { year: number };
+/**
+ * The all-time half of the timeline page: totals, rankings and the two
+ * migration lists. Everything here spans the station's whole history, so
+ * unlike the rest of that page it takes no window -- it is only ever asked
+ * for under the "All time" period.
+ *
+ * A plain function rather than a server function: `timeline-page.ts` composes it
+ * with the window queries into a single round trip.
+ */
+export async function loadAllTimeStats(): Promise<StatsData> {
+	const [
+		[{ totalDetections }],
+		[{ uniqueSpecies }],
+		busiestDay,
+		topSpeciesList,
+		rarestSpeciesList,
+		hourActivity,
+		quietSpecies,
+		newArrivals,
+	] = await Promise.all([
+		db.select({ totalDetections: count() }).from(detections),
+		db
+			.select({ uniqueSpecies: countDistinct(detections.Com_Name) })
+			.from(detections),
+		getBusiestDay(),
+		getSpeciesRanking(10, "most"),
+		getSpeciesRanking(10, "least"),
+		getHourActivity(),
+		getQuietSpecies(),
+		getNewArrivals(),
+	]);
 
-export const getStats = createServerFn({ method: "GET" })
-	.validator((input: StatsInput) => input)
-	.handler(async ({ data: { year } }): Promise<StatsData> => {
-		const [
-			[{ totalDetections }],
-			[{ uniqueSpecies }],
-			busiestDay,
-			topSpeciesList,
-			rarestSpeciesList,
-			hourActivity,
-			detectionTrend,
-			availableYears,
-			quietSpecies,
-			newArrivals,
-		] = await Promise.all([
-			db.select({ totalDetections: count() }).from(detections),
-			db
-				.select({ uniqueSpecies: countDistinct(detections.Com_Name) })
-				.from(detections),
-			getBusiestDay(),
-			getSpeciesRanking(10, "most"),
-			getSpeciesRanking(10, "least"),
-			getHourActivity(),
-			getMonthlyTrend(year),
-			getDetectionYears(),
-			getQuietSpecies(),
-			getNewArrivals(),
-		]);
-
-		return {
-			totalDetections,
-			uniqueSpecies,
-			busiestDay,
-			busiestHour: selectBusiestHour(hourActivity),
-			topSpeciesList,
-			rarestSpeciesList,
-			hourActivity,
-			detectionTrend,
-			availableYears,
-			quietSpecies,
-			newArrivals,
-		};
-	});
+	return {
+		totalDetections,
+		uniqueSpecies,
+		busiestDay,
+		busiestHour: selectBusiestHour(hourActivity),
+		topSpeciesList,
+		rarestSpeciesList,
+		hourActivity,
+		quietSpecies,
+		newArrivals,
+	};
+}

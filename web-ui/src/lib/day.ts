@@ -359,24 +359,27 @@ export type DayPageResult =
 	| { status: "future" }
 	| { status: "before-station"; firstRecorded: string };
 
-export const getDayPage = createServerFn({ method: "GET" })
-	.validator((date: string) => date)
-	.handler(async ({ data: date }): Promise<DayPageResult> => {
-		// Cheap enough not to bother short-circuiting on the format check first:
-		// one indexed min() against the table's leading index key.
-		const [range] = await db
-			.select({ firstRecorded: min(detections.Date) })
-			.from(detections);
-		const firstRecorded = range?.firstRecorded ?? null;
+/**
+ * A plain function rather than only a server function: the timeline page
+ * composes this with the window queries that draw its toolbar, and calling one
+ * server function from inside another would cost a second round trip.
+ */
+export async function loadDayPage(date: string): Promise<DayPageResult> {
+	// Cheap enough not to bother short-circuiting on the format check first:
+	// one indexed min() against the table's leading index key.
+	const [range] = await db
+		.select({ firstRecorded: min(detections.Date) })
+		.from(detections);
+	const firstRecorded = range?.firstRecorded ?? null;
 
-		const verdict = classifyDay(date, dayIdFor(new Date()), firstRecorded);
-		if (verdict === "malformed") return { status: "malformed" };
-		if (verdict === "future") return { status: "future" };
-		if (verdict === "before-station") {
-			// Only ever reached with a non-null firstRecorded, but the compiler
-			// cannot know that from the verdict alone.
-			return { status: "before-station", firstRecorded: firstRecorded ?? date };
-		}
+	const verdict = classifyDay(date, dayIdFor(new Date()), firstRecorded);
+	if (verdict === "malformed") return { status: "malformed" };
+	if (verdict === "future") return { status: "future" };
+	if (verdict === "before-station") {
+		// Only ever reached with a non-null firstRecorded, but the compiler
+		// cannot know that from the verdict alone.
+		return { status: "before-station", firstRecorded: firstRecorded ?? date };
+	}
 
-		return { status: "ok", day: await getDayReview({ data: date }) };
-	});
+	return { status: "ok", day: await getDayReview({ data: date }) };
+}

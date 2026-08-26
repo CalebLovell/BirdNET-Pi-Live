@@ -1,44 +1,56 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
 import {
 	Bird,
-	Calendar,
-	CalendarDays,
-	CalendarRange,
 	ChartNoAxesColumnIncreasing,
-	ChevronLeft,
-	ChevronRight,
-	Clock,
 	Clock3,
 	Feather,
-	Infinity as InfinityIcon,
 } from "lucide-react";
-import { useMemo } from "react";
 import { z } from "zod";
-
+import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
+import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
 } from "~/components/page-header-card.tsx";
-import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
-import { Input } from "~/components/ui/input.tsx";
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
-import { useShareCard } from "~/components/use-share-card.tsx";
-import { pageTitle } from "~/lib/page-title.ts";
-import { hourLabel } from "~/lib/time-ago.ts";
-import { getTimelineData, type TimelineRow } from "~/lib/timeline.ts";
 import {
-	TIMELINE_PERIOD_LABELS,
+	type SpeciesActivityItem,
+	SpeciesActivityList,
+} from "~/components/species-activity-list.tsx";
+import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
+import { SpeciesList } from "~/components/species-list.tsx";
+import { StatusPage } from "~/components/status-page.tsx";
+import {
+	DayReviewBody,
+	formatDayTitle,
+	standingLabel,
+} from "~/components/timeline/day-review.tsx";
+import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
+import { TooltipProvider } from "~/components/ui/tooltip.tsx";
+import { useShareCard } from "~/components/use-share-card.tsx";
+import type { DayReview } from "~/lib/day.ts";
+import { getDayShareCard } from "~/lib/day-share.ts";
+import {
+	ARRIVAL_WINDOW_DAYS,
+	QUIET_AFTER_DAYS,
+	RESIDENT_MIN_DAYS,
+	shortDateLabel,
+} from "~/lib/migration-data.ts";
+import { pageTitle } from "~/lib/page-title.ts";
+import { formatShareCard } from "~/lib/share-card.ts";
+import { hourLabel } from "~/lib/time-ago.ts";
+import type { TimelineRow } from "~/lib/timeline.ts";
+import {
+	getTimelinePage,
+	type TimelineBody,
+	type TimelinePageData,
+} from "~/lib/timeline-page.ts";
+import {
 	TIMELINE_PERIODS,
 	type TimelinePeriod,
 } from "~/lib/timeline-periods.ts";
 import { formatTimelineShareCard } from "~/lib/timeline-share.ts";
-import {
-	anchorForDay,
-	currentAnchor,
-	isValidAnchor,
-	type TimelineAnchor,
-} from "~/lib/timeline-window.ts";
+import { currentAnchor, isValidAnchor } from "~/lib/timeline-window.ts";
 
 const DEFAULT_PERIOD: TimelinePeriod = "week";
 
@@ -49,8 +61,9 @@ const timelineSearchSchema = z.object({
 		.catch(DEFAULT_PERIOD),
 	/**
 	 * Which window of the period to show, in that period's own notation (see
-	 * TimelineAnchor). Absent means the one containing today, so a bare /timeline
-	 * link stays current instead of freezing on whatever day it was written.
+	 * TimelineAnchor). Absent means the one containing today, so a bare
+	 * /timeline link stays current instead of freezing on whatever day it was
+	 * written.
 	 */
 	// Coerced, not plain string: a bare year in a hand-written link
 	// (?date=2019) parses as a number, and rejecting it would silently snap the
@@ -59,12 +72,20 @@ const timelineSearchSchema = z.object({
 });
 
 /**
- * Falls back to today's window, and to today's window again when the URL holds
- * an anchor left over from a different period (switching Monthly -> Daily mid-
- * navigation) or plain garbage.
+ * Falls back to today's window when the URL names none, and to today's window
+ * again when it holds an anchor left over from a different period (switching
+ * Monthly -> Daily mid-navigation) or plain garbage.
+ *
+ * The day period is the exception: it is the one scope that can tell you *why*
+ * a date is unusable -- not a date at all, still ahead, or before the station
+ * was listening -- so a value it cannot read travels on to be judged rather
+ * than being silently swapped for today. Quietly showing a different day than
+ * the address asked for is the worse failure.
  */
 function resolveAnchor(period: TimelinePeriod, date: string | undefined) {
-	return date && isValidAnchor(period, date) ? date : currentAnchor(period);
+	if (!date) return currentAnchor(period);
+	if (isValidAnchor(period, date)) return date;
+	return period === "day" ? date : currentAnchor(period);
 }
 
 export const Route = createFileRoute("/timeline")({
@@ -77,319 +98,403 @@ export const Route = createFileRoute("/timeline")({
 		period: search.period,
 		anchor: resolveAnchor(search.period, search.date),
 	}),
-	loader: ({ deps }) => getTimelineData({ data: deps }),
+	loader: ({ deps }) => getTimelinePage({ data: deps }),
 	component: Timeline,
 });
 
-const PERIOD_ICONS: Record<
-	TimelinePeriod,
-	React.ComponentType<{ className?: string }>
-> = {
-	day: Clock,
-	week: CalendarDays,
-	month: CalendarRange,
-	year: Calendar,
-	all: InfinityIcon,
-};
-
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
-// The native input that fits each granularity. Chromium renders week and month
-// as real pickers; elsewhere they degrade to text fields holding the same
-// "2026-W31" / "2026-07" values, which still round-trip correctly.
-const PICKER_TYPES: Record<Exclude<TimelinePeriod, "all">, string> = {
-	day: "date",
-	week: "week",
-	month: "month",
-	year: "number",
-};
-
-const PICKER_LABELS: Record<Exclude<TimelinePeriod, "all">, string> = {
-	day: "Day",
-	week: "Week",
-	month: "Month",
-	year: "Year",
-};
-
 function Timeline() {
-	const {
-		rows,
-		hasAnyDetections,
-		// Aliased: `window` would shadow the global inside this component.
-		window: activeWindow,
-		prevAnchor,
-		nextAnchor,
-		lastActiveDay,
-		stationRange,
-	} = Route.useLoaderData();
+	const data = Route.useLoaderData();
 	const search = Route.useSearch();
 	const { period } = search;
 	const anchor = resolveAnchor(period, search.date);
 	const navigate = Route.useNavigate();
-	// Only ever read when the station has detections but this window has none --
-	// a station with nothing at all is handled by the page-level empty below,
-	// before this card renders. Naming the window makes sense here precisely
-	// because the picker that chose it is on screen to explain it.
-	const emptyMessage = activeWindow
-		? `No detections recorded for ${activeWindow.label}.`
-		: "No detections recorded in this window.";
 
-	const show = (next: Partial<{ period: TimelinePeriod; date: string }>) =>
+	const show = (next: { period?: TimelinePeriod; date?: string }) =>
 		navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
-	// The chart bodies need the kicker's bottom margin; the empty note brings its
-	// own top margin, so keeping both would double the gap.
 
-	// Every figure is derived from the already period-scoped rows, so the
-	// header moves with the period toggle without a second round trip.
-	const stats = useMemo<PageHeaderStat[]>(() => {
-		// An empty window keeps all four figures as em dashes rather than dropping
-		// the row. Collapsing the masthead would shift the switcher and the picker
-		// up the page underneath the cursor, mid-click, exactly when stepping into
-		// a quiet window makes you most likely to click again.
-		if (rows.length === 0) {
-			return [
-				{ label: "Species", value: "—", icon: Feather },
-				{ label: "Detections", value: "—", icon: ChartNoAxesColumnIncreasing },
-				{ label: "Busiest hour", value: "—", icon: Clock3 },
-				{ label: "Most active", value: "—", icon: Bird },
-			] satisfies PageHeaderStat[];
-		}
-
-		const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
-
-		const hourTotals = HOURS.map((hour) =>
-			rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
-		);
-		const peakHour = hourTotals.reduce(
-			(best, count, hour) => (count > hourTotals[best] ? hour : best),
-			0,
-		);
-		const hasPeak = hourTotals[peakHour] > 0;
-
-		const topRow = rows.reduce<TimelineRow | null>(
-			(best, row) =>
-				best && best.totalDetections >= row.totalDetections ? best : row,
-			null,
-		);
-
-		return [
-			{ label: "Species", value: rows.length, icon: Feather },
-			{
-				label: "Detections",
-				value: detections,
-				icon: ChartNoAxesColumnIncreasing,
-			},
-			{
-				label: "Busiest hour",
-				value: hasPeak ? hourLabel(peakHour) : "—",
-				detail: hasPeak
-					? `${hourTotals[peakHour].toLocaleString()} detections`
-					: undefined,
-				icon: Clock3,
-			},
-			{
-				label: "Most active",
-				value: topRow ? topRow.comName : "—",
-				detail: topRow
-					? `${topRow.totalDetections.toLocaleString()} detections`
-					: undefined,
-				icon: Bird,
-			},
-		] satisfies PageHeaderStat[];
-	}, [rows]);
-
-	// Everything the card says is already on this page, so the summary is built
-	// from the loader's rows rather than fetched -- no round trip, and it can
-	// never disagree with the figures above it.
-	const share = useShareCard({
-		// Named by what's showing, so switching period or stepping to another week
-		// rebuilds the card instead of leaving the last one behind the button.
-		subject: `${period}:${anchor}`,
-		load: async () =>
-			formatTimelineShareCard({
-				period,
-				windowLabel: activeWindow?.label ?? null,
-				rows,
-			}),
-	});
+	// A date the station could never have recorded is the one case with nothing
+	// to say at all -- no figures, no window, no grid -- so it replaces the page
+	// rather than sitting inside it.
+	if (data.body.kind === "day" && data.body.result.status !== "ok") {
+		return <OutOfRangeDay result={data.body.result} date={anchor} />;
+	}
 
 	return (
-		<div className="page-wrap space-y-4 py-4">
-			<PageHeaderCard
-				title="Timeline"
-				description="When each species is active across the day, hour by hour."
-				stats={stats}
-				// Kept on screen for empty windows too -- the card says so in a line,
-				// and a control that vanished as you stepped through quiet weeks would
-				// shift the masthead under the cursor.
-				action={hasAnyDetections ? share.trigger : undefined}
-			>
-				{share.summary}
-			</PageHeaderCard>
+		<TooltipProvider>
+			<div className="page-wrap space-y-4 py-4">
+				<TimelineHeader data={data} period={period} anchor={anchor} />
 
-			{/* Gated on the station rather than the window: an empty week still
-			    needs the switcher to reach a window that has something in it. */}
-			{hasAnyDetections && (
-				<div className="flex flex-wrap items-center justify-between gap-3">
-					{/* Five joined segments are wider than a phone, and a segmented
-					    control cannot wrap without breaking its own shape -- so on a
-					    narrow screen the row scrolls instead, the same way the site
-					    nav above it does. The padding keeps focus rings off the clip
-					    edge. */}
-					<div className="-mx-1 max-w-full overflow-x-auto px-1 py-1">
-						<ToggleGroup
-							type="single"
-							variant="outline"
-							value={period}
-							onValueChange={(value) => {
-								if (!value) return;
-								const next = value as TimelinePeriod;
-								// Carry the spot in history across the switch, anchored on the
-								// last day of the current window that holds detections. Using the
-								// window's start instead would drop Annually onto January 1st and
-								// land the user in a dead month; falling back to it only matters
-								// when the current window is empty anyway.
-								const carried = lastActiveDay ?? activeWindow?.start;
-								show({
-									period: next,
-									date:
-										next === "all" || !carried
-											? undefined
-											: anchorForDay(next, carried),
-								});
-							}}
-						>
-							{TIMELINE_PERIODS.map((p) => {
-								const Icon = PERIOD_ICONS[p];
-								return (
-									<ToggleGroupItem key={p} value={p}>
-										<Icon className="size-4" />
-										{TIMELINE_PERIOD_LABELS[p]}
-									</ToggleGroupItem>
-								);
-							})}
-						</ToggleGroup>
-					</div>
+				{/* Gated on the station rather than the window: an empty week still
+				    needs the switcher to reach a window that has something in it. */}
+				{data.hasAnyDetections && (
+					<PeriodToolbar
+						period={period}
+						anchor={anchor}
+						window={data.window}
+						prevAnchor={data.prevAnchor}
+						nextAnchor={data.nextAnchor}
+						lastActiveDay={data.lastActiveDay}
+						stationRange={data.stationRange}
+						onChange={show}
+					/>
+				)}
 
-					{period !== "all" && (
-						<WindowPicker
-							period={period}
-							anchor={anchor}
-							stationRange={stationRange}
-							prevAnchor={prevAnchor}
-							nextAnchor={nextAnchor}
-							onPick={(date) => show({ date })}
-						/>
-					)}
-				</div>
-			)}
-
-			{/* A station with nothing recorded has no window picker and no figures,
-			    so the hour card would be an empty shell with one line in it. The
-			    page-level treatment replaces it outright rather than nesting a card
-			    inside a card. */}
-			{!hasAnyDetections ? (
-				<EmptyState icon={Bird} title="No detections recorded yet.">
-					Once the station hears something, its daily rhythm will show up here.
-				</EmptyState>
-			) : (
-				<SpeciesByHourCard
-					rows={rows}
-					newLabel={activeWindow?.label ?? null}
-					emptyMessage={emptyMessage}
-				/>
-			)}
-		</div>
+				{/* A station with nothing recorded has no window picker and no
+				    figures, so every card below would be an empty shell with one
+				    line in it. The page-level treatment replaces them outright
+				    rather than nesting a card inside a card. */}
+				{data.hasAnyDetections ? (
+					<TimelineCards
+						body={data.body}
+						window={data.window?.label ?? null}
+						anchor={anchor}
+					/>
+				) : (
+					<EmptyState icon={Bird} title="No detections recorded yet.">
+						Once the station hears something, its rhythm will show up here --
+						hour by hour, day by day, and across the whole of its history.
+					</EmptyState>
+				)}
+			</div>
+		</TooltipProvider>
 	);
 }
 
 /**
- * The date side of the toolbar: a native picker matched to the granularity,
- * flanked by steps to the nearest neighbouring window that actually holds
- * detections. The arrows disable at the ends of the station's history rather
- * than walking off into empty windows.
+ * One masthead for every period. The title never changes; the sentence under
+ * it and the figures beside it are what say which window you are looking
+ * through, which is why the four pages this replaced no longer need four
+ * different headings.
  */
-function WindowPicker({
+function TimelineHeader({
+	data,
 	period,
 	anchor,
-	stationRange,
-	prevAnchor,
-	nextAnchor,
-	onPick,
 }: {
-	period: Exclude<TimelinePeriod, "all">;
-	anchor: TimelineAnchor;
-	stationRange: { first: string; last: string } | null;
-	prevAnchor: TimelineAnchor | null;
-	nextAnchor: TimelineAnchor | null;
-	onPick: (anchor: TimelineAnchor) => void;
+	data: TimelinePageData;
+	period: TimelinePeriod;
+	anchor: string;
 }) {
-	const label = PICKER_LABELS[period];
-	// Bounds in the picker's own notation, so the calendar greys out everything
-	// the station could never have recorded.
-	const min = stationRange
-		? anchorForDay(period, stationRange.first)
-		: undefined;
-	const max = stationRange
-		? anchorForDay(period, stationRange.last)
-		: undefined;
+	const day = data.body.kind === "day" ? dayOf(data.body) : null;
+
+	const share = useShareCard({
+		// Named by what's showing, so switching period or stepping to another
+		// week rebuilds the card instead of leaving the last one behind the
+		// button.
+		subject: `${period}:${anchor}`,
+		load: async () =>
+			day
+				? formatShareCard(await getDayShareCard({ data: day.date }))
+				: formatTimelineShareCard({
+						period,
+						windowLabel: data.window?.label ?? null,
+						rows: rowsOf(data.body),
+					}),
+	});
 
 	return (
-		<div className="flex items-center gap-1">
-			<StepButton
-				direction="prev"
-				label={`Previous ${label.toLowerCase()} with detections`}
-				target={prevAnchor}
-				onPick={onPick}
+		<PageHeaderCard
+			title="Timeline"
+			description={describe(data, period)}
+			stats={headerStats(data.body)}
+			// Kept on screen for empty windows too -- the card says so in a line,
+			// and a control that vanished as you stepped through quiet weeks would
+			// shift the masthead under the cursor.
+			action={data.hasAnyDetections ? share.trigger : undefined}
+		>
+			{share.summary}
+		</PageHeaderCard>
+	);
+}
+
+/**
+ * The same four figures in the same order under every period: detections,
+ * species, busiest hour, most active. The window changes what they measure,
+ * never what they are -- a masthead that reshuffled itself as you stepped from
+ * Daily to All Time would read as four different pages again, which is the
+ * thing this page exists to undo.
+ *
+ * Four numbers and nothing else. Every sub-line these used to carry -- the
+ * count behind the busiest hour, the count behind the most active bird, the
+ * day's comparison against a typical one -- said something already available
+ * further down the page, in a size that made the row look ragged before it
+ * made it informative.
+ */
+function headerStats(body: TimelineBody): PageHeaderStat[] {
+	if (body.kind === "day") {
+		const day = dayOf(body);
+		return day ? dayStats(day) : [];
+	}
+	return windowStats(body.rows);
+}
+
+/** The sentence that says which window the figures below belong to. */
+function describe(data: TimelinePageData, period: TimelinePeriod): string {
+	if (data.body.kind === "day") {
+		const day = dayOf(data.body);
+		if (!day) return "One day at this station, hour by hour.";
+		const standing = day.standing
+			? ` · ${standingLabel(day.standing, day)}`
+			: "";
+		return `${formatDayTitle(day.date)} · ${day.relativeLabel}${standing}`;
+	}
+
+	if (period === "all") {
+		return "Every detection this station has recorded, and what stands out in it.";
+	}
+
+	return data.window
+		? `${data.window.label} — when each species was active, hour by hour.`
+		: "When each species is active across the day, hour by hour.";
+}
+
+function dayOf(body: TimelineBody): DayReview | null {
+	return body.kind === "day" && body.result.status === "ok"
+		? body.result.day
+		: null;
+}
+
+function rowsOf(body: TimelineBody): TimelineRow[] {
+	return body.kind === "day" ? [] : body.rows;
+}
+
+/**
+ * The day's figures come from the day review rather than the grid -- it is the
+ * one period whose body is not built from timeline rows -- but they answer the
+ * same four questions in the same order.
+ */
+function dayStats(day: DayReview): PageHeaderStat[] {
+	const { summary } = day;
+	// The list is ranked, so the day's most active species is simply its first
+	// row.
+	const topRow = day.species[0] ?? null;
+
+	return [
+		{
+			label: "Detections",
+			value: summary.detections,
+			icon: ChartNoAxesColumnIncreasing,
+		},
+		{ label: "Species", value: summary.species, icon: Feather },
+		{
+			label: "Busiest hour",
+			value: summary.busiestHour ? hourLabel(summary.busiestHour.hour) : "—",
+			icon: Clock3,
+		},
+		{
+			label: "Most active",
+			value: topRow ? topRow.comName : "—",
+			icon: Bird,
+		},
+	];
+}
+
+/**
+ * Every figure is derived from the already period-scoped rows, so the header
+ * moves with the period toggle without a second round trip.
+ */
+function windowStats(rows: TimelineRow[]): PageHeaderStat[] {
+	// An empty window keeps all four figures as em dashes rather than dropping
+	// the row. Collapsing the masthead would shift the switcher and the picker
+	// up the page underneath the cursor, mid-click, exactly when stepping into a
+	// quiet window makes you most likely to click again.
+	if (rows.length === 0) {
+		return [
+			{ label: "Detections", value: "—", icon: ChartNoAxesColumnIncreasing },
+			{ label: "Species", value: "—", icon: Feather },
+			{ label: "Busiest hour", value: "—", icon: Clock3 },
+			{ label: "Most active", value: "—", icon: Bird },
+		];
+	}
+
+	const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
+
+	const hourTotals = HOURS.map((hour) =>
+		rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
+	);
+	const peakHour = hourTotals.reduce(
+		(best, count, hour) => (count > hourTotals[best] ? hour : best),
+		0,
+	);
+	const hasPeak = hourTotals[peakHour] > 0;
+
+	const topRow = rows.reduce<TimelineRow | null>(
+		(best, row) =>
+			best && best.totalDetections >= row.totalDetections ? best : row,
+		null,
+	);
+
+	return [
+		{
+			label: "Detections",
+			value: detections,
+			icon: ChartNoAxesColumnIncreasing,
+		},
+		{ label: "Species", value: rows.length, icon: Feather },
+		{
+			label: "Busiest hour",
+			value: hasPeak ? hourLabel(peakHour) : "—",
+			icon: Clock3,
+		},
+		{
+			label: "Most active",
+			value: topRow ? topRow.comName : "—",
+			icon: Bird,
+		},
+	];
+}
+
+/**
+ * What each period puts under the toolbar. The species-by-hour grid is the one
+ * card every window shares; everything else earns its place by needing a
+ * window of a particular size to mean anything.
+ */
+function TimelineCards({
+	body,
+	window,
+	anchor,
+}: {
+	body: TimelineBody;
+	window: string | null;
+	anchor: string;
+}) {
+	if (body.kind === "day") {
+		const day = dayOf(body);
+		return day ? <DayReviewBody day={day} /> : null;
+	}
+
+	const emptyMessage = window
+		? `No detections recorded for ${window}.`
+		: "No detections recorded in this window.";
+
+	return (
+		<>
+			<SpeciesByHourCard
+				rows={body.rows}
+				newLabel={window}
+				emptyMessage={emptyMessage}
 			/>
-			<Input
-				aria-label={label}
-				className="!w-44"
-				type={PICKER_TYPES[period]}
-				value={anchor}
-				min={min}
-				max={max}
-				step={period === "year" ? 1 : undefined}
-				onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
-					const next = event.target.value;
-					// Half-typed values stream through on every keystroke; only commit
-					// once one names a real window.
-					if (isValidAnchor(period, next)) onPick(next);
-				}}
+
+			{body.kind === "window" && body.trend ? (
+				<DetectionsByMonthCard trend={body.trend} year={Number(anchor)} />
+			) : null}
+
+			{body.kind === "all" ? <AllTimeCards stats={body.stats} /> : null}
+		</>
+	);
+}
+
+/**
+ * The cards that need the station's whole history as their baseline. A ranking
+ * or a migration list scoped to one week is not a shorter version of itself --
+ * it is noise, which is why these appear under "All time" alone.
+ */
+function AllTimeCards({
+	stats,
+}: {
+	stats: Extract<TimelineBody, { kind: "all" }>["stats"];
+}) {
+	// Both lists date their rows by the marker detection each one stands on --
+	// the last one heard, or the first of an arrival.
+	const quietItems: SpeciesActivityItem[] = stats.quietSpecies.map((item) => ({
+		comName: item.comName,
+		sciName: item.sciName,
+		imageUrl: item.imageUrl,
+		detectedAt: item.detectedAt,
+		ageMs: item.ageMs,
+		timeLabel: shortDateLabel(item.lastSeen),
+		confidence: item.confidence,
+		audioUrl: item.audioUrl,
+	}));
+
+	const arrivalItems: SpeciesActivityItem[] = stats.newArrivals.map((item) => ({
+		comName: item.comName,
+		sciName: item.sciName,
+		imageUrl: item.imageUrl,
+		detectedAt: item.detectedAt,
+		ageMs: item.ageMs,
+		timeLabel: shortDateLabel(item.firstSeen),
+		confidence: item.confidence,
+		audioUrl: item.audioUrl,
+	}));
+
+	return (
+		<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+			<DetectionsByHourCard activity={stats.hourActivity} />
+			{/* No min-height: the two lists sit in the same grid row, so they
+			    already stretch to match each other. Reserving height instead only
+			    padded them with dead space until the lists were long enough. */}
+			<SpeciesList title="Top species" species={stats.topSpeciesList} />
+			<SpeciesList title="Rarest species" species={stats.rarestSpeciesList} />
+			<SpeciesActivityList
+				title="New arrivals"
+				description={`Species heard in the last ${ARRIVAL_WINDOW_DAYS} days that were absent for the ${ARRIVAL_WINDOW_DAYS} days before that — new sightings and returning migrants alike.`}
+				species={arrivalItems}
+				emptyMessage="No new arrivals in the last two weeks."
 			/>
-			<StepButton
-				direction="next"
-				label={`Next ${label.toLowerCase()} with detections`}
-				target={nextAnchor}
-				onPick={onPick}
+			<SpeciesActivityList
+				title="Gone quiet"
+				description={`Regular visitors — heard on at least ${RESIDENT_MIN_DAYS} separate days — with no detection in the last ${QUIET_AFTER_DAYS} days. They may have migrated away or shifted territory.`}
+				species={quietItems}
+				emptyMessage="Every regular visitor has been heard recently."
 			/>
 		</div>
 	);
 }
 
-function StepButton({
-	direction,
-	label,
-	target,
-	onPick,
-}: {
-	direction: "prev" | "next";
-	label: string;
-	target: TimelineAnchor | null;
-	onPick: (anchor: TimelineAnchor) => void;
-}) {
-	const Icon = direction === "prev" ? ChevronLeft : ChevronRight;
+const TIMELINE_SECTION = "Timeline";
+const TIMELINE_SECTION_DESCRIPTION =
+	"What this station heard, at whatever scale you ask for.";
 
-	return (
-		<button
-			type="button"
-			aria-label={label}
-			title={label}
-			disabled={target === null}
-			onClick={() => target && onPick(target)}
-			className="flex size-8 items-center justify-center rounded-md border border-[var(--line)] text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-		>
-			<Icon className="size-4" />
-		</button>
-	);
+/**
+ * A date outside the station's history. Not a page with empty cards on it: the
+ * window itself is the thing that does not exist, so there is nothing to scope
+ * and nothing to draw.
+ */
+function OutOfRangeDay({
+	result,
+	date,
+}: {
+	result: Extract<TimelineBody, { kind: "day" }>["result"];
+	date: string;
+}) {
+	switch (result.status) {
+		case "future":
+			return (
+				<StatusPage
+					section={TIMELINE_SECTION}
+					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
+					tone="missing"
+					title="That day hasn't happened yet"
+				>
+					{formatDayTitle(date)} is still ahead. There is nothing to review
+					until the station has heard it.
+				</StatusPage>
+			);
+		case "before-station":
+			return (
+				<StatusPage
+					section={TIMELINE_SECTION}
+					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
+					tone="missing"
+					title="Before this station started listening"
+				>
+					{formatDayTitle(date)} predates the first recording. This station has
+					been listening since {formatDayTitle(result.firstRecorded)}.
+				</StatusPage>
+			);
+		default:
+			return (
+				<StatusPage
+					section={TIMELINE_SECTION}
+					sectionDescription={TIMELINE_SECTION_DESCRIPTION}
+					tone="missing"
+					title="That isn't a date"
+				>
+					“{date}” isn’t a valid date. Dates look like 2025-04-19.
+				</StatusPage>
+			);
+	}
 }

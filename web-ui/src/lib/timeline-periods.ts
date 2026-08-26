@@ -14,6 +14,6 @@ export const TIMELINE_PERIOD_LABELS: Record<TimelinePeriod, string> = {
 	day: "Daily",
 	week: "Weekly",
 	month: "Monthly",
-	year: "Annually",
+	year: "Yearly",
 	all: "All Time",
 };

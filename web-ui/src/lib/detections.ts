@@ -28,6 +28,7 @@ import {
 } from "~/lib/detection-workspace.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { countVisits } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 const isToday = sql`${detections.Date} = date('now', 'localtime')`;
@@ -334,6 +335,7 @@ export type LifeListCard = {
 	comName: string;
 	sciName: string;
 	allTimeCount: number;
+	visits: number;
 	lastDetected: string;
 	audioUrl: string | null;
 	imageUrl: string | null;
@@ -366,10 +368,18 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 			string,
 			{ date: string; time: string; fileName: string }
 		>();
+		// The same pass that finds each species' latest detection also gathers all
+		// of its timestamps, so a species' visit count is a pure fold over the rows
+		// we already hold rather than a second query.
+		const timestampsByName = new Map<string, string[]>();
 		for (const row of recent) {
 			if (!latestByName.has(row.comName)) {
 				latestByName.set(row.comName, row);
 			}
+			const stamps = timestampsByName.get(row.comName);
+			const timestamp = `${row.date} ${row.time}`;
+			if (stamps) stamps.push(timestamp);
+			else timestampsByName.set(row.comName, [timestamp]);
 		}
 
 		return Promise.all(
@@ -380,6 +390,7 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 					comName: row.comName,
 					sciName: row.sciName,
 					allTimeCount: row.allTimeCount,
+					visits: countVisits(timestampsByName.get(row.comName) ?? []),
 					lastDetected: latest ? `${latest.date} ${latest.time}` : "",
 					audioUrl: latest
 						? audioUrlFor(latest.date, row.comName, latest.fileName)

@@ -1,15 +1,14 @@
 import { Link, useRouteContext } from "@tanstack/react-router";
 import {
 	Bird,
-	CalendarDays,
 	ChartColumn,
 	CheckCheck,
 	GraduationCap,
 	ListTree,
 	Lock,
+	Radio,
 	Settings,
 	SlidersHorizontal,
-	Sunrise,
 } from "lucide-react";
 
 /**
@@ -52,12 +51,19 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 				>
 					Explore
 				</p>
-				<Link to="/today" {...linkProps}>
-					<Sunrise className="sidebar-icon" aria-hidden="true" />
-					Today
+				<Link to="/live" {...linkProps}>
+					<Radio className="sidebar-icon" aria-hidden="true" />
+					Live
 				</Link>
-				<Link to="/timeline" {...linkProps}>
-					<CalendarDays className="sidebar-icon" aria-hidden="true" />
+				{/* One entry for every scope: a day, a week, a year, all of it. The
+				    period control on the page is what used to be three separate nav
+				    entries, so listing them again here would undo the merge. */}
+				<Link
+					to="/timeline"
+					activeOptions={{ includeSearch: false }}
+					{...linkProps}
+				>
+					<ChartColumn className="sidebar-icon" aria-hidden="true" />
 					Timeline
 				</Link>
 				<Link to="/species" {...linkProps}>
@@ -80,10 +86,6 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 				>
 					<ListTree className="sidebar-icon" aria-hidden="true" />
 					Detections
-				</Link>
-				<Link to="/stats" {...linkProps}>
-					<ChartColumn className="sidebar-icon" aria-hidden="true" />
-					Stats
 				</Link>
 				<Link to="/learn" {...linkProps}>
 					<GraduationCap className="sidebar-icon" aria-hidden="true" />
