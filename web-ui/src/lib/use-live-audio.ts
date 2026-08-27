@@ -108,6 +108,14 @@ export function useLiveAudio(streamUrl: string) {
 	useEffect(() => {
 		return () => {
 			ctxRef.current?.close();
+			// Null the refs so a remount rebuilds the graph rather than reusing a
+			// closed context. Harmless today (no StrictMode, and PlayerPanel mounts
+			// once), but it keeps ensureGraph's `if (ctxRef.current) return` guard
+			// honest if either changes.
+			ctxRef.current = null;
+			gainRef.current = null;
+			compressorRef.current = null;
+			analyserRef.current = null;
 		};
 	}, []);
 
