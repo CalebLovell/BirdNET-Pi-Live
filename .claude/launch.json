@@ -1,12 +1,12 @@
 {
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "web-ui",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--prefix", "web-ui"],
-      "port": 3000,
-      "autoPort": true
-    }
-  ]
+	"version": "0.0.1",
+	"configurations": [
+		{
+			"name": "web-ui",
+			"runtimeExecutable": "npm",
+			"runtimeArgs": ["run", "dev", "--", "--port", "5199", "--strictPort"],
+			"cwd": "web-ui",
+			"port": 5199
+		}
+	]
 }
