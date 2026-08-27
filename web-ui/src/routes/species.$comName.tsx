@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 
+import { BestRecordingCard } from "~/components/best-recording-card.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
@@ -285,10 +286,10 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 			<div className="page-wrap pb-4">
 				<SummaryCard detail={detail} offsetMs={offsetMs} />
 
-				<div className="mt-4">
+				<div className="mt-4 grid items-stretch gap-4 lg:grid-cols-[minmax(0,max-content)_minmax(20rem,1fr)]">
 					<section
 						aria-label="Detection history"
-						className="feature-card w-full overflow-hidden rounded-md p-4"
+						className="feature-card overflow-hidden rounded-md p-4"
 					>
 						<div className="flex flex-wrap items-center justify-between gap-4">
 							<div className="island-kicker">Detection history</div>
@@ -353,10 +354,12 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 							<span>More</span>
 						</div>
 					</section>
+
+					<BestRecordingCard recording={detail.bestRecording} />
 				</div>
 
 				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-					<div className="order-2 grid gap-4 lg:order-1 lg:grid-rows-2">
+					<div className="grid gap-4 lg:grid-rows-2">
 						<DetectionsByHourCard
 							activity={detail.hourActivity}
 							className="lg:min-h-0"
@@ -521,7 +524,7 @@ function RecentVisitsCard({
 	return (
 		<section
 			aria-label="Visit log"
-			className="feature-card order-1 flex min-h-[420px] flex-col rounded-md p-4 lg:order-2"
+			className="feature-card flex min-h-[420px] flex-col rounded-md p-4"
 		>
 			<div className="island-kicker">Visit log</div>
 

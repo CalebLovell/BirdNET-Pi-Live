@@ -36,6 +36,14 @@ export type Visit = {
  */
 export type RecentVisit = Visit & { ageMs: number };
 
+/** The species' highest-confidence detection, featured with a spectrogram. */
+export type BestRecording = {
+	date: string;
+	time: string;
+	confidence: number | null;
+	audioUrl: string | null;
+};
+
 export type SpeciesDetail = {
 	comName: string;
 	sciName: string;
@@ -52,6 +60,8 @@ export type SpeciesDetail = {
 	detectionTrend: TrendPoint[];
 	/** Every detection by hour of day, like the stats page's chart. */
 	hourActivity: HourActivity[];
+	/** The single cleanest clip -- highest confidence, all-time. */
+	bestRecording: BestRecording | null;
 	recentVisits: RecentVisit[];
 	/** When the visit ages were measured, for `useAgeOffset` to advance them. */
 	generatedAt: string;
@@ -171,6 +181,7 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 			const [
 				[first],
 				[last],
+				[best],
 				recentVisits,
 				availableYears,
 				history,
@@ -207,6 +218,19 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 					})
 					.from(detections)
 					.where(filter)
+					// The cleanest clip is the highest-confidence one; ties break toward
+					// the most recent, since that clip is likeliest to still be on disk.
+					.orderBy(desc(detections.Confidence), desc(detections.Date))
+					.limit(1),
+				db
+					.select({
+						date: detections.Date,
+						time: detections.Time,
+						confidence: detections.Confidence,
+						fileName: detections.File_Name,
+					})
+					.from(detections)
+					.where(filter)
 					.orderBy(desc(detections.Date), desc(detections.Time))
 					.limit(9), // odd count so the visit log's zebra striping starts and ends on the tinted row
 				getDetectionYears(filter),
@@ -231,6 +255,14 @@ export const getSpeciesDetail = createServerFn({ method: "GET" })
 				history,
 				detectionTrend,
 				hourActivity,
+				bestRecording: best
+					? {
+							date: best.date,
+							time: best.time,
+							confidence: best.confidence,
+							audioUrl: audioUrlFor(best.date, comName, best.fileName),
+						}
+					: null,
 				recentVisits: recentVisits.map((visit) => ({
 					date: visit.date,
 					time: visit.time,
