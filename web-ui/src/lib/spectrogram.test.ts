@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { rampColor, type Rgb } from "./spectrogram.ts";
+import { type Rgb, rampColor } from "./spectrogram.ts";
 
 const STOPS: Rgb[] = [
 	[0, 0, 0],

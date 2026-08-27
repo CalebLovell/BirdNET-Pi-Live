@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 
 import { Button } from "~/components/ui/button.tsx";
 import { Toggle } from "~/components/ui/toggle.tsx";
-import { rampColor, type Rgb } from "~/lib/spectrogram.ts";
+import { type Rgb, rampColor } from "~/lib/spectrogram.ts";
 import { useLiveAudio } from "~/lib/use-live-audio.ts";
 
 const STREAM_URL = "/api/live-stream";
@@ -33,7 +33,10 @@ function LockedPanel() {
 		<CardShell>
 			<div className="flex items-center gap-3">
 				<div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))]">
-					<LockKeyhole aria-hidden="true" className="size-4 text-[var(--moss)]" />
+					<LockKeyhole
+						aria-hidden="true"
+						className="size-4 text-[var(--moss)]"
+					/>
 				</div>
 				<p className="text-muted-foreground text-sm">
 					Unlock the station to listen to the live feed.
@@ -86,7 +89,9 @@ function PlayerPanel() {
 						className="accent-[var(--moss)]"
 						aria-label="Gain"
 					/>
-					<span className="tabular-data w-10 text-right">{live.gainPercent}%</span>
+					<span className="tabular-data w-10 text-right">
+						{live.gainPercent}%
+					</span>
 				</label>
 
 				<Toggle
@@ -142,7 +147,10 @@ function Spectrogram({
 			readRgb(styles.getPropertyValue("--moss"), [32, 59, 20]),
 			readRgb(styles.getPropertyValue("--clay"), [156, 74, 52]),
 		];
-		const background = readRgb(styles.getPropertyValue("--paper"), [251, 253, 246]);
+		const background = readRgb(
+			styles.getPropertyValue("--paper"),
+			[251, 253, 246],
+		);
 
 		const bins = analyser.frequencyBinCount;
 		const data = new Uint8Array(bins);

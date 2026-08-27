@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-export type LiveAudioState = "idle" | "connecting" | "playing" | "paused" | "offline";
+export type LiveAudioState =
+	| "idle"
+	| "connecting"
+	| "playing"
+	| "paused"
+	| "offline";
 
 const MIN_GAIN_PERCENT = 100;
 const MAX_GAIN_PERCENT = 400;
