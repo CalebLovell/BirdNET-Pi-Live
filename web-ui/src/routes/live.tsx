@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
+import { LiveAudioCard } from "~/components/now/live-audio-card.tsx";
 import { LiveStoryCard } from "~/components/now/live-story-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
@@ -21,12 +22,12 @@ export const Route = createFileRoute("/live")({
 	// The story rides the loader alone. It is judged against a fortnight of
 	// history and cannot change inside a ten-second poll, so pulling it here
 	// keeps its full-table scans off the polling path.
-	loader: async () => {
+	loader: async ({ context }) => {
 		const [snapshot, story] = await Promise.all([
 			getNowSnapshot(),
 			getTodaysStory(),
 		]);
-		return { snapshot, story };
+		return { snapshot, story, unlocked: context.auth.unlocked };
 	},
 });
 
@@ -58,7 +59,7 @@ function useFreshKeys(keys: string[]): Set<string> {
 }
 
 function Live() {
-	const { snapshot: initialSnapshot, story } = Route.useLoaderData();
+	const { snapshot: initialSnapshot, story, unlocked } = Route.useLoaderData();
 	const { data: snapshot } = usePolledData(
 		() => getNowSnapshot(),
 		initialSnapshot,
@@ -88,6 +89,10 @@ function Live() {
 				offsetMs={offsetMs}
 				flash={heroIsNew}
 			/>
+
+			<div className="mt-4">
+				<LiveAudioCard unlocked={unlocked} />
+			</div>
 
 			<LiveStoryCard lines={story} className="mt-4" />
 
