@@ -4,6 +4,7 @@ import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
+import { RARE_LIFETIME_MAX } from "~/lib/story-data.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 import {
 	anchorForDay,
@@ -37,6 +38,15 @@ export type TimelineRow = {
 	 * every species is trivially first heard inside the window.
 	 */
 	isNew: boolean;
+	/** Mean detection confidence across this window, 0–1. Null when the window
+	    holds no scored detections for the species. */
+	averageConfidence: number | null;
+	/**
+	 * A rare visitor here: its lifetime detection count at this station is at or
+	 * below RARE_LIFETIME_MAX, regardless of the selected window. Matches the
+	 * threshold the Live story card uses.
+	 */
+	isRare: boolean;
 };
 
 export type TimelineData = {
@@ -156,32 +166,51 @@ export async function loadTimelineData({
 			)
 		: undefined;
 
-	const [rows, previouslySeenRows, nav] = await Promise.all([
-		db
-			.select({
-				comName: detections.Com_Name,
-				sciName: detections.Sci_Name,
-				hour: sql<string>`strftime('%H', ${detections.Time})`,
-				count: sql<number>`count(*)`,
-			})
-			.from(detections)
-			.where(inWindow)
-			.groupBy(
-				detections.Com_Name,
-				detections.Sci_Name,
-				sql`strftime('%H', ${detections.Time})`,
-			),
-		// Everything the station knew before this window opened; a species
-		// missing from it is one the window introduced. "All time" has no
-		// "before" to compare against and skips the probe.
-		window
-			? db
-					.selectDistinct({ comName: detections.Com_Name })
-					.from(detections)
-					.where(lt(detections.Date, window.start))
-			: Promise.resolve([]),
-		loadTimelineNav(period, window),
-	]);
+	const [rows, previouslySeenRows, confidenceRows, lifetimeRows, nav] =
+		await Promise.all([
+			db
+				.select({
+					comName: detections.Com_Name,
+					sciName: detections.Sci_Name,
+					hour: sql<string>`strftime('%H', ${detections.Time})`,
+					count: sql<number>`count(*)`,
+				})
+				.from(detections)
+				.where(inWindow)
+				.groupBy(
+					detections.Com_Name,
+					detections.Sci_Name,
+					sql`strftime('%H', ${detections.Time})`,
+				),
+			// Everything the station knew before this window opened; a species
+			// missing from it is one the window introduced. "All time" has no
+			// "before" to compare against and skips the probe.
+			window
+				? db
+						.selectDistinct({ comName: detections.Com_Name })
+						.from(detections)
+						.where(lt(detections.Date, window.start))
+				: Promise.resolve([]),
+			// Mean confidence per species inside the window.
+			db
+				.select({
+					comName: detections.Com_Name,
+					avgConfidence: sql<number | null>`avg(${detections.Confidence})`,
+				})
+				.from(detections)
+				.where(inWindow)
+				.groupBy(detections.Com_Name),
+			// Lifetime detection count per species, ignoring the window: what makes
+			// a species a rare visitor here at all.
+			db
+				.select({
+					comName: detections.Com_Name,
+					lifetime: sql<number>`count(*)`,
+				})
+				.from(detections)
+				.groupBy(detections.Com_Name),
+			loadTimelineNav(period, window),
+		]);
 
 	const bySpecies = new Map<
 		string,
@@ -202,6 +231,13 @@ export async function loadTimelineData({
 
 	const previouslySeen = new Set(previouslySeenRows.map((row) => row.comName));
 
+	const avgConfidenceByName = new Map(
+		confidenceRows.map((row) => [row.comName, row.avgConfidence]),
+	);
+	const lifetimeByName = new Map(
+		lifetimeRows.map((row) => [row.comName, row.lifetime]),
+	);
+
 	const withImages = await Promise.all(
 		Array.from(bySpecies.values()).map(async (entry) => {
 			const { imageUrl: wikiImageUrl } = await getSpeciesInfo(entry.comName);
@@ -214,6 +250,9 @@ export async function loadTimelineData({
 				totalDetections,
 				hourCounts: entry.hourCounts,
 				isNew: window !== null && !previouslySeen.has(entry.comName),
+				averageConfidence: avgConfidenceByName.get(entry.comName) ?? null,
+				isRare:
+					(lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX,
 			};
 		}),
 	);
