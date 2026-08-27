@@ -29,7 +29,7 @@ test("one loader serves every period", async () => {
 	assert.match(source, /stripSearchParams\(\{ period: DEFAULT_PERIOD \}\)/);
 });
 
-test("every period draws the same three-part body", async () => {
+test("every period draws the same body", async () => {
 	const source = await read("../lib/timeline-page.ts");
 	// One rows path for every period; the Daily range check is the only branch.
 	assert.match(source, /kind: "rows"; rows: TimelineRow\[\]/);
@@ -39,8 +39,9 @@ test("every period draws the same three-part body", async () => {
 
 	const route = await read("./timeline.tsx");
 	assert.match(route, /<SpeciesByHourCard/);
-	assert.match(route, /<DetectionsByHourCard activity=\{hourActivityFromRows/);
 	assert.match(route, /<SpeciesGrid/);
+	// The detections-by-hour card was dropped from every period's body.
+	assert.doesNotMatch(route, /<DetectionsByHourCard/);
 	assert.doesNotMatch(route, /AllTimeCards/);
 });
 

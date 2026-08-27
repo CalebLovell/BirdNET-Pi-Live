@@ -29,10 +29,18 @@ export type SpeciesHourRow = {
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
-// The hour columns share whatever the name column leaves over, so the cells
-// stretch into rectangles on a wide card and fall back to their 26px floor
-// (scrolling the card) once the viewport can't afford that.
-const HOUR_GRID_COLUMNS = "16rem repeat(24, minmax(26px, 1fr))";
+// The left panel is three tracks -- name, bar, count. The name keeps a fixed
+// column (wide enough for a bird's name, truncating the longest) so the bars
+// all start at the same x; the bar then takes every remaining pixel, so it's
+// the bar -- not a stretched-out name column -- that soaks up the card's spare
+// width. The count sits in its own narrow column so the numbers stay in a line.
+const LABEL_GRID_COLUMNS = "15rem minmax(0, 1fr) auto";
+
+// The hour columns are a fixed 1.75rem wide so each cell stays square (its
+// 1.5rem tile plus the 0.125rem margin on either side) no matter how wide the
+// card gets -- the grid never stretches the tiles into rectangles, and it
+// scrolls once the viewport can't afford the full 24 columns.
+const HOUR_GRID_COLUMNS = "repeat(24, 1.75rem)";
 
 // Ink for the count sitting inside each cell, indexed the same way as
 // HEAT_COLORS. The first four grounds are pale enough to take dark text; the
@@ -57,9 +65,11 @@ function hourTickParts(hour: number): { number: string; meridiem: string } {
 
 /**
  * The species x hour grid, shared by the timeline page (a window of days) and
- * the day page (one calendar day). Each row is scaled against its own busiest
- * hour, so a quiet species still shows the shape of when it was around rather
- * than flattening against the station's loudest bird.
+ * the day page (one calendar day). A fixed left panel ranks the species by
+ * total detections as a bar chart; the heatmap to its right scales each row
+ * against its own busiest hour, so a quiet species still shows the shape of
+ * when it was around rather than flattening against the station's loudest bird.
+ * The heatmap is hidden on mobile, where the bars alone carry the ranking.
  */
 export function SpeciesByHourCard({
 	rows,
@@ -75,6 +85,13 @@ export function SpeciesByHourCard({
 	className?: string;
 }) {
 	const isEmpty = rows.length === 0;
+	// The busiest bird sets the bar scale for the whole panel, so a bar's length
+	// reads against the loudest species rather than against itself.
+	const maxTotal = Math.max(...rows.map((row) => row.totalDetections), 0);
+	// The count column is fixed to the widest number's character count, so a
+	// two-digit row doesn't push its bar shorter than a one-digit row's -- every
+	// bar ends at the same x, with the digits right-aligned into that column.
+	const countWidthCh = maxTotal.toLocaleString().length;
 
 	return (
 		<TooltipProvider>
@@ -89,38 +106,68 @@ export function SpeciesByHourCard({
 				{isEmpty ? (
 					<EmptyNote>{emptyMessage}</EmptyNote>
 				) : (
-					// p-1/-m-1 cancel out visually, but the padding gives the first
-					// column's focus ring somewhere to draw: the row links sit flush
-					// against the scrollport, so a 2px offset outline would be clipped
-					// on its left edge without the slack.
-					<div className="-m-1 overflow-x-auto p-1">
-						<div className="w-max min-w-full">
+					<div className="flex gap-4">
+						{/* LEFT: bird, name and a detections bar. Grows to fill the card's
+						    spare width, and is the only panel on mobile. The min width
+						    keeps the names legible on a tight card -- past that floor the
+						    heatmap gives way and scrolls rather than the names collapsing.
+						    p-1/-m-1 give the row links' focus ring room against the edge. */}
+						<div className="-m-1 min-w-0 flex-1 p-1">
 							<div
-								className={`grid items-center ${HEADER_HEIGHT}`}
-								style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
+								// gap-6 matches the bar rows, so the "Detections" caption
+								// sits over the bar column's left edge rather than shy of it.
+								className={`grid items-end gap-6 ${HEADER_HEIGHT}`}
+								style={{ gridTemplateColumns: LABEL_GRID_COLUMNS }}
 							>
-								<div className="sticky top-0 left-0 z-20 bg-[var(--paper-raised)]" />
-								{HOURS.map((hour) => {
-									const { number, meridiem } = hourTickParts(hour);
-									return (
-										<div
-											key={`tick-${hour}`}
-											className="sticky top-0 z-10 flex items-baseline justify-center gap-px bg-[var(--paper-raised)] leading-none"
-										>
-											<span className="font-semibold text-[10px] text-foreground">
-												{number}
-											</span>
-											<span className="text-[7px] text-muted-foreground">
-												{meridiem}
-											</span>
-										</div>
-									);
-								})}
+								<span />
+								<span className="text-[10px] text-muted-foreground">
+									Detections
+								</span>
+								<span />
 							</div>
 
 							{rows.map((row) => (
-								<HourRow key={row.comName} row={row} newLabel={newLabel} />
+								<BarRow
+									key={row.comName}
+									row={row}
+									maxTotal={maxTotal}
+									countWidthCh={countWidthCh}
+									newLabel={newLabel}
+								/>
 							))}
+						</div>
+
+						{/* RIGHT: the hour heatmap, taking half the card. Its columns keep
+						    their fixed square size, so when the 24 of them outgrow the half
+						    it scrolls rather than stretching; on mobile it drops away. */}
+						<div className="-m-1 hidden overflow-x-auto p-1 md:block md:min-w-0 md:flex-1">
+							<div className="w-max">
+								<div
+									className={`grid items-center ${HEADER_HEIGHT}`}
+									style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
+								>
+									{HOURS.map((hour) => {
+										const { number, meridiem } = hourTickParts(hour);
+										return (
+											<div
+												key={`tick-${hour}`}
+												className="flex items-baseline justify-center gap-px leading-none"
+											>
+												<span className="font-semibold text-[10px] text-foreground">
+													{number}
+												</span>
+												<span className="text-[7px] text-muted-foreground">
+													{meridiem}
+												</span>
+											</div>
+										);
+									})}
+								</div>
+
+								{rows.map((row) => (
+									<HeatRow key={row.comName} row={row} />
+								))}
+							</div>
 						</div>
 					</div>
 				)}
@@ -155,25 +202,39 @@ function NewBadge({ newLabel }: { newLabel: string }) {
 	);
 }
 
-function HourRow({
+/**
+ * The left panel's row: bird, name and a bar whose length is the row's share of
+ * the busiest species' total. The count rides at the bar's end so the axis
+ * doesn't need its own ticks.
+ */
+function BarRow({
 	row,
+	maxTotal,
+	countWidthCh,
 	newLabel,
 }: {
 	row: SpeciesHourRow;
+	maxTotal: number;
+	countWidthCh: number;
 	newLabel: string | null;
 }) {
-	const rowMax = Math.max(...row.hourCounts, 0);
+	// A non-zero count always shows a sliver, so a quiet bird doesn't vanish into
+	// the track next to a loud one.
+	const fillPercent =
+		maxTotal > 0 && row.totalDetections > 0
+			? Math.max((row.totalDetections / maxTotal) * 100, 2)
+			: 0;
 
 	return (
-		<div
-			className={`grid items-center border-[var(--line)] border-t ${ROW_HEIGHT}`}
-			style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
+		<Link
+			to="/species/$comName"
+			params={{ comName: comNameToSlug(row.comName) }}
+			className={`group grid items-center gap-6 border-[var(--line)] border-t no-underline ${ROW_HEIGHT}`}
+			style={{ gridTemplateColumns: LABEL_GRID_COLUMNS }}
 		>
-			<Link
-				to="/species/$comName"
-				params={{ comName: comNameToSlug(row.comName) }}
-				className="group sticky left-0 z-10 flex items-center gap-2 bg-[var(--paper-raised)] pr-3 no-underline"
-			>
+			{/* Left-aligned against the panel edge, so the names read as a column
+			    down the left rather than ragged against the bars. */}
+			<div className="flex min-w-0 items-center gap-2">
 				<div className="flex size-6 shrink-0 items-center justify-center">
 					{row.imageUrl ? (
 						<img
@@ -190,13 +251,49 @@ function HourRow({
 					{row.comName}
 				</div>
 				{row.isNew && newLabel && <NewBadge newLabel={newLabel} />}
-				{/* Rides in the sticky name cell so the total stays on screen no
-				    matter how far the hour grid is scrolled. */}
-				<span className="tabular-data ml-auto shrink-0 pl-4 font-semibold text-muted-foreground text-xs">
-					{row.totalDetections.toLocaleString()}
-				</span>
-			</Link>
+			</div>
 
+			<div
+				className="h-2.5 w-full overflow-hidden rounded-full"
+				style={{
+					backgroundColor:
+						"color-mix(in oklab, var(--moss) 12%, var(--paper-raised))",
+				}}
+			>
+				<div
+					className="h-full rounded-full"
+					style={{
+						width: `${fillPercent}%`,
+						backgroundColor: "var(--moss)",
+					}}
+				/>
+			</div>
+
+			{/* Sits at the section's end, right-aligned into a column fixed to the
+			    widest count -- so the bar always ends at the same x -- with the grid
+			    gap to the bar matching the space the name keeps on the other side. */}
+			<span
+				className="tabular-data shrink-0 text-right font-semibold text-muted-foreground text-xs"
+				style={{ width: `${countWidthCh}ch` }}
+			>
+				{row.totalDetections.toLocaleString()}
+			</span>
+		</Link>
+	);
+}
+
+/**
+ * The heatmap panel's row: 24 cells, each scaled against this row's own busiest
+ * hour so the shape of the day reads regardless of the bird's overall volume.
+ */
+function HeatRow({ row }: { row: SpeciesHourRow }) {
+	const rowMax = Math.max(...row.hourCounts, 0);
+
+	return (
+		<div
+			className={`grid items-center border-[var(--line)] border-t ${ROW_HEIGHT}`}
+			style={{ gridTemplateColumns: HOUR_GRID_COLUMNS }}
+		>
 			{/* Driven by the hour list rather than the counts, so each cell is keyed
 			    by the hour it stands for instead of its position in the array. */}
 			{HOURS.map((hour) => {

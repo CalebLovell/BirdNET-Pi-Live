@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { and, avg, count, countDistinct, desc, sql } from "drizzle-orm";
+import { and, avg, count, desc, sql } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
@@ -11,7 +11,6 @@ import {
 import { comNameToSlug } from "~/lib/species-slug.ts";
 import {
 	countVisits,
-	countVisitsBySpecies,
 	localTimestamp,
 	timestampToMillis,
 } from "~/lib/visits.ts";
@@ -24,10 +23,7 @@ export const detectedAt = sql<string>`datetime(${detections.Date} || ' ' || ${de
 export const isLast24h = sql`datetime(${detections.Date} || ' ' || ${detections.Time}) >= datetime('now', '-24 hours', 'localtime')`;
 
 export type NowSummary = {
-	species: number;
 	detections: number;
-	visits: number;
-	busiestHour: { hour: number; count: number } | null;
 };
 
 export type CurrentBird = {
@@ -159,74 +155,52 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 		const generatedAtDate = new Date();
 		const generatedAtMs = generatedAtDate.getTime();
 
-		const [
-			[latest],
-			[{ detectionCount }],
-			[{ speciesCount }],
-			visitMoments,
-			[busiest],
-			topRows,
-			recentRows,
-		] = await Promise.all([
-			// The one query deliberately NOT bounded to 24 hours: the hero card
-			// names the most recent detection whatever its age, even if that was
-			// days ago. Every other figure on the page respects the window.
-			db
-				.select({
-					comName: detections.Com_Name,
-					sciName: detections.Sci_Name,
-					date: detections.Date,
-					detectedAt,
-					confidence: detections.Confidence,
-					fileName: detections.File_Name,
-				})
-				.from(detections)
-				.orderBy(desc(detections.Date), desc(detections.Time))
-				.limit(1),
-			db.select({ detectionCount: count() }).from(detections).where(isLast24h),
-			db
-				.select({ speciesCount: countDistinct(detections.Com_Name) })
-				.from(detections)
-				.where(isLast24h),
-			db
-				.select({ comName: detections.Com_Name, timestamp: detectedAt })
-				.from(detections)
-				.where(isLast24h),
-			db
-				.select({
-					hour: sql<string>`strftime('%H', ${detections.Time})`,
-					count: count(),
-				})
-				.from(detections)
-				.where(isLast24h)
-				.groupBy(sql`strftime('%H', ${detections.Time})`)
-				.orderBy(sql`count(*) desc`)
-				.limit(1),
-			db
-				.select({
-					comName: detections.Com_Name,
-					sciName: detections.Sci_Name,
-					count: count(),
-				})
-				.from(detections)
-				.where(isLast24h)
-				.groupBy(detections.Com_Name, detections.Sci_Name)
-				.orderBy(sql`count(*) desc`)
-				.limit(5),
-			db
-				.select({
-					comName: detections.Com_Name,
-					sciName: detections.Sci_Name,
-					date: detections.Date,
-					detectedAt,
-					confidence: detections.Confidence,
-					fileName: detections.File_Name,
-				})
-				.from(detections)
-				.where(isLast24h)
-				.orderBy(desc(detections.Date), desc(detections.Time))
-				.limit(5),
-		]);
+		const [[latest], [{ detectionCount }], topRows, recentRows] =
+			await Promise.all([
+				// The one query deliberately NOT bounded to 24 hours: the hero card
+				// names the most recent detection whatever its age, even if that was
+				// days ago. Every other figure on the page respects the window.
+				db
+					.select({
+						comName: detections.Com_Name,
+						sciName: detections.Sci_Name,
+						date: detections.Date,
+						detectedAt,
+						confidence: detections.Confidence,
+						fileName: detections.File_Name,
+					})
+					.from(detections)
+					.orderBy(desc(detections.Date), desc(detections.Time))
+					.limit(1),
+				db
+					.select({ detectionCount: count() })
+					.from(detections)
+					.where(isLast24h),
+				db
+					.select({
+						comName: detections.Com_Name,
+						sciName: detections.Sci_Name,
+						count: count(),
+					})
+					.from(detections)
+					.where(isLast24h)
+					.groupBy(detections.Com_Name, detections.Sci_Name)
+					.orderBy(sql`count(*) desc`)
+					.limit(5),
+				db
+					.select({
+						comName: detections.Com_Name,
+						sciName: detections.Sci_Name,
+						date: detections.Date,
+						detectedAt,
+						confidence: detections.Confidence,
+						fileName: detections.File_Name,
+					})
+					.from(detections)
+					.where(isLast24h)
+					.orderBy(desc(detections.Date), desc(detections.Time))
+					.limit(5),
+			]);
 
 		const [current, topSpecies, recent] = await Promise.all([
 			latest ? buildCurrentBird(latest, generatedAtMs) : null,
@@ -257,14 +231,7 @@ export const getNowSnapshot = createServerFn({ method: "GET" }).handler(
 		return {
 			generatedAt: localTimestamp(generatedAtDate),
 			current,
-			summary: {
-				species: speciesCount,
-				detections: detectionCount,
-				visits: countVisitsBySpecies(visitMoments),
-				busiestHour: busiest
-					? { hour: Number(busiest.hour), count: busiest.count }
-					: null,
-			},
+			summary: { detections: detectionCount },
 			topSpecies,
 			recent,
 		};

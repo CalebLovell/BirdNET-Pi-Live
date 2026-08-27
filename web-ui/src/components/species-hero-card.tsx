@@ -118,7 +118,9 @@ export function SpeciesHeroCard({
 	clockTime: string;
 	confidence: number | null;
 	audioUrl: string | null;
-	stats: PageHeaderStat[];
+	/** The figure row beneath the detection line. Omit it entirely -- as the
+	    Live hero does -- where the page's own cards already carry these counts. */
+	stats?: PageHeaderStat[];
 	/** Top-right controls, e.g. the species page's eBird link. */
 	actions?: ReactNode;
 	/** Unfolds beneath the figures -- what `actions` opens, if anything. */
@@ -171,7 +173,7 @@ export function SpeciesHeroCard({
 				</div>
 			</div>
 
-			<PageHeaderStats stats={stats} />
+			{stats && stats.length > 0 ? <PageHeaderStats stats={stats} /> : null}
 		</HeroCardShell>
 	);
 }

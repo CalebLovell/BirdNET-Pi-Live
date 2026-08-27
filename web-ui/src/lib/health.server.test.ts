@@ -22,10 +22,6 @@ test("reports every metric without throwing on a host that cannot answer", async
 		// Never blank: an empty figure reads as a broken page rather than as a
 		// reading that could not be taken.
 		assert.ok(metric.value.length > 0, `${metric.id} needs a value`);
-		assert.ok(
-			["ok", "warn", "problem", "unknown"].includes(metric.level),
-			`${metric.id} has an unknown level`,
-		);
 	}
 });
 

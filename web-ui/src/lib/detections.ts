@@ -28,7 +28,6 @@ import {
 } from "~/lib/detection-workspace.ts";
 import { ebirdUrlFor } from "~/lib/ebird.ts";
 import { illustrationUrlFor } from "~/lib/illustrations.ts";
-import { countVisits } from "~/lib/visits.ts";
 import { getSpeciesInfo } from "~/lib/wikipedia.ts";
 
 const isToday = sql`${detections.Date} = date('now', 'localtime')`;
@@ -335,7 +334,9 @@ export type LifeListCard = {
 	comName: string;
 	sciName: string;
 	allTimeCount: number;
-	visits: number;
+	// Detections bucketed by hour of day (length 24), so the species page can
+	// fold these across a search result to name its most active hour.
+	hourCounts: number[];
 	lastDetected: string;
 	audioUrl: string | null;
 	imageUrl: string | null;
@@ -368,18 +369,22 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 			string,
 			{ date: string; time: string; fileName: string }
 		>();
-		// The same pass that finds each species' latest detection also gathers all
-		// of its timestamps, so a species' visit count is a pure fold over the rows
-		// we already hold rather than a second query.
-		const timestampsByName = new Map<string, string[]>();
+		// The same pass that finds each species' latest detection also tallies its
+		// detections by hour of day, so the hourly histogram is a pure fold over
+		// the rows we already hold rather than a second query.
+		const hourCountsByName = new Map<string, number[]>();
 		for (const row of recent) {
 			if (!latestByName.has(row.comName)) {
 				latestByName.set(row.comName, row);
 			}
-			const stamps = timestampsByName.get(row.comName);
-			const timestamp = `${row.date} ${row.time}`;
-			if (stamps) stamps.push(timestamp);
-			else timestampsByName.set(row.comName, [timestamp]);
+			const hour = Number.parseInt(row.time.slice(0, 2), 10);
+			if (Number.isNaN(hour) || hour < 0 || hour > 23) continue;
+			let counts = hourCountsByName.get(row.comName);
+			if (!counts) {
+				counts = new Array(24).fill(0);
+				hourCountsByName.set(row.comName, counts);
+			}
+			counts[hour] += 1;
 		}
 
 		return Promise.all(
@@ -390,7 +395,7 @@ export const getLifeListCards = createServerFn({ method: "GET" }).handler(
 					comName: row.comName,
 					sciName: row.sciName,
 					allTimeCount: row.allTimeCount,
-					visits: countVisits(timestampsByName.get(row.comName) ?? []),
+					hourCounts: hourCountsByName.get(row.comName) ?? new Array(24).fill(0),
 					lastDetected: latest ? `${latest.date} ${latest.time}` : "",
 					audioUrl: latest
 						? audioUrlFor(latest.date, row.comName, latest.fileName)

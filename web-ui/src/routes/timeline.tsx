@@ -6,7 +6,6 @@ import {
 	Feather,
 } from "lucide-react";
 import { z } from "zod";
-import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
@@ -25,7 +24,6 @@ import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
-import { hourActivityFromRows } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 import type { TimelineRow } from "~/lib/timeline.ts";
 import {
@@ -290,7 +288,6 @@ function TimelineCards({
 				newLabel={windowLabel}
 				emptyMessage={emptyMessage}
 			/>
-			<DetectionsByHourCard activity={hourActivityFromRows(rows)} />
 			<SpeciesGrid
 				species={gridItems}
 				newLabel={windowLabel}

@@ -126,18 +126,15 @@ export function ReviewWorkflow({
 			label: "Confidence",
 			value: formatConfidence(row.confidence),
 			icon: Gauge,
-			hint: "BirdNET's score for this recording",
 		},
 		{
 			label: "Lifetime detections",
 			value: row.lifetimeCount,
 			icon: ChartNoAxesColumnIncreasing,
-			hint: "Times this species has been recorded at this station",
 		},
 		{
 			label: "Recorded",
 			value: recorded.day,
-			detail: recorded.clock,
 			icon: Clock3,
 		},
 	] satisfies PageHeaderStat[];

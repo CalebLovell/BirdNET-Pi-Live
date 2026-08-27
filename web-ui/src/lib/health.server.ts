@@ -5,21 +5,18 @@ import { stat, statfs } from "node:fs/promises";
 import { detectionsDbPath, sqlite } from "~/db/index.ts";
 import { extractedDir } from "~/lib/audio.server.ts";
 import {
-	diskLevel,
 	formatBytes,
 	formatPercent,
 	type HealthMetric,
-	lastDetectionLevel,
 	type StationHealth,
 } from "~/lib/health-data.ts";
-import { readSettingsPageValues } from "~/lib/settings-config.server.ts";
 import { formatTimeAgo } from "~/lib/time-ago.ts";
 
 /**
  * The filesystem holding the recordings, which is the one the purge threshold
  * is about -- not necessarily the one the app is installed on.
  */
-async function diskMetric(purgeThreshold: number): Promise<HealthMetric> {
+async function diskMetric(): Promise<HealthMetric> {
 	const base = { id: "disk", label: "Disk" } as const;
 	try {
 		const stats = await statfs(extractedDir());
@@ -27,22 +24,11 @@ async function diskMetric(purgeThreshold: number): Promise<HealthMetric> {
 		// `bavail` excludes the root-reserved blocks, so this is the space that
 		// actually remains for recordings rather than the theoretical figure.
 		const free = stats.bavail * stats.bsize;
-		if (!(total > 0)) return { ...base, value: "—", level: "unknown" };
+		if (!(total > 0)) return { ...base, value: "—" };
 		const percentUsed = ((total - free) / total) * 100;
-		return {
-			...base,
-			value: formatPercent(percentUsed),
-			detail: "used",
-			level: diskLevel(percentUsed, purgeThreshold),
-			hint: `${formatBytes(free)} free of ${formatBytes(total)} — this station acts at ${purgeThreshold}%`,
-		};
+		return { ...base, value: formatPercent(percentUsed) };
 	} catch {
-		return {
-			...base,
-			value: "Unknown",
-			level: "unknown",
-			hint: "The recordings directory could not be read",
-		};
+		return { ...base, value: "Unknown" };
 	}
 }
 
@@ -50,21 +36,9 @@ async function databaseMetric(): Promise<HealthMetric> {
 	const base = { id: "database", label: "Database" } as const;
 	try {
 		const { size } = await stat(detectionsDbPath());
-		// Always neutral: there is no size at which a detections database is
-		// unhealthy, so colouring it would be inventing a threshold.
-		return {
-			...base,
-			value: formatBytes(size),
-			level: "ok",
-			hint: "Size of the BirdNET-Pi detections database",
-		};
+		return { ...base, value: formatBytes(size) };
 	} catch {
-		return {
-			...base,
-			value: "Unknown",
-			level: "unknown",
-			hint: "The detections database could not be read",
-		};
+		return { ...base, value: "Unknown" };
 	}
 }
 
@@ -76,25 +50,13 @@ function lastDetectionMetric(now: number): HealthMetric {
 				"SELECT Date date, Time time FROM detections ORDER BY Date DESC, Time DESC LIMIT 1",
 			)
 			.get() as { date: string; time: string } | undefined;
-		if (!row)
-			return {
-				...base,
-				value: "None yet",
-				level: "unknown",
-				hint: "This station has not recorded a detection",
-			};
+		if (!row) return { ...base, value: "None yet" };
 		const recorded = new Date(`${row.date}T${row.time}`);
-		if (Number.isNaN(recorded.getTime()))
-			return { ...base, value: "Unknown", level: "unknown" };
+		if (Number.isNaN(recorded.getTime())) return { ...base, value: "Unknown" };
 		const ageMs = now - recorded.getTime();
-		return {
-			...base,
-			value: formatTimeAgo(ageMs),
-			level: lastDetectionLevel(ageMs),
-			hint: `Recorded ${row.date} at ${row.time}`,
-		};
+		return { ...base, value: formatTimeAgo(ageMs) };
 	} catch {
-		return { ...base, value: "Unknown", level: "unknown" };
+		return { ...base, value: "Unknown" };
 	}
 }
 
@@ -104,15 +66,8 @@ function lastDetectionMetric(now: number): HealthMetric {
  * cannot be measured says so in its own tile instead.
  */
 export async function loadStationHealth(): Promise<StationHealth> {
-	let purgeThreshold = 95;
-	try {
-		purgeThreshold = (await readSettingsPageValues()).storage.purgeThreshold;
-	} catch {
-		// No readable config: fall back to BirdNET-Pi's own default so the disk
-		// tile still has something meaningful to compare against.
-	}
 	const metrics = await Promise.all([
-		diskMetric(purgeThreshold),
+		diskMetric(),
 		databaseMetric(),
 		Promise.resolve(lastDetectionMetric(Date.now())),
 	]);

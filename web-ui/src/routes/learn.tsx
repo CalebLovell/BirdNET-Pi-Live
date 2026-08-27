@@ -16,7 +16,6 @@ import {
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { getLearnRound } from "~/lib/learn.ts";
 import {
-	LEARN_POOL_DESCRIPTIONS,
 	LEARN_POOL_LABELS,
 	LEARN_POOLS,
 	type LearnPool,
@@ -67,19 +66,16 @@ function Learn() {
 								{
 									label: "Recordings",
 									value: QUESTIONS_PER_ROUND,
-									detail: "per round",
 									icon: Headphones,
 								},
 								{
 									label: "Choices",
 									value: CHOICES_PER_QUESTION,
-									detail: "per question",
 									icon: ListChecks,
 								},
 								{
 									label: "Drawing from",
 									value: LEARN_POOL_LABELS[pool],
-									detail: LEARN_POOL_DESCRIPTIONS[pool],
 									icon: LEARN_POOL_ICONS[pool],
 								},
 							]

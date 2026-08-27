@@ -12,8 +12,8 @@ import {
 	ChevronDown,
 	ChevronUp,
 	Clock,
+	Clock3,
 	Feather,
-	Footprints,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
@@ -37,6 +37,7 @@ import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group.tsx";
 import { getLifeListCards, type LifeListCard } from "~/lib/detections.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
+import { hourLabel } from "~/lib/time-ago.ts";
 
 const SORT_KEYS = ["count", "recent", "alpha"] as const;
 type SortKey = (typeof SORT_KEYS)[number];
@@ -137,12 +138,10 @@ function Species() {
 		// the row comes off entirely rather than reading as broken.
 		if (filtered.length === 0) return [];
 
-		const isSearching = search.trim().length > 0;
 		const detections = filtered.reduce(
 			(sum, card) => sum + card.allTimeCount,
 			0,
 		);
-		const visits = filtered.reduce((sum, card) => sum + card.visits, 0);
 		// Ranked by count regardless of the current sort, so this always names the
 		// most-detected species in the result rather than whatever the toggle put
 		// on top.
@@ -150,6 +149,18 @@ function Species() {
 			(top, card) => (card.allTimeCount > top.allTimeCount ? card : top),
 			filtered[0],
 		);
+		// Hourly histograms folded across the whole result, so the peak names the
+		// busiest hour of day for these species rather than for any one of them.
+		const hourTotals = filtered.reduce((totals, card) => {
+			for (let hour = 0; hour < 24; hour += 1)
+				totals[hour] += card.hourCounts[hour] ?? 0;
+			return totals;
+		}, new Array<number>(24).fill(0));
+		const peakHour = hourTotals.reduce(
+			(best, count, hour) => (count > hourTotals[best] ? hour : best),
+			0,
+		);
+		const hasPeak = hourTotals[peakHour] > 0;
 
 		return [
 			{
@@ -160,22 +171,20 @@ function Species() {
 			{
 				label: "Species",
 				value: filtered.length,
-				detail: isSearching ? `of ${cards.length} recorded` : undefined,
 				icon: Feather,
-			},
-			{
-				label: "Visits",
-				value: visits,
-				icon: Footprints,
-				hint: "Detection runs separated by 15+ minutes of silence",
 			},
 			{
 				label: "Most active",
 				value: mostActive.comName,
 				icon: Bird,
 			},
+			{
+				label: "Most active hour",
+				value: hasPeak ? hourLabel(peakHour) : "—",
+				icon: Clock3,
+			},
 		] satisfies PageHeaderStat[];
-	}, [cards.length, filtered, search]);
+	}, [filtered]);
 
 	const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
 	const currentPage = Math.min(page, pageCount);

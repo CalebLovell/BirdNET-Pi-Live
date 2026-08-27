@@ -1,12 +1,5 @@
-import {
-	ChartNoAxesColumnIncreasing,
-	Clock,
-	Feather,
-	Footprints,
-} from "lucide-react";
 import type { ReactNode } from "react";
 
-import type { PageHeaderStat } from "~/components/page-header-card.tsx";
 import {
 	HERO_CARD_SHELL,
 	HeroCardShell,
@@ -16,7 +9,7 @@ import { useShareCard } from "~/components/use-share-card.tsx";
 import type { CurrentBird, NowSummary } from "~/lib/now.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
 import { getShareCard } from "~/lib/share-card-data.ts";
-import { formatClockTime, formatTimeAgo, hourLabel } from "~/lib/time-ago.ts";
+import { formatClockTime, formatTimeAgo } from "~/lib/time-ago.ts";
 
 /**
  * The page's masthead: the most recent detection as its portrait, and the
@@ -68,35 +61,9 @@ export function CurrentBirdCard({
 	// `offsetMs` is 0 through hydration and only ages it forward from there.
 	const elapsedMs = current.ageMs + offsetMs;
 
-	// The whole station over the rolling window, not the bird in the portrait:
-	// these figures describe what the page is showing beneath them.
-	const stats = [
-		{
-			label: "Total species",
-			value: summary.species,
-			icon: Feather,
-		},
-		{
-			label: "Total detections",
-			value: summary.detections,
-			icon: ChartNoAxesColumnIncreasing,
-		},
-		{
-			label: "Total visits",
-			value: summary.visits,
-			icon: Footprints,
-			hint: "Detection runs separated by 15+ minutes of silence",
-		},
-		{
-			label: "Busiest hour",
-			value: summary.busiestHour ? hourLabel(summary.busiestHour.hour) : "—",
-			detail: summary.busiestHour
-				? `${summary.busiestHour.count.toLocaleString()} detections`
-				: undefined,
-			icon: Clock,
-		},
-	] satisfies PageHeaderStat[];
-
+	// No figure row: the station's counts live in the cards below -- Top
+	// detections, the log, the Live story -- so repeating them in the masthead
+	// only duplicates what the page already shows.
 	return (
 		<SpeciesHeroCard
 			label="Last 24 hours"
@@ -110,7 +77,6 @@ export function CurrentBirdCard({
 			clockTime={formatClockTime(current.detectedAt)}
 			confidence={current.confidence}
 			audioUrl={current.audioUrl}
-			stats={stats}
 			className={flash ? `${HERO_CARD_SHELL} flash-in` : HERO_CARD_SHELL}
 		/>
 	);
