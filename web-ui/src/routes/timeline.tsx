@@ -7,42 +7,30 @@ import {
 } from "lucide-react";
 import { z } from "zod";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
-import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyState } from "~/components/empty-state.tsx";
 import {
 	PageHeaderCard,
 	type PageHeaderStat,
 } from "~/components/page-header-card.tsx";
-import {
-	type SpeciesActivityItem,
-	SpeciesActivityList,
-} from "~/components/species-activity-list.tsx";
 import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
-import { SpeciesList } from "~/components/species-list.tsx";
-import { StatusPage } from "~/components/status-page.tsx";
 import {
-	DayReviewBody,
-	formatDayTitle,
-	standingLabel,
-} from "~/components/timeline/day-review.tsx";
+	SpeciesGrid,
+	type SpeciesGridItem,
+} from "~/components/species-grid.tsx";
 import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
+import { StatusPage } from "~/components/status-page.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
-import type { DayReview } from "~/lib/day.ts";
 import { getDayShareCard } from "~/lib/day-share.ts";
-import {
-	ARRIVAL_WINDOW_DAYS,
-	QUIET_AFTER_DAYS,
-	RESIDENT_MIN_DAYS,
-	shortDateLabel,
-} from "~/lib/migration-data.ts";
+import { formatDayTitle } from "~/lib/day-title.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 import type { TimelineRow } from "~/lib/timeline.ts";
+import { hourActivityFromRows } from "~/lib/stats-data.ts";
 import {
+	type DayOutOfRange,
 	getTimelinePage,
-	type TimelineBody,
 	type TimelinePageData,
 } from "~/lib/timeline-page.ts";
 import {
@@ -117,7 +105,7 @@ function Timeline() {
 	// A date the station could never have recorded is the one case with nothing
 	// to say at all -- no figures, no window, no grid -- so it replaces the page
 	// rather than sitting inside it.
-	if (data.body.kind === "day" && data.body.result.status !== "ok") {
+	if (data.body.kind === "day-out-of-range") {
 		return <OutOfRangeDay result={data.body.result} date={anchor} />;
 	}
 
@@ -147,9 +135,8 @@ function Timeline() {
 				    rather than nesting a card inside a card. */}
 				{data.hasAnyDetections ? (
 					<TimelineCards
-						body={data.body}
-						window={data.window?.label ?? null}
-						anchor={anchor}
+						rows={data.body.rows}
+						windowLabel={data.window?.label ?? null}
 					/>
 				) : (
 					<EmptyState icon={Bird} title="No detections recorded yet.">
@@ -177,20 +164,17 @@ function TimelineHeader({
 	period: TimelinePeriod;
 	anchor: string;
 }) {
-	const day = data.body.kind === "day" ? dayOf(data.body) : null;
+	const rows = data.body.kind === "rows" ? data.body.rows : [];
 
 	const share = useShareCard({
-		// Named by what's showing, so switching period or stepping to another
-		// week rebuilds the card instead of leaving the last one behind the
-		// button.
 		subject: `${period}:${anchor}`,
 		load: async () =>
-			day
-				? formatShareCard(await getDayShareCard({ data: day.date }))
+			period === "day"
+				? formatShareCard(await getDayShareCard({ data: anchor }))
 				: formatTimelineShareCard({
 						period,
 						windowLabel: data.window?.label ?? null,
-						rows: rowsOf(data.body),
+						rows,
 					}),
 	});
 
@@ -198,10 +182,7 @@ function TimelineHeader({
 		<PageHeaderCard
 			title="Timeline"
 			description={describe(data, period)}
-			stats={headerStats(data.body)}
-			// Kept on screen for empty windows too -- the card says so in a line,
-			// and a control that vanished as you stepped through quiet weeks would
-			// shift the masthead under the cursor.
+			stats={windowStats(rows)}
 			action={data.hasAnyDetections ? share.trigger : undefined}
 		>
 			{share.summary}
@@ -209,86 +190,14 @@ function TimelineHeader({
 	);
 }
 
-/**
- * The same four figures in the same order under every period: detections,
- * species, busiest hour, most active. The window changes what they measure,
- * never what they are -- a masthead that reshuffled itself as you stepped from
- * Daily to All Time would read as four different pages again, which is the
- * thing this page exists to undo.
- *
- * Four numbers and nothing else. Every sub-line these used to carry -- the
- * count behind the busiest hour, the count behind the most active bird, the
- * day's comparison against a typical one -- said something already available
- * further down the page, in a size that made the row look ragged before it
- * made it informative.
- */
-function headerStats(body: TimelineBody): PageHeaderStat[] {
-	if (body.kind === "day") {
-		const day = dayOf(body);
-		return day ? dayStats(day) : [];
-	}
-	return windowStats(body.rows);
-}
-
 /** The sentence that says which window the figures below belong to. */
 function describe(data: TimelinePageData, period: TimelinePeriod): string {
-	if (data.body.kind === "day") {
-		const day = dayOf(data.body);
-		if (!day) return "One day at this station, hour by hour.";
-		const standing = day.standing
-			? ` · ${standingLabel(day.standing, day)}`
-			: "";
-		return `${formatDayTitle(day.date)} · ${day.relativeLabel}${standing}`;
-	}
-
 	if (period === "all") {
 		return "Every detection this station has recorded, and what stands out in it.";
 	}
-
 	return data.window
 		? `${data.window.label} — when each species was active, hour by hour.`
 		: "When each species is active across the day, hour by hour.";
-}
-
-function dayOf(body: TimelineBody): DayReview | null {
-	return body.kind === "day" && body.result.status === "ok"
-		? body.result.day
-		: null;
-}
-
-function rowsOf(body: TimelineBody): TimelineRow[] {
-	return body.kind === "day" ? [] : body.rows;
-}
-
-/**
- * The day's figures come from the day review rather than the grid -- it is the
- * one period whose body is not built from timeline rows -- but they answer the
- * same four questions in the same order.
- */
-function dayStats(day: DayReview): PageHeaderStat[] {
-	const { summary } = day;
-	// The list is ranked, so the day's most active species is simply its first
-	// row.
-	const topRow = day.species[0] ?? null;
-
-	return [
-		{
-			label: "Detections",
-			value: summary.detections,
-			icon: ChartNoAxesColumnIncreasing,
-		},
-		{ label: "Species", value: summary.species, icon: Feather },
-		{
-			label: "Busiest hour",
-			value: summary.busiestHour ? hourLabel(summary.busiestHour.hour) : "—",
-			icon: Clock3,
-		},
-		{
-			label: "Most active",
-			value: topRow ? topRow.comName : "—",
-			icon: Bird,
-		},
-	];
 }
 
 /**
@@ -347,100 +256,45 @@ function windowStats(rows: TimelineRow[]): PageHeaderStat[] {
 }
 
 /**
- * What each period puts under the toolbar. The species-by-hour grid is the one
- * card every window shares; everything else earns its place by needing a
- * window of a particular size to mean anything.
+ * The one body every period now shows: when each species was active across the
+ * day, the shape of the whole window's activity by hour, and the grid of
+ * everything heard in it.
  */
 function TimelineCards({
-	body,
-	window,
-	anchor,
+	rows,
+	windowLabel,
 }: {
-	body: TimelineBody;
-	window: string | null;
-	anchor: string;
+	rows: TimelineRow[];
+	windowLabel: string | null;
 }) {
-	if (body.kind === "day") {
-		const day = dayOf(body);
-		return day ? <DayReviewBody day={day} /> : null;
-	}
-
-	const emptyMessage = window
-		? `No detections recorded for ${window}.`
+	const emptyMessage = windowLabel
+		? `No detections recorded for ${windowLabel}.`
 		: "No detections recorded in this window.";
+
+	const gridItems: SpeciesGridItem[] = rows.map((row) => ({
+		comName: row.comName,
+		sciName: row.sciName,
+		imageUrl: row.imageUrl,
+		count: row.totalDetections,
+		averageConfidence: row.averageConfidence,
+		isNew: row.isNew,
+		isRare: row.isRare,
+	}));
 
 	return (
 		<>
 			<SpeciesByHourCard
-				rows={body.rows}
-				newLabel={window}
+				rows={rows}
+				newLabel={windowLabel}
 				emptyMessage={emptyMessage}
 			/>
-
-			{body.kind === "window" && body.trend ? (
-				<DetectionsByMonthCard trend={body.trend} year={Number(anchor)} />
-			) : null}
-
-			{body.kind === "all" ? <AllTimeCards stats={body.stats} /> : null}
+			<DetectionsByHourCard activity={hourActivityFromRows(rows)} />
+			<SpeciesGrid
+				species={gridItems}
+				newLabel={windowLabel}
+				emptyMessage={emptyMessage}
+			/>
 		</>
-	);
-}
-
-/**
- * The cards that need the station's whole history as their baseline. A ranking
- * or a migration list scoped to one week is not a shorter version of itself --
- * it is noise, which is why these appear under "All time" alone.
- */
-function AllTimeCards({
-	stats,
-}: {
-	stats: Extract<TimelineBody, { kind: "all" }>["stats"];
-}) {
-	// Both lists date their rows by the marker detection each one stands on --
-	// the last one heard, or the first of an arrival.
-	const quietItems: SpeciesActivityItem[] = stats.quietSpecies.map((item) => ({
-		comName: item.comName,
-		sciName: item.sciName,
-		imageUrl: item.imageUrl,
-		detectedAt: item.detectedAt,
-		ageMs: item.ageMs,
-		timeLabel: shortDateLabel(item.lastSeen),
-		confidence: item.confidence,
-		audioUrl: item.audioUrl,
-	}));
-
-	const arrivalItems: SpeciesActivityItem[] = stats.newArrivals.map((item) => ({
-		comName: item.comName,
-		sciName: item.sciName,
-		imageUrl: item.imageUrl,
-		detectedAt: item.detectedAt,
-		ageMs: item.ageMs,
-		timeLabel: shortDateLabel(item.firstSeen),
-		confidence: item.confidence,
-		audioUrl: item.audioUrl,
-	}));
-
-	return (
-		<div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-			<DetectionsByHourCard activity={stats.hourActivity} />
-			{/* No min-height: the two lists sit in the same grid row, so they
-			    already stretch to match each other. Reserving height instead only
-			    padded them with dead space until the lists were long enough. */}
-			<SpeciesList title="Top species" species={stats.topSpeciesList} />
-			<SpeciesList title="Rarest species" species={stats.rarestSpeciesList} />
-			<SpeciesActivityList
-				title="New arrivals"
-				description={`Species heard in the last ${ARRIVAL_WINDOW_DAYS} days that were absent for the ${ARRIVAL_WINDOW_DAYS} days before that — new sightings and returning migrants alike.`}
-				species={arrivalItems}
-				emptyMessage="No new arrivals in the last two weeks."
-			/>
-			<SpeciesActivityList
-				title="Gone quiet"
-				description={`Regular visitors — heard on at least ${RESIDENT_MIN_DAYS} separate days — with no detection in the last ${QUIET_AFTER_DAYS} days. They may have migrated away or shifted territory.`}
-				species={quietItems}
-				emptyMessage="Every regular visitor has been heard recently."
-			/>
-		</div>
 	);
 }
 
@@ -457,7 +311,7 @@ function OutOfRangeDay({
 	result,
 	date,
 }: {
-	result: Extract<TimelineBody, { kind: "day" }>["result"];
+	result: DayOutOfRange;
 	date: string;
 }) {
 	switch (result.status) {

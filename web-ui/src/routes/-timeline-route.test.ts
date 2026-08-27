@@ -29,29 +29,28 @@ test("one loader serves every period", async () => {
 	assert.match(source, /stripSearchParams\(\{ period: DEFAULT_PERIOD \}\)/);
 });
 
-test("each period gets the cards its window can support", async () => {
+test("every period draws the same three-part body", async () => {
 	const source = await read("../lib/timeline-page.ts");
-	// A day is a review, not a one-day slice of the grid.
-	assert.match(source, /if \(period === "day"\)/);
-	assert.match(source, /loadDayPage\(anchor\)/);
-	// The rankings and migration lists need the whole history as a baseline.
-	assert.match(source, /if \(period === "all"\)/);
-	assert.match(source, /loadAllTimeStats\(\)/);
-	// Twelve months only mean something once the window is a year wide.
-	assert.match(source, /period === "year" \? await getMonthlyTrend/);
+	// One rows path for every period; the Daily range check is the only branch.
+	assert.match(source, /kind: "rows"; rows: TimelineRow\[\]/);
+	assert.match(source, /kind: "day-out-of-range"/);
+	assert.doesNotMatch(source, /loadAllTimeStats/);
+	assert.doesNotMatch(source, /getMonthlyTrend/);
 
 	const route = await read("./timeline.tsx");
-	assert.match(route, /body\.kind === "all" \? <AllTimeCards/);
-	assert.match(route, /body\.kind === "window" && body\.trend/);
+	assert.match(route, /<SpeciesByHourCard/);
+	assert.match(route, /<DetectionsByHourCard activity=\{hourActivityFromRows/);
+	assert.match(route, /<SpeciesGrid/);
+	assert.doesNotMatch(route, /AllTimeCards/);
 });
 
 test("the day period keeps the range check rather than a bare format check", async () => {
 	const source = await read("../lib/timeline-page.ts");
-	assert.match(source, /loadDayPage/);
-	assert.doesNotMatch(source, /isDayId/);
+	// The Daily anchor is classified, not merely format-checked, so a future or
+	// pre-station date still gets its own message.
+	assert.match(source, /classifyDay\(anchor/);
 
 	const route = await read("./timeline.tsx");
-	// Every out-of-range verdict still gets its own card.
 	assert.match(route, /case "future"/);
 	assert.match(route, /case "before-station"/);
 	assert.match(route, /<StatusPage/);
