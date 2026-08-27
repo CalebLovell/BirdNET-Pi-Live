@@ -356,10 +356,13 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					</section>
 
 					<BestRecordingCard recording={detail.bestRecording} />
-				</div>
 
-				<div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-					<div className="grid gap-4 lg:grid-rows-2">
+					{/* The hour/month charts and the visit log share the same two
+					    columns as the row above -- one grid, so the heat map and the
+					    charts line up on the left and Best recording and the visit log
+					    line up on the right. min-w-0 lets the charts conform to the
+					    left track rather than widen it. */}
+					<div className="grid min-w-0 gap-4 lg:grid-rows-2">
 						<DetectionsByHourCard
 							activity={detail.hourActivity}
 							className="lg:min-h-0"
