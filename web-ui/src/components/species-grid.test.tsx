@@ -14,10 +14,7 @@ import {
 	type SpeciesGridItem,
 } from "~/components/species-grid.tsx";
 
-async function renderGrid(
-	species: SpeciesGridItem[],
-	newLabel: string | null,
-) {
+async function renderGrid(species: SpeciesGridItem[], newLabel: string | null) {
 	const rootRoute = createRootRoute();
 	const indexRoute = createRoute({
 		getParentRoute: () => rootRoute,

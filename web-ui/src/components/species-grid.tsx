@@ -100,7 +100,11 @@ function SpeciesGridRow({
 				<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
 					<ConfidencePill confidence={item.averageConfidence} />
 					{item.isNew && newLabel ? (
-						<Chip icon={Sparkles} label="New" tooltip={`First recorded here in ${newLabel}`} />
+						<Chip
+							icon={Sparkles}
+							label="New"
+							tooltip={`First recorded here in ${newLabel}`}
+						/>
 					) : null}
 					{item.isRare ? (
 						<Chip

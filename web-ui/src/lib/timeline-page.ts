@@ -3,8 +3,8 @@ import { min } from "drizzle-orm";
 
 import { db } from "~/db/index.ts";
 import { detections } from "~/db/schema.ts";
-import { classifyDay } from "~/lib/day-range.ts";
 import { dayIdFor } from "~/lib/day.ts";
+import { classifyDay } from "~/lib/day-range.ts";
 import {
 	loadTimelineData,
 	loadTimelineNav,
@@ -57,7 +57,10 @@ export const getTimelinePage = createServerFn({ method: "GET" })
 			if (verdict !== "in-range") {
 				const result: DayOutOfRange =
 					verdict === "before-station"
-						? { status: "before-station", firstRecorded: firstRecorded ?? anchor }
+						? {
+								status: "before-station",
+								firstRecorded: firstRecorded ?? anchor,
+							}
 						: { status: verdict };
 				// A window still lets the toolbar draw around the message.
 				const nav = await loadTimelineNav("day", windowFor("day", anchor));

@@ -17,17 +17,17 @@ import {
 	SpeciesGrid,
 	type SpeciesGridItem,
 } from "~/components/species-grid.tsx";
-import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
 import { StatusPage } from "~/components/status-page.tsx";
+import { PeriodToolbar } from "~/components/timeline/period-toolbar.tsx";
 import { TooltipProvider } from "~/components/ui/tooltip.tsx";
 import { useShareCard } from "~/components/use-share-card.tsx";
 import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
+import { hourActivityFromRows } from "~/lib/stats-data.ts";
 import { hourLabel } from "~/lib/time-ago.ts";
 import type { TimelineRow } from "~/lib/timeline.ts";
-import { hourActivityFromRows } from "~/lib/stats-data.ts";
 import {
 	type DayOutOfRange,
 	getTimelinePage,

@@ -251,8 +251,7 @@ export async function loadTimelineData({
 				hourCounts: entry.hourCounts,
 				isNew: window !== null && !previouslySeen.has(entry.comName),
 				averageConfidence: avgConfidenceByName.get(entry.comName) ?? null,
-				isRare:
-					(lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX,
+				isRare: (lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX,
 			};
 		}),
 	);

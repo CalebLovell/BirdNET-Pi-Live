@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
-import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { LiveStoryCard } from "~/components/now/live-story-card.tsx";
+import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
