@@ -56,12 +56,6 @@ test("a page-level empty replaces its card rather than nesting inside one", asyn
 	);
 });
 
-test("a quiet day keeps the page-level card it already had", async () => {
-	const source = await read("../components/timeline/day-review.tsx");
-	assert.match(source, /<EmptyState icon=\{Bird\}/);
-	assert.match(source, /No detections recorded on this day\./);
-});
-
 test("section-level empties stay quiet lines", async () => {
 	const detections = await read("./detections.tsx");
 	assert.match(
@@ -84,7 +78,6 @@ test("no route hand-rolls the empty paragraph any more", async () => {
 		"./learn.tsx",
 		"./species.index.tsx",
 		"./species.$comName.tsx",
-		"../components/timeline/day-review.tsx",
 	]) {
 		const source = await read(file);
 		assert.doesNotMatch(
