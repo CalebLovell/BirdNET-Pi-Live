@@ -5,6 +5,7 @@ import {
 	anchorForDay,
 	currentAnchor,
 	isValidAnchor,
+	previousPeriodStart,
 	windowFor,
 } from "./timeline-window.ts";
 
@@ -103,4 +104,23 @@ test("anchors are validated against their period's shape", () => {
 	assert.equal(isValidAnchor("week", "2025-W53"), false);
 	// "all" ignores whatever is left in the URL from another period.
 	assert.equal(isValidAnchor("all", "2026-W31"), true);
+});
+
+test("the previous period starts one whole period back", () => {
+	assert.equal(previousPeriodStart("day", "2026-05-25"), "2026-05-24");
+	// Week of May 11 (2026-W20) sits after the week starting May 4.
+	assert.equal(previousPeriodStart("week", "2026-W20"), "2026-05-04");
+	assert.equal(previousPeriodStart("month", "2026-05"), "2026-04-01");
+	assert.equal(previousPeriodStart("year", "2026"), "2025-01-01");
+	// All time has no period before it, so nothing can have "returned".
+	assert.equal(previousPeriodStart("all", ""), null);
+});
+
+test("the previous period crosses month, year and ISO-week boundaries", () => {
+	// First of the month steps back into the prior month's first day.
+	assert.equal(previousPeriodStart("day", "2026-03-01"), "2026-02-28");
+	assert.equal(previousPeriodStart("month", "2026-01"), "2025-12-01");
+	assert.equal(previousPeriodStart("year", "2025"), "2024-01-01");
+	// Week 1 of 2026 (starts 2025-12-29) follows the last week of 2025.
+	assert.equal(previousPeriodStart("week", "2026-W01"), "2025-12-22");
 });

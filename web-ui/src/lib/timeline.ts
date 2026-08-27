@@ -8,6 +8,7 @@ import { RARE_LIFETIME_MAX } from "~/lib/story-data.ts";
 import type { TimelinePeriod } from "~/lib/timeline-periods.ts";
 import {
 	anchorForDay,
+	previousPeriodStart,
 	type TimelineAnchor,
 	type TimelineWindow,
 	windowFor,
@@ -43,10 +44,30 @@ export type TimelineRow = {
 	averageConfidence: number | null;
 	/**
 	 * A rare visitor here: its lifetime detection count at this station is at or
-	 * below RARE_LIFETIME_MAX, regardless of the selected window. Matches the
-	 * threshold the Live story card uses.
+	 * below RARE_LIFETIME_MAX, regardless of the selected window, and it is not a
+	 * first-ever arrival (see isNew) -- the two flags divide the species between
+	 * them rather than both landing on a newcomer. Matches the threshold the Live
+	 * story card uses.
 	 */
 	isRare: boolean;
+	/**
+	 * Back after missing the previous period: the station had heard this species
+	 * before, but not during the period immediately before this window (the prior
+	 * day / week / month / year, matching the selected tab), and now it has turned
+	 * up again. Requires the station to have actually recorded something in that
+	 * previous period -- an empty span is downtime, not an absence. Excludes
+	 * newcomers (isNew) and rare visitors (isRare), so each species carries at most
+	 * one of the three flags -- a returning regular, not a bird that is barely ever
+	 * here anyway. Always false on "all time", which has no preceding period.
+	 */
+	isReturned: boolean;
+	/**
+	 * The unit of the window a returning species skipped -- always exactly the
+	 * selected period, since "returned" means it was absent the one period just
+	 * before this one. Lets the pill say "last heard a {unit} before". Null unless
+	 * isReturned.
+	 */
+	returnedUnit: "day" | "week" | "month" | "year" | null;
 };
 
 export type TimelineData = {
@@ -166,51 +187,83 @@ export async function loadTimelineData({
 			)
 		: undefined;
 
-	const [rows, previouslySeenRows, confidenceRows, lifetimeRows, nav] =
-		await Promise.all([
-			db
-				.select({
-					comName: detections.Com_Name,
-					sciName: detections.Sci_Name,
-					hour: sql<string>`strftime('%H', ${detections.Time})`,
-					count: sql<number>`count(*)`,
-				})
-				.from(detections)
-				.where(inWindow)
-				.groupBy(
-					detections.Com_Name,
-					detections.Sci_Name,
-					sql`strftime('%H', ${detections.Time})`,
-				),
-			// Everything the station knew before this window opened; a species
-			// missing from it is one the window introduced. "All time" has no
-			// "before" to compare against and skips the probe.
-			window
-				? db
-						.selectDistinct({ comName: detections.Com_Name })
-						.from(detections)
-						.where(lt(detections.Date, window.start))
-				: Promise.resolve([]),
-			// Mean confidence per species inside the window.
-			db
-				.select({
-					comName: detections.Com_Name,
-					avgConfidence: sql<number | null>`avg(${detections.Confidence})`,
-				})
-				.from(detections)
-				.where(inWindow)
-				.groupBy(detections.Com_Name),
-			// Lifetime detection count per species, ignoring the window: what makes
-			// a species a rare visitor here at all.
-			db
-				.select({
-					comName: detections.Com_Name,
-					lifetime: sql<number>`count(*)`,
-				})
-				.from(detections)
-				.groupBy(detections.Com_Name),
-			loadTimelineNav(period, window),
-		]);
+	// The prior period's first day, shared by every species: a bird last heard
+	// before it skipped that whole period, so reappearing now counts as a return.
+	const prevPeriodStart = previousPeriodStart(period, anchor);
+
+	const [
+		rows,
+		beforeRows,
+		confidenceRows,
+		lifetimeRows,
+		prevActivityRows,
+		nav,
+	] = await Promise.all([
+		db
+			.select({
+				comName: detections.Com_Name,
+				sciName: detections.Sci_Name,
+				hour: sql<string>`strftime('%H', ${detections.Time})`,
+				count: sql<number>`count(*)`,
+			})
+			.from(detections)
+			.where(inWindow)
+			.groupBy(
+				detections.Com_Name,
+				detections.Sci_Name,
+				sql`strftime('%H', ${detections.Time})`,
+			),
+		// The last day each species was heard before this window opened. A species
+		// missing from this list is one the window introduced (isNew); one whose
+		// last visit predates the previous period has returned from an absence
+		// (isReturned). "All time" has no "before" and skips the probe.
+		window
+			? db
+					.select({
+						comName: detections.Com_Name,
+						lastBefore: sql<string>`max(${detections.Date})`,
+					})
+					.from(detections)
+					.where(lt(detections.Date, window.start))
+					.groupBy(detections.Com_Name)
+			: Promise.resolve([]),
+		// Mean confidence per species inside the window.
+		db
+			.select({
+				comName: detections.Com_Name,
+				avgConfidence: sql<number | null>`avg(${detections.Confidence})`,
+			})
+			.from(detections)
+			.where(inWindow)
+			.groupBy(detections.Com_Name),
+		// Lifetime detection count per species, ignoring the window: what makes
+		// a species a rare visitor here at all.
+		db
+			.select({
+				comName: detections.Com_Name,
+				lifetime: sql<number>`count(*)`,
+			})
+			.from(detections)
+			.groupBy(detections.Com_Name),
+		// Did the station record anything at all during the previous period? If it
+		// was down for the whole span, an empty period is silence on our side, not
+		// the bird's -- so nothing counts as "returned" against it.
+		prevPeriodStart != null && window != null
+			? db
+					.select({ present: sql<number>`1` })
+					.from(detections)
+					.where(
+						and(
+							sql`${detections.Date} >= ${prevPeriodStart}`,
+							lt(detections.Date, window.start),
+						),
+					)
+					.limit(1)
+			: Promise.resolve([]),
+		loadTimelineNav(period, window),
+	]);
+
+	const prevPeriodHadActivity = prevActivityRows.length > 0;
 
 	const bySpecies = new Map<
 		string,
@@ -229,7 +282,10 @@ export async function loadTimelineData({
 		entry.hourCounts[Number(row.hour)] = row.count;
 	}
 
-	const previouslySeen = new Set(previouslySeenRows.map((row) => row.comName));
+	const previouslySeen = new Set(beforeRows.map((row) => row.comName));
+	const lastBeforeByName = new Map(
+		beforeRows.map((row) => [row.comName, row.lastBefore]),
+	);
 
 	const avgConfidenceByName = new Map(
 		confidenceRows.map((row) => [row.comName, row.avgConfidence]),
@@ -242,6 +298,25 @@ export async function loadTimelineData({
 		Array.from(bySpecies.values()).map(async (entry) => {
 			const { imageUrl: wikiImageUrl } = await getSpeciesInfo(entry.comName);
 			const totalDetections = entry.hourCounts.reduce((a, b) => a + b, 0);
+			// New, Rare and Returned divide the species between them rather than
+			// stacking: a first-ever arrival is "New"; failing that, a bird heard
+			// only a handful of times ever is "Rare"; failing that, one whose last
+			// visit predates the previous period is "Returned". The guards encode
+			// that order.
+			const isNew = window !== null && !previouslySeen.has(entry.comName);
+			const isRare =
+				!isNew && (lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX;
+			const lastBefore = lastBeforeByName.get(entry.comName);
+			const isReturned =
+				!isNew &&
+				!isRare &&
+				// Only a genuine absence counts: the station must have been recording
+				// through the previous period, or an empty span is our downtime rather
+				// than the bird being away.
+				prevPeriodHadActivity &&
+				lastBefore != null &&
+				prevPeriodStart != null &&
+				lastBefore < prevPeriodStart;
 			return {
 				comName: entry.comName,
 				sciName: entry.sciName,
@@ -249,9 +324,13 @@ export async function loadTimelineData({
 				ebirdUrl: ebirdUrlFor(entry.sciName, entry.comName),
 				totalDetections,
 				hourCounts: entry.hourCounts,
-				isNew: window !== null && !previouslySeen.has(entry.comName),
+				isNew,
 				averageConfidence: avgConfidenceByName.get(entry.comName) ?? null,
-				isRare: (lifetimeByName.get(entry.comName) ?? 0) <= RARE_LIFETIME_MAX,
+				isRare,
+				isReturned,
+				// Returned means "absent the one period before this one", so the pill
+				// always names a single unit of the selected period.
+				returnedUnit: isReturned && period !== "all" ? period : null,
 			};
 		}),
 	);

@@ -279,6 +279,8 @@ function TimelineCards({
 		averageConfidence: row.averageConfidence,
 		isNew: row.isNew,
 		isRare: row.isRare,
+		isReturned: row.isReturned,
+		returnedUnit: row.returnedUnit,
 	}));
 
 	return (

@@ -210,3 +210,24 @@ export function windowFor(
 			return null;
 	}
 }
+
+/**
+ * The first day of the calendar period immediately before the one `anchor`
+ * names, at the same granularity: the day before for "day", the Monday a week
+ * back for "week", the first of last month, the first of last year. Null for
+ * "all", which has no period before it. Used to decide whether a species went
+ * unheard for a whole period before turning up again -- a "return".
+ */
+export function previousPeriodStart(
+	period: TimelinePeriod,
+	anchor: TimelineAnchor,
+): string | null {
+	const window = windowFor(period, anchor);
+	if (!window) return null;
+	// A day one step before this window's start lands in the previous period;
+	// resolving that day back to a window gives the period's own first day.
+	const dayInPrevPeriod = shiftDays(window.start, -1);
+	return (
+		windowFor(period, anchorForDay(period, dayInPrevPeriod))?.start ?? null
+	);
+}

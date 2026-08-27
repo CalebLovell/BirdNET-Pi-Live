@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
-import { Gem, Sparkles } from "lucide-react";
+import { Gem, Sparkles, Undo2 } from "lucide-react";
+import type { CSSProperties } from "react";
 
-import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import {
@@ -10,6 +10,7 @@ import {
 	TooltipProvider,
 	TooltipTrigger,
 } from "~/components/ui/tooltip.tsx";
+import { confidenceStyle, formatConfidence } from "~/lib/confidence.ts";
 import { comNameToSlug } from "~/lib/species-slug.ts";
 
 export type SpeciesGridItem = {
@@ -20,6 +21,35 @@ export type SpeciesGridItem = {
 	averageConfidence: number | null;
 	isNew: boolean;
 	isRare: boolean;
+	isReturned: boolean;
+	/** The selected period's unit, or null unless isReturned. Returned always means
+	    absent the one period before this one, so the pill names a single unit. */
+	returnedUnit: "day" | "week" | "month" | "year" | null;
+};
+
+export function returnedTooltip(returnedUnit: string | null): string {
+	if (returnedUnit == null)
+		return "Back after an absence, having missed the previous period.";
+	return `Back after an absence — last heard a ${returnedUnit} before.`;
+}
+
+// Each status pill wears its own tint over the raised paper, so a glance down the
+// grid sorts them by hue -- and none reuses the confidence pill's moss/sand/sage
+// scale, which reads as data rather than as a flag. Blue for a first arrival,
+// rose for a bird back from a long absence, heather for a rare visitor.
+const NEW_PILL_STYLE: CSSProperties = {
+	backgroundColor: "color-mix(in oklab, #3f6ea6 20%, var(--paper-raised))",
+	color: "#2a4d78",
+};
+
+const RETURNED_PILL_STYLE: CSSProperties = {
+	backgroundColor: "color-mix(in oklab, #a8536e 20%, var(--paper-raised))",
+	color: "#733a4e",
+};
+
+const RARE_PILL_STYLE: CSSProperties = {
+	backgroundColor: "color-mix(in oklab, #6f5c9c 22%, var(--paper-raised))",
+	color: "#463a73",
 };
 
 /**
@@ -81,35 +111,54 @@ function SpeciesGridRow({
 		<li className="flex min-h-16 min-w-0 items-center gap-3 rounded-md bg-[var(--meadow)] px-3 py-2">
 			<SpeciesThumbnail imageUrl={item.imageUrl} comName={item.comName} />
 
+			{/* LEFT: who the bird is -- common name over its scientific name. */}
 			<div className="min-w-0 flex-1">
-				<div className="flex items-baseline justify-between gap-2">
-					<Link
-						to="/species/$comName"
-						params={{ comName: comNameToSlug(item.comName) }}
-						className="truncate font-medium no-underline hover:underline"
-					>
-						{item.comName}
-					</Link>
-					<span className="tabular-data shrink-0 font-semibold text-sm">
-						{item.count.toLocaleString()}
-					</span>
-				</div>
+				<Link
+					to="/species/$comName"
+					params={{ comName: comNameToSlug(item.comName) }}
+					className="block truncate font-medium no-underline hover:underline"
+				>
+					{item.comName}
+				</Link>
 				<div className="truncate text-[var(--bark)] text-xs italic">
 					{item.sciName}
 				</div>
-				<div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-					<ConfidencePill confidence={item.averageConfidence} />
+			</div>
+
+			{/* RIGHT: everything measured about it -- the count and its flags. */}
+			<div className="flex shrink-0 flex-col items-end gap-1.5">
+				<span className="tabular-data font-semibold text-sm">
+					{item.count.toLocaleString()}
+				</span>
+				<div className="flex flex-wrap items-center justify-end gap-1.5">
+					{item.averageConfidence != null ? (
+						<Pill
+							label={formatConfidence(item.averageConfidence)}
+							style={confidenceStyle(item.averageConfidence)}
+							tabular
+						/>
+					) : null}
 					{item.isNew && newLabel ? (
-						<Chip
+						<Pill
 							icon={Sparkles}
 							label="New"
+							style={NEW_PILL_STYLE}
 							tooltip={`First recorded here in ${newLabel}`}
 						/>
 					) : null}
+					{item.isReturned ? (
+						<Pill
+							icon={Undo2}
+							label="Returned"
+							style={RETURNED_PILL_STYLE}
+							tooltip={returnedTooltip(item.returnedUnit)}
+						/>
+					) : null}
 					{item.isRare ? (
-						<Chip
+						<Pill
 							icon={Gem}
 							label="Rare"
+							style={RARE_PILL_STYLE}
 							tooltip="Barely ever heard here — a rare visitor."
 						/>
 					) : null}
@@ -120,33 +169,40 @@ function SpeciesGridRow({
 }
 
 /**
- * A small labelled icon chip, styled to match the "New" / "First ever" badges
- * already used on the day and species-by-hour views.
+ * One pill in a row's cluster. Every pill -- confidence, New, Returned, Rare --
+ * shares this size, radius and weight so the cluster reads as one family; only
+ * the tint and the optional icon set them apart. The flag pills carry a tooltip
+ * explaining what they mean; the confidence pill is a bare number, so it takes
+ * no tooltip and renders without one.
  */
-function Chip({
+function Pill({
 	icon: Icon,
 	label,
+	style,
 	tooltip,
+	tabular = false,
 }: {
-	icon: React.ComponentType<{ className?: string }>;
+	icon?: React.ComponentType<{ className?: string }>;
 	label: string;
-	tooltip: string;
+	style: CSSProperties;
+	tooltip?: string;
+	tabular?: boolean;
 }) {
+	const pill = (
+		<span
+			className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 font-semibold text-[11px] leading-none ${tabular ? "tabular-data" : ""}`}
+			style={style}
+		>
+			{Icon ? <Icon className="size-2.5" /> : null}
+			{label}
+		</span>
+	);
+
+	if (!tooltip) return pill;
+
 	return (
 		<Tooltip>
-			<TooltipTrigger asChild>
-				<span
-					className="inline-flex shrink-0 items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] leading-none"
-					style={{
-						backgroundColor:
-							"color-mix(in oklab, var(--sand) 22%, var(--paper-raised))",
-						color: "var(--bark)",
-					}}
-				>
-					<Icon className="size-2.5" />
-					{label}
-				</span>
-			</TooltipTrigger>
+			<TooltipTrigger asChild>{pill}</TooltipTrigger>
 			<TooltipContent>{tooltip}</TooltipContent>
 		</Tooltip>
 	);

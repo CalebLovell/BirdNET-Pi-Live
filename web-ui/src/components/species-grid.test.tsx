@@ -10,6 +10,7 @@ import {
 import { renderToStaticMarkup } from "react-dom/server";
 
 import {
+	returnedTooltip,
 	SpeciesGrid,
 	type SpeciesGridItem,
 } from "~/components/species-grid.tsx";
@@ -43,6 +44,8 @@ const robin: SpeciesGridItem = {
 	averageConfidence: 0.83,
 	isNew: false,
 	isRare: false,
+	isReturned: false,
+	returnedUnit: null,
 };
 
 test("a species row shows its name, count and confidence", async () => {
@@ -71,6 +74,32 @@ test("a rare visitor gets a Rare chip with the gem icon", async () => {
 	const markup = await renderGrid([{ ...robin, isRare: true }], "this week");
 	assert.match(markup, /lucide-gem/);
 	assert.match(markup, /Rare/);
+});
+
+test("a returned visitor gets a Returned chip", async () => {
+	const markup = await renderGrid(
+		[{ ...robin, isReturned: true, returnedUnit: "day" }],
+		"this week",
+	);
+	assert.match(markup, /lucide-undo-2/);
+	assert.match(markup, /Returned/);
+});
+
+test("the Returned tooltip names one unit of the selected period", () => {
+	// The tooltip content lives in a Radix portal that only mounts on hover, so
+	// it never reaches the static markup above -- test the copy at its source.
+	// "Returned" always means absent the single period before, so it is always
+	// "a <unit> before", never a today-relative "ago" or a bare date.
+	assert.equal(
+		returnedTooltip("day"),
+		"Back after an absence — last heard a day before.",
+	);
+	assert.equal(
+		returnedTooltip("month"),
+		"Back after an absence — last heard a month before.",
+	);
+	assert.match(returnedTooltip("year"), /last heard a year before\./);
+	assert.doesNotMatch(returnedTooltip("week"), /ago|\d/);
 });
 
 test("an empty grid shows its empty note", async () => {
