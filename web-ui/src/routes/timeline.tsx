@@ -279,6 +279,7 @@ function TimelineCards({
 		isRare: row.isRare,
 		isReturned: row.isReturned,
 		returnedUnit: row.returnedUnit,
+		hourCounts: row.hourCounts,
 	}));
 
 	return (

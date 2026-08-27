@@ -3,6 +3,7 @@ import { Gem, Sparkles, Undo2 } from "lucide-react";
 import type { CSSProperties } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
+import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
 import { SpeciesThumbnail } from "~/components/species-row.tsx";
 import {
 	Tooltip,
@@ -25,6 +26,10 @@ export type SpeciesGridItem = {
 	/** The selected period's unit, or null unless isReturned. Returned always means
 	    absent the one period before this one, so the pill names a single unit. */
 	returnedUnit: "day" | "week" | "month" | "year" | null;
+	/** 24 detection counts, midnight first, for this species in the window.
+	    Absent when the caller has no hourly breakdown; the row then draws no
+	    chart. */
+	hourCounts?: number[];
 };
 
 export function returnedTooltip(returnedUnit: string | null): string {
@@ -108,62 +113,74 @@ function SpeciesGridRow({
 	newLabel: string | null;
 }) {
 	return (
-		<li className="flex min-h-16 min-w-0 items-center gap-3 rounded-md bg-[var(--meadow)] px-3 py-2">
-			<SpeciesThumbnail imageUrl={item.imageUrl} comName={item.comName} />
+		<li className="flex min-h-16 min-w-0 flex-col gap-2 rounded-md bg-[var(--meadow)] px-3 py-2">
+			<div className="flex min-w-0 items-center gap-3">
+				<SpeciesThumbnail imageUrl={item.imageUrl} comName={item.comName} />
 
-			{/* LEFT: who the bird is -- common name over its scientific name. */}
-			<div className="min-w-0 flex-1">
-				<Link
-					to="/species/$comName"
-					params={{ comName: comNameToSlug(item.comName) }}
-					className="block truncate font-medium no-underline hover:underline"
-				>
-					{item.comName}
-				</Link>
-				<div className="truncate text-[var(--bark)] text-xs italic">
-					{item.sciName}
+				{/* LEFT: who the bird is -- common name over its scientific name. */}
+				<div className="min-w-0 flex-1">
+					<Link
+						to="/species/$comName"
+						params={{ comName: comNameToSlug(item.comName) }}
+						className="block truncate font-medium no-underline hover:underline"
+					>
+						{item.comName}
+					</Link>
+					<div className="truncate text-[var(--bark)] text-xs italic">
+						{item.sciName}
+					</div>
+				</div>
+
+				{/* RIGHT: everything measured about it -- the count and its flags. */}
+				<div className="flex shrink-0 flex-col items-end gap-1.5">
+					<span className="tabular-data font-semibold text-sm">
+						{item.count.toLocaleString()}
+					</span>
+					<div className="flex flex-wrap items-center justify-end gap-1.5">
+						{item.averageConfidence != null ? (
+							<Pill
+								label={formatConfidence(item.averageConfidence)}
+								style={confidenceStyle(item.averageConfidence)}
+								tabular
+							/>
+						) : null}
+						{item.isNew && newLabel ? (
+							<Pill
+								icon={Sparkles}
+								label="New"
+								style={NEW_PILL_STYLE}
+								tooltip={`First recorded here in ${newLabel}`}
+							/>
+						) : null}
+						{item.isReturned ? (
+							<Pill
+								icon={Undo2}
+								label="Returned"
+								style={RETURNED_PILL_STYLE}
+								tooltip={returnedTooltip(item.returnedUnit)}
+							/>
+						) : null}
+						{item.isRare ? (
+							<Pill
+								icon={Gem}
+								label="Rare"
+								style={RARE_PILL_STYLE}
+								tooltip="Barely ever heard here — a rare visitor."
+							/>
+						) : null}
+					</div>
 				</div>
 			</div>
 
-			{/* RIGHT: everything measured about it -- the count and its flags. */}
-			<div className="flex shrink-0 flex-col items-end gap-1.5">
-				<span className="tabular-data font-semibold text-sm">
-					{item.count.toLocaleString()}
-				</span>
-				<div className="flex flex-wrap items-center justify-end gap-1.5">
-					{item.averageConfidence != null ? (
-						<Pill
-							label={formatConfidence(item.averageConfidence)}
-							style={confidenceStyle(item.averageConfidence)}
-							tabular
-						/>
-					) : null}
-					{item.isNew && newLabel ? (
-						<Pill
-							icon={Sparkles}
-							label="New"
-							style={NEW_PILL_STYLE}
-							tooltip={`First recorded here in ${newLabel}`}
-						/>
-					) : null}
-					{item.isReturned ? (
-						<Pill
-							icon={Undo2}
-							label="Returned"
-							style={RETURNED_PILL_STYLE}
-							tooltip={returnedTooltip(item.returnedUnit)}
-						/>
-					) : null}
-					{item.isRare ? (
-						<Pill
-							icon={Gem}
-							label="Rare"
-							style={RARE_PILL_STYLE}
-							tooltip="Barely ever heard here — a rare visitor."
-						/>
-					) : null}
-				</div>
-			</div>
+			{/* The bird's day at a glance, under its name. Hairline off the meadow
+			    so it reads as the same tile, not a nested card. */}
+			{item.hourCounts ? (
+				<SpeciesHourBars
+					comName={item.comName}
+					hourCounts={item.hourCounts}
+					className="border-[var(--line)] border-t pt-2"
+				/>
+			) : null}
 		</li>
 	);
 }

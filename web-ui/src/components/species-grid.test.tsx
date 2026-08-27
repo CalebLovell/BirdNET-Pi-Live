@@ -46,6 +46,13 @@ const robin: SpeciesGridItem = {
 	isRare: false,
 	isReturned: false,
 	returnedUnit: null,
+	// 24-count fixture, midnight first, peak at 06:00 — lets the row show bars.
+	hourCounts: (() => {
+		const c = Array(24).fill(0);
+		c[6] = 30;
+		c[7] = 15;
+		return c;
+	})(),
 };
 
 test("a species row shows its name, count and confidence", async () => {
@@ -105,4 +112,19 @@ test("the Returned tooltip names one unit of the selected period", () => {
 test("an empty grid shows its empty note", async () => {
 	const markup = await renderGrid([], "this week");
 	assert.match(markup, /Nothing heard in this window/);
+});
+
+test("a grid row draws the bird's hourly bars when hourCounts is present", async () => {
+	const markup = await renderGrid([robin], "this week");
+	// 24 bars for the one bird in the grid.
+	assert.equal((markup.match(/data-hour-bar/g) ?? []).length, 24);
+	// And the eight three-hour ticks beneath them.
+	assert.equal((markup.match(/data-hour-tick/g) ?? []).length, 8);
+});
+
+test("a grid row without hourCounts draws no bars", async () => {
+	const { hourCounts, ...noHours } = robin;
+	void hourCounts;
+	const markup = await renderGrid([noHours], "this week");
+	assert.doesNotMatch(markup, /data-hour-bar/);
 });
