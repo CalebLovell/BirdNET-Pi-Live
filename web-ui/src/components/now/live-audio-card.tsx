@@ -170,11 +170,13 @@ function Spectrogram({
 	}, [analyser, active]);
 
 	return (
+		// biome-ignore lint/a11y/noAriaHiddenOnFocusable: the spectrogram is a purely decorative live visualization with no accessible content
 		<canvas
 			ref={canvasRef}
 			width={640}
 			height={SPECTROGRAM_HEIGHT}
 			className="h-40 w-full rounded-md border border-[var(--line)] bg-[var(--paper)]"
+			aria-hidden="true"
 		/>
 	);
 }
