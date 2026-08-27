@@ -16,6 +16,7 @@ import { z } from "zod";
 import { BestRecordingCard } from "~/components/best-recording-card.tsx";
 import { ConfidencePill } from "~/components/confidence-pill.tsx";
 import { DetectionsByHourCard } from "~/components/detections-by-hour-card.tsx";
+import { DetectionsByHourRoseCard } from "~/components/detections-by-hour-rose-card.tsx";
 import { DetectionsByMonthCard } from "~/components/detections-by-month-card.tsx";
 import { EmptyNote } from "~/components/empty-state.tsx";
 import {
@@ -363,10 +364,19 @@ function SpeciesDetailView({ detail }: { detail: SpeciesDetail }) {
 					    line up on the right. min-w-0 lets the charts conform to the
 					    left track rather than widen it. */}
 					<div className="grid min-w-0 gap-4 lg:grid-rows-2">
-						<DetectionsByHourCard
-							activity={detail.hourActivity}
-							className="lg:min-h-0"
-						/>
+						{/* The line chart and its radial twin read the same hour series
+						    side by side: one for the exact counts, one for the shape of
+						    the day as a clock-face. They stack on a narrow screen. */}
+						<div className="grid min-w-0 gap-4 sm:grid-cols-2">
+							<DetectionsByHourCard
+								activity={detail.hourActivity}
+								className="lg:min-h-0"
+							/>
+							<DetectionsByHourRoseCard
+								activity={detail.hourActivity}
+								className="lg:min-h-0"
+							/>
+						</div>
 
 						<DetectionsByMonthCard
 							trend={detail.detectionTrend}
