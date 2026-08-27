@@ -21,9 +21,10 @@ const COLUMN_CLASSES: Record<number, string> = {
 };
 
 /**
- * Page masthead: what the page is, and beneath a hairline, the figures that
- * describe whatever it's currently showing. One card rather than a title card
- * over a row of tiles, so the page's own controls stay near the top.
+ * Page masthead: what the page is, on its own card, and beneath a standard gap
+ * the figures that describe whatever it's currently showing -- each its own
+ * little card. A row of separate units rather than a title card stacked over a
+ * divided panel, so the header and every figure read as their own thing.
  */
 export function PageHeaderCard({
 	title,
@@ -38,44 +39,65 @@ export function PageHeaderCard({
 	stats?: PageHeaderStat[];
 	/** A control for the page as a whole, set against the title. */
 	action?: ReactNode;
-	/** Unfolds beneath the figures -- what `action` opens, if anything. */
+	/** Unfolds beneath the title -- what `action` opens, if anything. */
 	children?: ReactNode;
 }) {
 	return (
-		<section aria-label={title} className="feature-card rounded-md p-4">
-			<div className="flex items-start justify-between gap-3">
-				<div className="min-w-0">
-					<h1 className="display-title font-bold text-xl leading-tight">
-						{title}
-					</h1>
-					<p className="mt-1 text-muted-foreground text-sm">{description}</p>
+		<section aria-label={title} className="space-y-4">
+			<div className="feature-card rounded-md p-4">
+				<div className="flex items-start justify-between gap-3">
+					<div className="min-w-0">
+						<h1 className="display-title font-bold text-xl leading-tight">
+							{title}
+						</h1>
+						<p className="mt-1 text-muted-foreground text-sm">{description}</p>
+					</div>
+					{action}
 				</div>
-				{action}
+
+				{children}
 			</div>
 
 			{stats.length > 0 && <PageHeaderStats stats={stats} />}
-			{children}
 		</section>
 	);
 }
 
 /**
- * The masthead's figure row on its own, for cards that build their own heading
- * -- a species portrait, say -- but should still read as the same page header.
+ * The masthead's figure row: each figure its own little card, laid out in the
+ * same responsive grid as the header it sits below. Rendered as a sibling of
+ * the header card, not nested in it -- a row of separate units.
+ *
+ * `inline` keeps the older strip -- borderless figures under a hairline -- for
+ * the one place a figure row still lives *inside* another card (the review
+ * decision card), where turning each figure into its own card would nest cards.
  */
 export function PageHeaderStats({
 	stats,
 	className = "",
+	inline = false,
 }: {
 	stats: PageHeaderStat[];
 	className?: string;
+	/** Render the borderless in-card strip instead of standalone figure cards. */
+	inline?: boolean;
 }) {
 	const columns = COLUMN_CLASSES[Math.min(stats.length, 4)] ?? "lg:grid-cols-4";
 
+	if (inline) {
+		return (
+			<dl
+				className={`mt-4 grid grid-cols-2 gap-4 border-[var(--line)] border-t pt-4 ${columns} ${className}`}
+			>
+				{stats.map((stat) => (
+					<Figure key={stat.label} {...stat} inline />
+				))}
+			</dl>
+		);
+	}
+
 	return (
-		<dl
-			className={`mt-4 grid grid-cols-2 gap-4 border-[var(--line)] border-t pt-4 ${columns} ${className}`}
-		>
+		<dl className={`grid grid-cols-2 gap-4 ${columns} ${className}`}>
 			{stats.map((stat) => (
 				<Figure key={stat.label} {...stat} />
 			))}
@@ -83,9 +105,20 @@ export function PageHeaderStats({
 	);
 }
 
-function Figure({ label, value, icon: Icon }: PageHeaderStat) {
+function Figure({
+	label,
+	value,
+	icon: Icon,
+	inline = false,
+}: PageHeaderStat & { inline?: boolean }) {
 	return (
-		<div className="flex items-center gap-4 overflow-hidden">
+		<div
+			className={
+				inline
+					? "flex items-center gap-4 overflow-hidden"
+					: "feature-card flex items-center gap-4 overflow-hidden rounded-md p-4"
+			}
+		>
 			<div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color-mix(in_oklab,var(--sage)_30%,var(--paper-raised))] text-[var(--moss)]">
 				<Icon aria-hidden="true" className="size-4" />
 			</div>

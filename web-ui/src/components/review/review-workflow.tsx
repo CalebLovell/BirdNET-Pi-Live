@@ -177,7 +177,7 @@ export function ReviewWorkflow({
 					</p>
 				) : null}
 
-				<PageHeaderStats stats={stats} />
+				<PageHeaderStats stats={stats} inline />
 
 				{/* Horizontal, at the foot of the card: the verdict pair reads left to
 				    right, and the two ways out sit apart from them on the right. */}

@@ -1,6 +1,6 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { CircleAlert, Feather, ListChecks } from "lucide-react";
+import { CircleAlert } from "lucide-react";
 import { useState } from "react";
 import { LockedPage } from "~/components/auth/locked-page.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
@@ -97,18 +97,6 @@ function ReviewContent({
 			<PageHeaderCard
 				title={REVIEW_PAGE_TITLE}
 				description={`Species the station has heard fewer than ${page.rareSpeciesMax} times, on recordings BirdNET scored below ${formatConfidence(CONFIDENT_MIN)}.`}
-				stats={[
-					{
-						label: "Recordings to review",
-						value: page.total,
-						icon: ListChecks,
-					},
-					{
-						label: "Species",
-						value: page.speciesTotal,
-						icon: Feather,
-					},
-				]}
 				action={
 					<ReviewQueueSettings
 						rareSpeciesMax={page.rareSpeciesMax}

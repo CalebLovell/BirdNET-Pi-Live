@@ -4,26 +4,16 @@ import {
 	useRouter,
 	useRouterState,
 } from "@tanstack/react-router";
-import { Bird, Headphones, ListChecks } from "lucide-react";
+import { Bird } from "lucide-react";
 import { z } from "zod";
 
 import { EmptyNote, EmptyState } from "~/components/empty-state.tsx";
 import { LearnGame } from "~/components/learn/learn-game.tsx";
-import {
-	LEARN_POOL_ICONS,
-	LearnPoolSelector,
-} from "~/components/learn/learn-layout.tsx";
+import { LearnPoolSelector } from "~/components/learn/learn-layout.tsx";
 import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { getLearnRound } from "~/lib/learn.ts";
-import {
-	LEARN_POOL_LABELS,
-	LEARN_POOLS,
-	type LearnPool,
-} from "~/lib/learn-pools.ts";
-import {
-	CHOICES_PER_QUESTION,
-	QUESTIONS_PER_ROUND,
-} from "~/lib/learn-round.ts";
+import { LEARN_POOLS, type LearnPool } from "~/lib/learn-pools.ts";
+import { CHOICES_PER_QUESTION } from "~/lib/learn-round.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 
 const DEFAULT_POOL: LearnPool = "today";
@@ -58,29 +48,6 @@ function Learn() {
 			<PageHeaderCard
 				title="Learn the calls"
 				description="Ear training on the recordings your own station captured."
-				// The shape of a round is only worth describing when there is one to
-				// play; with nothing recorded these promise a game that cannot start.
-				stats={
-					hasAnyDetections
-						? [
-								{
-									label: "Recordings",
-									value: QUESTIONS_PER_ROUND,
-									icon: Headphones,
-								},
-								{
-									label: "Choices",
-									value: CHOICES_PER_QUESTION,
-									icon: ListChecks,
-								},
-								{
-									label: "Drawing from",
-									value: LEARN_POOL_LABELS[pool],
-									icon: LEARN_POOL_ICONS[pool],
-								},
-							]
-						: []
-				}
 			/>
 
 			{/* Gated on the station, not the pool: an empty pool still needs the

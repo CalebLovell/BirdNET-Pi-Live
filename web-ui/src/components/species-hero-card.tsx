@@ -76,7 +76,7 @@ export function HeroPortrait({
 		// splits it. Sizing the column to the bird instead would move the text's
 		// left edge per species, which the Today hero would jump through on every
 		// poll.
-		<div className="flex h-40 w-full shrink-0 items-center justify-center overflow-hidden sm:h-44">
+		<div className="flex h-32 w-full shrink-0 items-center justify-center overflow-hidden sm:h-36">
 			{imageUrl ? (
 				<img
 					src={imageUrl}
@@ -118,8 +118,9 @@ export function SpeciesHeroCard({
 	clockTime: string;
 	confidence: number | null;
 	audioUrl: string | null;
-	/** The figure row beneath the detection line. Omit it entirely -- as the
-	    Live hero does -- where the page's own cards already carry these counts. */
+	/** The figures, rendered as their own row of little cards below the portrait
+	    card. Omit them entirely -- as the Live hero does -- where the page's own
+	    cards already carry these counts. */
 	stats?: PageHeaderStat[];
 	/** Top-right controls, e.g. the species page's eBird link. */
 	actions?: ReactNode;
@@ -128,7 +129,7 @@ export function SpeciesHeroCard({
 	className?: string;
 	style?: CSSProperties;
 }) {
-	return (
+	const hero = (
 		<HeroCardShell
 			label={label}
 			portrait={<HeroPortrait imageUrl={imageUrl} comName={comName} />}
@@ -172,8 +173,18 @@ export function SpeciesHeroCard({
 					<RecordingButton audioUrl={audioUrl} />
 				</div>
 			</div>
-
-			{stats && stats.length > 0 ? <PageHeaderStats stats={stats} /> : null}
 		</HeroCardShell>
+	);
+
+	// The figures are their own row of little cards below the portrait card, not
+	// a strip inside it -- siblings, so nothing sits card-inside-card. Without
+	// figures the card stands alone and needs no wrapper.
+	if (!stats || stats.length === 0) return hero;
+
+	return (
+		<div className="space-y-4">
+			{hero}
+			<PageHeaderStats stats={stats} />
+		</div>
 	);
 }

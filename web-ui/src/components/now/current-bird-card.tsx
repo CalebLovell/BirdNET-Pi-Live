@@ -92,7 +92,7 @@ function NestPortrait() {
 	return (
 		// Aligned like HeroPortrait, so the empty state sits in the same slot as
 		// the bird it stands in for.
-		<div className="flex h-40 w-full items-center justify-center overflow-hidden sm:h-44">
+		<div className="flex h-32 w-full items-center justify-center overflow-hidden sm:h-36">
 			<img
 				src="/illustrations/nest.webp"
 				alt="An empty nest"
