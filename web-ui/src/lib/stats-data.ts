@@ -83,3 +83,18 @@ export function rankingBarPercent(count: number, maximum: number): number {
 	if (count <= 0 || maximum <= 0) return 0;
 	return Math.max(2, Math.round((count / maximum) * 100));
 }
+
+/**
+ * Collapses per-species hour counts (each a 24-length array, midnight first)
+ * into one detections-by-hour series for a window. Lets any timeline window
+ * feed DetectionsByHourCard, not just the day and all-time views that carry a
+ * ready-made HourActivity.
+ */
+export function hourActivityFromRows(
+	rows: { hourCounts: number[] }[],
+): HourActivity[] {
+	return Array.from({ length: 24 }, (_, hour) => ({
+		hour,
+		count: rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
+	}));
+}

@@ -4,6 +4,7 @@ import type { SpeciesCount } from "./stats-data.ts";
 import {
 	buildHourActivity,
 	buildMonthlyTrend,
+	hourActivityFromRows,
 	rankingBarPercent,
 	selectBusiestHour,
 } from "./stats-data.ts";
@@ -72,4 +73,24 @@ test("a year with nothing on record is twelve zeroes, not an empty series", () =
 
 	assert.equal(result.length, 12);
 	assert.ok(result.every((point) => point.count === 0));
+});
+
+test("hourActivityFromRows sums each hour across rows", () => {
+	const rows = [
+		{ hourCounts: [1, 0, 5, ...Array(21).fill(0)] },
+		{ hourCounts: [2, 0, 3, ...Array(21).fill(0)] },
+	];
+	const activity = hourActivityFromRows(rows);
+
+	assert.equal(activity.length, 24);
+	assert.deepEqual(activity[0], { hour: 0, count: 3 });
+	assert.deepEqual(activity[2], { hour: 2, count: 8 });
+	assert.deepEqual(activity[1], { hour: 1, count: 0 });
+});
+
+test("hourActivityFromRows returns 24 zeros for no rows", () => {
+	const activity = hourActivityFromRows([]);
+	assert.equal(activity.length, 24);
+	assert.ok(activity.every((point) => point.count === 0));
+	assert.deepEqual(activity[23], { hour: 23, count: 0 });
 });
