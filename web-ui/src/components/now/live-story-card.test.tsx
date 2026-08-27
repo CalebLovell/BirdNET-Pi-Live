@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-router";
 import { renderToStaticMarkup } from "react-dom/server";
 
-import { TodaysStoryCard } from "~/components/now/todays-story-card.tsx";
+import { LiveStoryCard } from "~/components/now/live-story-card.tsx";
 import type { StoryLine } from "~/lib/story-data.ts";
 
 // Every bird the story names links to its species page, and <Link> needs a
@@ -20,7 +20,7 @@ async function renderCard(lines: StoryLine[]) {
 	const indexRoute = createRoute({
 		getParentRoute: () => rootRoute,
 		path: "/",
-		component: () => <TodaysStoryCard lines={lines} />,
+		component: () => <LiveStoryCard lines={lines} />,
 	});
 	const router = createRouter({
 		routeTree: rootRoute.addChildren([indexRoute]),
@@ -82,5 +82,5 @@ test("birds past the listed few are counted rather than dropped", async () => {
 
 test("each rule gets its own icon", async () => {
 	assert.match(await renderCard([volumeLine]), /lucide-cloud/);
-	assert.match(await renderCard([speciesLine]), /lucide-search/);
+	assert.match(await renderCard([speciesLine]), /lucide-gem/);
 });

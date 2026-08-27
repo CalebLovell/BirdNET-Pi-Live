@@ -3,9 +3,9 @@ import {
 	Bird,
 	Clock,
 	Cloud,
+	Gem,
 	Home,
 	type LucideIcon,
-	Search,
 	Sprout,
 	TrendingUp,
 	Undo2,
@@ -22,7 +22,7 @@ import type { StoryLine, StoryMention, StoryTone } from "~/lib/story-data.ts";
 const TONE_ICONS: Record<StoryTone, LucideIcon> = {
 	new: Bird,
 	return: Undo2,
-	rare: Search,
+	rare: Gem,
 	routine: Clock,
 	busy: TrendingUp,
 	quiet: Cloud,
@@ -31,14 +31,14 @@ const TONE_ICONS: Record<StoryTone, LucideIcon> = {
 };
 
 /**
- * Today's story: what the last 24 hours were worth saying, if anything.
+ * Live: what the last 24 hours were worth saying, if anything.
  *
  * The lines arrive already gated -- the card's job is only to make them read
  * like observations rather than a readout. Every line that names birds names
  * them as birds, with the illustration and a link through to the species, on
  * the principle that a species is never just a string in a sentence here.
  */
-export function TodaysStoryCard({
+export function LiveStoryCard({
 	lines,
 	className = "",
 }: {
@@ -53,10 +53,10 @@ export function TodaysStoryCard({
 
 	return (
 		<section
-			aria-label="Today's story"
+			aria-label="Live"
 			className={`feature-card rounded-md p-4 ${className}`}
 		>
-			<div className="island-kicker">Today's story</div>
+			<div className="island-kicker">Live</div>
 
 			<ul className="mt-4 space-y-3">
 				{lines.map((line) => (

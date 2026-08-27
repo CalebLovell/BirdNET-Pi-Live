@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { CurrentBirdCard } from "~/components/now/current-bird-card.tsx";
 import { RecentLogCard } from "~/components/now/recent-log-card.tsx";
-import { TodaysStoryCard } from "~/components/now/todays-story-card.tsx";
+import { LiveStoryCard } from "~/components/now/live-story-card.tsx";
 import { SpeciesList } from "~/components/species-list.tsx";
 import { getNowSnapshot } from "~/lib/now.ts";
 import { pageTitle } from "~/lib/page-title.ts";
@@ -89,7 +89,7 @@ function Live() {
 				flash={heroIsNew}
 			/>
 
-			<TodaysStoryCard lines={story} className="mt-4" />
+			<LiveStoryCard lines={story} className="mt-4" />
 
 			{/* `grid-cols-1` rather than a bare `grid`: the implicit track it would
 			    fall back to is sized to max-content, so a long species name in the
