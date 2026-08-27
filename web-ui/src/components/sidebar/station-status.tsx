@@ -1,13 +1,10 @@
-import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import {
-	formatStationTally,
 	getStationStatus,
 	type StationStatus as StationReading,
 } from "~/lib/station.ts";
-import { formatClockTimeWithSeconds, formatTimeAgo } from "~/lib/time-ago.ts";
-import { useAgeOffset } from "~/lib/use-age-offset.ts";
+import { formatClockTimeWithSeconds } from "~/lib/time-ago.ts";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -53,67 +50,21 @@ function useStationStatus(): StationReading | null {
  */
 export function StationStatus() {
 	const reading = useStationStatus();
-	// Ages the server-measured `ageMs` forward between polls, re-basing each time
-	// a fresh reading lands.
-	const offsetMs = useAgeOffset(reading?.generatedAt ?? "");
 
 	return (
-		<section className="px-4 py-3">
-			<h2 className="island-kicker mb-2">Station</h2>
-
+		<section className="flex items-center gap-2 px-4 py-3">
 			<LivePill />
 
-			{/* Fixed-height rows whether or not the reading has landed, so the first
-			    response fills them in rather than shoving the footer down. */}
-			<dl className="mt-2 space-y-1 text-[11px] text-muted-foreground leading-tight">
-				<StatusRow label="Updated">
-					{reading ? (
-						<span className="tabular-data">
-							{formatClockTimeWithSeconds(reading.generatedAt)}
-						</span>
-					) : null}
-				</StatusRow>
-
-				<StatusRow label="Latest">
-					{reading?.latest ? (
-						<Link
-							to="/species/$comName"
-							params={{ comName: reading.latest.speciesSlug }}
-							className="nav-link"
-						>
-							{reading.latest.comName}
-							<span className="tabular-data">
-								{" "}
-								· {formatTimeAgo(reading.latest.ageMs + offsetMs)}
-							</span>
-						</Link>
-					) : null}
-				</StatusRow>
-
-				<StatusRow label="Last 24h">
-					{reading ? (
-						<span className="tabular-data">
-							{formatStationTally(reading.species24h, reading.detections24h)}
-						</span>
-					) : null}
-				</StatusRow>
-			</dl>
+			{/* Fixed-height whether or not the reading has landed, so the first
+			    response fills it in rather than shoving the footer down. */}
+			<span className="min-h-[1.4em] truncate text-[11px] text-muted-foreground leading-tight">
+				{reading ? (
+					<span className="tabular-data">
+						{formatClockTimeWithSeconds(reading.generatedAt)}
+					</span>
+				) : null}
+			</span>
 		</section>
-	);
-}
-
-function StatusRow({
-	label,
-	children,
-}: {
-	label: string;
-	children: React.ReactNode;
-}) {
-	return (
-		<div className="min-h-[1.4em]">
-			<dt className="sr-only">{label}</dt>
-			<dd className="m-0 truncate">{children}</dd>
-		</div>
 	);
 }
 

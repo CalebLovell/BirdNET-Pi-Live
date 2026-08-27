@@ -20,18 +20,12 @@ export function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 
 			<SidebarNav onNavigate={onNavigate} />
 
-			<hr className="mx-4 my-4 border-0 border-[var(--line)] border-t" />
-
-			<StationStatus />
-
 			{/* Pushed to the bottom on a tall viewport, and simply last in the flow
 			    on a short one -- `mt-auto` does both. */}
-			<a
-				href="https://github.com/kahst/BirdNET-Analyzer"
-				className="nav-link mt-auto px-4 pt-4 text-[11px] text-muted-foreground"
-			>
-				Powered by BirdNET
-			</a>
+			<div className="mt-auto">
+				<hr className="mx-4 mb-4 border-0 border-[var(--line)] border-t" />
+				<StationStatus />
+			</div>
 		</div>
 	);
 }

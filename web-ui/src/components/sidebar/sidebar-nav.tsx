@@ -1,12 +1,12 @@
 import { Link, useRouteContext } from "@tanstack/react-router";
 import {
-	Bird,
-	ChartColumn,
+	Activity,
+	CalendarRange,
 	CheckCheck,
-	GraduationCap,
+	Feather,
+	Lightbulb,
 	ListTree,
 	Lock,
-	Radio,
 	Settings,
 	SlidersHorizontal,
 } from "lucide-react";
@@ -38,21 +38,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 
 	return (
 		<div className="flex flex-col gap-4 px-2">
-			{/* Two labelled navs rather than one list: everything anyone can open sits up
-			    top, and the three gated pages sit together at the bottom, so the
-			    lock icons read as one section rather than as scattered exceptions. */}
-			<nav
-				className="flex flex-col gap-0.5"
-				aria-labelledby="sidebar-group-explore"
-			>
-				<p
-					id="sidebar-group-explore"
-					className="island-kicker px-2.5 pb-1 text-[0.62rem]"
-				>
-					Explore
-				</p>
+			{/* Two navs rather than one list: everything anyone can open sits up top,
+			    and the three gated pages sit together below the divider, so the lock
+			    icons read as one section rather than as scattered exceptions. */}
+			<nav className="flex flex-col gap-0.5" aria-label="Explore">
 				<Link to="/live" {...linkProps}>
-					<Radio className="sidebar-icon" aria-hidden="true" />
+					<Activity className="sidebar-icon" aria-hidden="true" />
 					Live
 				</Link>
 				{/* One entry for every scope: a day, a week, a year, all of it. The
@@ -63,11 +54,11 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 					activeOptions={{ includeSearch: false }}
 					{...linkProps}
 				>
-					<ChartColumn className="sidebar-icon" aria-hidden="true" />
+					<CalendarRange className="sidebar-icon" aria-hidden="true" />
 					Timeline
 				</Link>
 				<Link to="/species" {...linkProps}>
-					<Bird className="sidebar-icon" aria-hidden="true" />
+					<Feather className="sidebar-icon" aria-hidden="true" />
 					Species
 				</Link>
 				{/* The search-bearing links keep their defaults and
@@ -88,21 +79,14 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
 					Detections
 				</Link>
 				<Link to="/learn" {...linkProps}>
-					<GraduationCap className="sidebar-icon" aria-hidden="true" />
+					<Lightbulb className="sidebar-icon" aria-hidden="true" />
 					Learn
 				</Link>
 			</nav>
 
-			<nav
-				className="flex flex-col gap-0.5"
-				aria-labelledby="sidebar-group-manage"
-			>
-				<p
-					id="sidebar-group-manage"
-					className="island-kicker px-2.5 pb-1 text-[0.62rem]"
-				>
-					Manage
-				</p>
+			<hr className="mx-2.5 border-0 border-[var(--line)] border-t" />
+
+			<nav className="flex flex-col gap-0.5" aria-label="Manage">
 				<Link
 					to="/review"
 					search={{ limit: 20 }}
