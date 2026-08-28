@@ -126,7 +126,7 @@ export type SpeciesDetailResult =
  * matched nothing, rather than escalating a typo into a claim that the whole
  * station is down. Species Control is the page that reports a broken catalog.
  */
-export async function resolveCatalogSpecies(
+async function resolveCatalogSpecies(
 	slug: string,
 ): Promise<CatalogSpecies | null> {
 	try {
