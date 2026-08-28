@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Bird, Sparkles } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
 import {
@@ -75,6 +76,7 @@ export function SpeciesByHourCard({
 	rows,
 	newLabel = null,
 	emptyMessage,
+	action,
 	className = "",
 }: {
 	rows: SpeciesHourRow[];
@@ -82,6 +84,9 @@ export function SpeciesByHourCard({
 	 * which is what "all time" wants: everything is trivially first heard. */
 	newLabel?: string | null;
 	emptyMessage: string;
+	/** A control set against the card title, top-right -- the view switcher on
+	 * the timeline page. Omitted by callers that show the card on its own. */
+	action?: ReactNode;
 	className?: string;
 }) {
 	const isEmpty = rows.length === 0;
@@ -99,8 +104,11 @@ export function SpeciesByHourCard({
 				aria-label="Species by hour"
 				className={`feature-card rounded-md p-4 ${className}`}
 			>
-				<div className={`island-kicker ${isEmpty ? "" : "mb-4"}`}>
-					Species by hour
+				<div
+					className={`flex items-center justify-between gap-3 ${isEmpty && !action ? "" : "mb-4"}`}
+				>
+					<div className="island-kicker">Species by hour</div>
+					{action}
 				</div>
 
 				{isEmpty ? (

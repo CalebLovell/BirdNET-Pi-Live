@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { Gem, Sparkles, Undo2 } from "lucide-react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { EmptyNote } from "~/components/empty-state.tsx";
 import { SpeciesHourBars } from "~/components/species-hour-bars.tsx";
@@ -68,6 +68,7 @@ export function SpeciesGrid({
 	species,
 	newLabel,
 	emptyMessage,
+	action,
 	className = "",
 }: {
 	species: SpeciesGridItem[];
@@ -75,6 +76,9 @@ export function SpeciesGrid({
 	    which is what "all time" wants: everything is trivially first heard. */
 	newLabel: string | null;
 	emptyMessage: string;
+	/** A control set against the card title, top-right -- the view switcher on
+	    the timeline page. Omitted by callers that show the card on its own. */
+	action?: ReactNode;
 	className?: string;
 }) {
 	return (
@@ -83,8 +87,11 @@ export function SpeciesGrid({
 				aria-label="Species"
 				className={`feature-card rounded-md p-4 ${className}`}
 			>
-				<div className={`island-kicker ${species.length === 0 ? "" : "mb-4"}`}>
-					Species
+				<div
+					className={`flex items-center justify-between gap-3 ${species.length === 0 && !action ? "" : "mb-4"}`}
+				>
+					<div className="island-kicker">Species</div>
+					{action}
 				</div>
 
 				{species.length === 0 ? (

@@ -4,6 +4,7 @@ import {
 	ChartNoAxesColumnIncreasing,
 	Clock3,
 	Feather,
+	LayoutGrid,
 } from "lucide-react";
 import { z } from "zod";
 import { EmptyState } from "~/components/empty-state.tsx";
@@ -32,19 +33,32 @@ import {
 	type TimelinePageData,
 } from "~/lib/timeline-page.ts";
 import {
+	TIMELINE_PERIOD_LABELS,
 	TIMELINE_PERIODS,
 	type TimelinePeriod,
 } from "~/lib/timeline-periods.ts";
 import { formatTimelineShareCard } from "~/lib/timeline-share.ts";
 import { currentAnchor, isValidAnchor } from "~/lib/timeline-window.ts";
+import { cn } from "~/lib/utils.ts";
 
 const DEFAULT_PERIOD: TimelinePeriod = "day";
+
+/**
+ * Which body to draw for the window: the species x hour heat map, or the grid
+ * of everything heard. Only one shows at a time; the other is a click away on
+ * the view toggle. Lives in the URL alongside period and date so a link carries
+ * the whole view, not just the window.
+ */
+const TIMELINE_VIEWS = ["hours", "grid"] as const;
+type TimelineView = (typeof TIMELINE_VIEWS)[number];
+const DEFAULT_VIEW: TimelineView = "hours";
 
 const timelineSearchSchema = z.object({
 	period: z
 		.enum(TIMELINE_PERIODS)
 		.default(DEFAULT_PERIOD)
 		.catch(DEFAULT_PERIOD),
+	view: z.enum(TIMELINE_VIEWS).default(DEFAULT_VIEW).catch(DEFAULT_VIEW),
 	/**
 	 * Which window of the period to show, in that period's own notation (see
 	 * TimelineAnchor). Absent means the one containing today, so a bare
@@ -78,7 +92,9 @@ export const Route = createFileRoute("/timeline")({
 	head: () => ({ meta: [{ title: pageTitle("Timeline") }] }),
 	validateSearch: timelineSearchSchema,
 	search: {
-		middlewares: [stripSearchParams({ period: DEFAULT_PERIOD })],
+		middlewares: [
+			stripSearchParams({ period: DEFAULT_PERIOD, view: DEFAULT_VIEW }),
+		],
 	},
 	loaderDeps: ({ search }) => ({
 		period: search.period,
@@ -90,15 +106,30 @@ export const Route = createFileRoute("/timeline")({
 
 const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
 
+/**
+ * The day masthead drops the weekday the shared window label carries -- the
+ * "Daily" eyebrow above it already says what kind of window this is, so
+ * "Thu, " only crowds the date. UTC to match every other timeline label.
+ */
+const DAY_TITLE = new Intl.DateTimeFormat("en-US", {
+	month: "short",
+	day: "numeric",
+	year: "numeric",
+	timeZone: "UTC",
+});
+
 function Timeline() {
 	const data = Route.useLoaderData();
 	const search = Route.useSearch();
-	const { period } = search;
+	const { period, view } = search;
 	const anchor = resolveAnchor(period, search.date);
 	const navigate = Route.useNavigate();
 
-	const show = (next: { period?: TimelinePeriod; date?: string }) =>
-		navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
+	const show = (next: {
+		period?: TimelinePeriod;
+		date?: string;
+		view?: TimelineView;
+	}) => navigate({ search: (prev) => ({ ...prev, ...next }), replace: true });
 
 	// A date the station could never have recorded is the one case with nothing
 	// to say at all -- no figures, no window, no grid -- so it replaces the page
@@ -110,22 +141,13 @@ function Timeline() {
 	return (
 		<TooltipProvider>
 			<div className="page-wrap space-y-4 py-4">
-				<TimelineHeader data={data} period={period} anchor={anchor} />
-
-				{/* Gated on the station rather than the window: an empty week still
-				    needs the switcher to reach a window that has something in it. */}
-				{data.hasAnyDetections && (
-					<PeriodToolbar
-						period={period}
-						anchor={anchor}
-						window={data.window}
-						prevAnchor={data.prevAnchor}
-						nextAnchor={data.nextAnchor}
-						lastActiveDay={data.lastActiveDay}
-						stationRange={data.stationRange}
-						onChange={show}
-					/>
-				)}
+				<TimelineHeader
+					data={data}
+					period={period}
+					anchor={anchor}
+					view={view}
+					onChange={show}
+				/>
 
 				{/* A station with nothing recorded has no window picker and no
 				    figures, so every card below would be an empty shell with one
@@ -135,6 +157,8 @@ function Timeline() {
 					<TimelineCards
 						rows={data.body.rows}
 						windowLabel={data.window?.label ?? null}
+						view={view}
+						onViewChange={(next) => show({ view: next })}
 					/>
 				) : (
 					<EmptyState icon={Bird} title="No detections recorded yet.">
@@ -148,19 +172,23 @@ function Timeline() {
 }
 
 /**
- * One masthead for every period. The title never changes; the sentence under
- * it and the figures beside it are what say which window you are looking
- * through, which is why the four pages this replaced no longer need four
- * different headings.
+ * The masthead for every period: the standard page header, with the selected
+ * window as the title, the granularity named beneath it, and the share control
+ * set against the title -- over the figures that say what the page is showing
+ * about that window.
  */
 function TimelineHeader({
 	data,
 	period,
 	anchor,
+	view,
+	onChange,
 }: {
 	data: TimelinePageData;
 	period: TimelinePeriod;
 	anchor: string;
+	view: TimelineView;
+	onChange: (next: { period?: TimelinePeriod; date?: string }) => void;
 }) {
 	const rows = data.body.kind === "rows" ? data.body.rows : [];
 
@@ -178,24 +206,55 @@ function TimelineHeader({
 
 	return (
 		<PageHeaderCard
-			title="Timeline"
-			description={describe(data, period)}
+			title={headerTitle(data, period, anchor)}
+			description={VIEW_META[view].description}
 			stats={windowStats(rows)}
 			action={data.hasAnyDetections ? share.trigger : undefined}
+			// Between the title and the figures, so the window it picks reads as
+			// steering the figures beneath it. Gated on the station rather than the
+			// window: an empty week still needs the switcher to reach a window with
+			// something in it.
+			afterHeader={
+				data.hasAnyDetections ? (
+					<PeriodToolbar
+						period={period}
+						anchor={anchor}
+						window={data.window}
+						prevAnchor={data.prevAnchor}
+						nextAnchor={data.nextAnchor}
+						lastActiveDay={data.lastActiveDay}
+						stationRange={data.stationRange}
+						onChange={onChange}
+					/>
+				) : undefined
+			}
 		>
 			{share.summary}
 		</PageHeaderCard>
 	);
 }
 
-/** The sentence that says which window the figures below belong to. */
-function describe(data: TimelinePageData, period: TimelinePeriod): string {
-	if (period === "all") {
-		return "Every detection this station has recorded, and what stands out in it.";
-	}
-	return data.window
-		? `${data.window.label} — when each species was active, hour by hour.`
-		: "When each species is active across the day, hour by hour.";
+/**
+ * The page's title: the scope, then the window -- "Daily — Aug 26, 2026". "all"
+ * has no window to name, so it stops at the scope ("All Time"); every other
+ * period appends the window label the picker moves through.
+ *
+ * The week label carries its own range dash (an en dash). Stepped down here to a
+ * hyphen so it reads as subordinate to the em dash that splits scope from
+ * window, rather than a second separator of the same weight sitting beside it.
+ */
+function headerTitle(
+	data: TimelinePageData,
+	period: TimelinePeriod,
+	anchor: string,
+): string {
+	const scope = TIMELINE_PERIOD_LABELS[period];
+	if (period === "all") return scope;
+	const window =
+		period === "day"
+			? DAY_TITLE.format(new Date(`${anchor}T00:00:00Z`))
+			: (data.window?.label ?? anchor);
+	return `${scope} — ${window.replace(/–/g, "-")}`;
 }
 
 /**
@@ -254,16 +313,21 @@ function windowStats(rows: TimelineRow[]): PageHeaderStat[] {
 }
 
 /**
- * The one body every period now shows: when each species was active across the
- * day, the shape of the whole window's activity by hour, and the grid of
- * everything heard in it.
+ * The window's body, one view at a time: either when each species was active
+ * across the window's hours, or the grid of everything heard in it. The toggle
+ * above swaps between them -- the same rows, drawn two ways, so only the one
+ * you asked for takes up the page.
  */
 function TimelineCards({
 	rows,
 	windowLabel,
+	view,
+	onViewChange,
 }: {
 	rows: TimelineRow[];
 	windowLabel: string | null;
+	view: TimelineView;
+	onViewChange: (next: TimelineView) => void;
 }) {
 	const emptyMessage = windowLabel
 		? `No detections recorded for ${windowLabel}.`
@@ -282,19 +346,94 @@ function TimelineCards({
 		hourCounts: row.hourCounts,
 	}));
 
+	const toggle = <ViewToggle view={view} onViewChange={onViewChange} />;
+
+	return view === "hours" ? (
+		<SpeciesByHourCard
+			rows={rows}
+			newLabel={windowLabel}
+			emptyMessage={emptyMessage}
+			action={toggle}
+		/>
+	) : (
+		<SpeciesGrid
+			species={gridItems}
+			newLabel={windowLabel}
+			emptyMessage={emptyMessage}
+			action={toggle}
+		/>
+	);
+}
+
+const VIEW_META: Record<
+	TimelineView,
+	{
+		label: string;
+		icon: React.ComponentType<{ className?: string }>;
+		/** The masthead subtitle when this view is showing -- says what the body
+		 * below draws, since the scope has moved up into the title. */
+		description: string;
+	}
+> = {
+	hours: {
+		label: "By-hour heat map",
+		icon: Clock3,
+		description: "When each species was heard, hour by hour",
+	},
+	grid: {
+		label: "Grid",
+		icon: LayoutGrid,
+		description: "Every species heard — how often, and how sure",
+	},
+};
+
+/**
+ * Picks which body the window draws -- set against the card's title, top-right.
+ * A pair of icon buttons sized to the kicker beside them, not the page's chunky
+ * segmented control: the active one takes the card's own sage wash rather than a
+ * moss fill, so the switch reads as part of the card's furniture, not a toolbar
+ * dropped into its corner. The glyphs carry the labels (tooltip + a11y name).
+ */
+function ViewToggle({
+	view,
+	onViewChange,
+}: {
+	view: TimelineView;
+	onViewChange: (next: TimelineView) => void;
+}) {
 	return (
-		<>
-			<SpeciesByHourCard
-				rows={rows}
-				newLabel={windowLabel}
-				emptyMessage={emptyMessage}
-			/>
-			<SpeciesGrid
-				species={gridItems}
-				newLabel={windowLabel}
-				emptyMessage={emptyMessage}
-			/>
-		</>
+		<div className="inline-flex shrink-0 items-center gap-0.5 rounded-md border border-[var(--line)] bg-card p-0.5">
+			{TIMELINE_VIEWS.map((value) => {
+				const { label, icon: Icon } = VIEW_META[value];
+				const active = value === view;
+				return (
+					<button
+						key={value}
+						type="button"
+						aria-pressed={active}
+						aria-label={label}
+						title={label}
+						onClick={() => !active && onViewChange(value)}
+						className={cn(
+							"flex size-6 items-center justify-center rounded-sm transition-colors",
+							active
+								? "text-[var(--moss)]"
+								: "text-muted-foreground hover:bg-[var(--meadow)] hover:text-foreground",
+						)}
+						style={
+							active
+								? {
+										backgroundColor:
+											"color-mix(in oklab, var(--sage) 45%, var(--paper-raised))",
+									}
+								: undefined
+						}
+					>
+						<Icon className="size-3.5" />
+					</button>
+				);
+			})}
+		</div>
 	);
 }
 

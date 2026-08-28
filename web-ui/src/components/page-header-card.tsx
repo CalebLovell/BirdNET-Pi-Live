@@ -31,6 +31,7 @@ export function PageHeaderCard({
 	description,
 	stats = [],
 	action,
+	afterHeader,
 	children,
 }: {
 	title: string;
@@ -39,6 +40,10 @@ export function PageHeaderCard({
 	stats?: PageHeaderStat[];
 	/** A control for the page as a whole, set against the title. */
 	action?: ReactNode;
+	/** Sits between the title card and the figures -- a control the whole
+	 * masthead answers to, like the timeline's period/date toolbar, which reads
+	 * as steering the figures below it. */
+	afterHeader?: ReactNode;
 	/** Unfolds beneath the title -- what `action` opens, if anything. */
 	children?: ReactNode;
 }) {
@@ -57,6 +62,8 @@ export function PageHeaderCard({
 
 				{children}
 			</div>
+
+			{afterHeader}
 
 			{stats.length > 0 && <PageHeaderStats stats={stats} />}
 		</section>
