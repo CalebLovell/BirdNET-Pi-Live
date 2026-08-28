@@ -1,17 +1,8 @@
 import { createFileRoute, stripSearchParams } from "@tanstack/react-router";
-import {
-	Bird,
-	ChartNoAxesColumnIncreasing,
-	Clock3,
-	Feather,
-	LayoutGrid,
-} from "lucide-react";
+import { Bird, Clock3, LayoutGrid } from "lucide-react";
 import { z } from "zod";
 import { EmptyState } from "~/components/empty-state.tsx";
-import {
-	PageHeaderCard,
-	type PageHeaderStat,
-} from "~/components/page-header-card.tsx";
+import { PageHeaderCard } from "~/components/page-header-card.tsx";
 import { SpeciesByHourCard } from "~/components/species-by-hour-card.tsx";
 import {
 	SpeciesGrid,
@@ -25,7 +16,6 @@ import { getDayShareCard } from "~/lib/day-share.ts";
 import { formatDayTitle } from "~/lib/day-title.ts";
 import { pageTitle } from "~/lib/page-title.ts";
 import { formatShareCard } from "~/lib/share-card.ts";
-import { hourLabel } from "~/lib/time-ago.ts";
 import type { TimelineRow } from "~/lib/timeline.ts";
 import {
 	type DayOutOfRange,
@@ -104,8 +94,6 @@ export const Route = createFileRoute("/timeline")({
 	component: Timeline,
 });
 
-const HOURS = Array.from({ length: 24 }, (_, hour) => hour);
-
 /**
  * The day masthead drops the weekday the shared window label carries -- the
  * "Daily" eyebrow above it already says what kind of window this is, so
@@ -145,7 +133,6 @@ function Timeline() {
 					data={data}
 					period={period}
 					anchor={anchor}
-					view={view}
 					onChange={show}
 				/>
 
@@ -174,20 +161,18 @@ function Timeline() {
 /**
  * The masthead for every period: the standard page header, with the selected
  * window as the title, the granularity named beneath it, and the share control
- * set against the title -- over the figures that say what the page is showing
- * about that window.
+ * set against the title. The window's figures no longer live here -- they ride
+ * the body card's kicker (see WindowSummary), against the species they count.
  */
 function TimelineHeader({
 	data,
 	period,
 	anchor,
-	view,
 	onChange,
 }: {
 	data: TimelinePageData;
 	period: TimelinePeriod;
 	anchor: string;
-	view: TimelineView;
 	onChange: (next: { period?: TimelinePeriod; date?: string }) => void;
 }) {
 	const rows = data.body.kind === "rows" ? data.body.rows : [];
@@ -207,13 +192,12 @@ function TimelineHeader({
 	return (
 		<PageHeaderCard
 			title={headerTitle(data, period, anchor)}
-			description={VIEW_META[view].description}
-			stats={windowStats(rows)}
+			description={TIMELINE_DESCRIPTION}
 			action={data.hasAnyDetections ? share.trigger : undefined}
-			// Between the title and the figures, so the window it picks reads as
-			// steering the figures beneath it. Gated on the station rather than the
-			// window: an empty week still needs the switcher to reach a window with
-			// something in it.
+			// Between the title and the body card, so the window it picks reads as
+			// steering the figures and body beneath it. Gated on the station rather
+			// than the window: an empty week still needs the switcher to reach a
+			// window with something in it.
 			afterHeader={
 				data.hasAnyDetections ? (
 					<PeriodToolbar
@@ -258,58 +242,40 @@ function headerTitle(
 }
 
 /**
- * Every figure is derived from the already period-scoped rows, so the header
- * moves with the period toggle without a second round trip.
+ * The window's headline figures -- how many detections, across how many species
+ * -- set beside the body card's kicker. This replaces the old four-figure
+ * masthead row: the two numbers worth keeping now ride the card that actually
+ * shows those species and their counts, so they read against the data rather
+ * than floating above it. Both bodies (heat map and grid) get the same node, so
+ * the view toggle never drops it. Derived from the already period-scoped rows,
+ * so it moves with the period toggle without a second round trip.
  */
-function windowStats(rows: TimelineRow[]): PageHeaderStat[] {
-	// An empty window keeps all four figures as em dashes rather than dropping
-	// the row. Collapsing the masthead would shift the switcher and the picker
-	// up the page underneath the cursor, mid-click, exactly when stepping into a
-	// quiet window makes you most likely to click again.
-	if (rows.length === 0) {
-		return [
-			{ label: "Detections", value: "—", icon: ChartNoAxesColumnIncreasing },
-			{ label: "Species", value: "—", icon: Feather },
-			{ label: "Busiest hour", value: "—", icon: Clock3 },
-			{ label: "Most active", value: "—", icon: Bird },
-		];
-	}
-
+function WindowSummary({ rows }: { rows: TimelineRow[] }) {
 	const detections = rows.reduce((sum, row) => sum + row.totalDetections, 0);
 
-	const hourTotals = HOURS.map((hour) =>
-		rows.reduce((sum, row) => sum + (row.hourCounts[hour] ?? 0), 0),
+	return (
+		<div className="flex min-w-0 items-center gap-2.5">
+			<span className="h-4 w-px shrink-0 bg-[var(--line)]" aria-hidden="true" />
+			<div className="flex items-center gap-2 truncate text-[13px] text-muted-foreground">
+				<span className="whitespace-nowrap">
+					<span className="tabular-data font-bold text-foreground">
+						{detections.toLocaleString()}
+					</span>{" "}
+					detections
+				</span>
+				<span
+					className="size-[3px] shrink-0 rounded-full bg-muted-foreground opacity-60"
+					aria-hidden="true"
+				/>
+				<span className="whitespace-nowrap">
+					<span className="tabular-data font-bold text-foreground">
+						{rows.length.toLocaleString()}
+					</span>{" "}
+					species
+				</span>
+			</div>
+		</div>
 	);
-	const peakHour = hourTotals.reduce(
-		(best, count, hour) => (count > hourTotals[best] ? hour : best),
-		0,
-	);
-	const hasPeak = hourTotals[peakHour] > 0;
-
-	const topRow = rows.reduce<TimelineRow | null>(
-		(best, row) =>
-			best && best.totalDetections >= row.totalDetections ? best : row,
-		null,
-	);
-
-	return [
-		{
-			label: "Detections",
-			value: detections,
-			icon: ChartNoAxesColumnIncreasing,
-		},
-		{ label: "Species", value: rows.length, icon: Feather },
-		{
-			label: "Busiest hour",
-			value: hasPeak ? hourLabel(peakHour) : "—",
-			icon: Clock3,
-		},
-		{
-			label: "Most active",
-			value: topRow ? topRow.comName : "—",
-			icon: Bird,
-		},
-	];
 }
 
 /**
@@ -348,11 +314,16 @@ function TimelineCards({
 
 	const toggle = <ViewToggle view={view} onViewChange={onViewChange} />;
 
+	// A quiet window (no rows) shows the empty card without a "0 detections · 0
+	// species" line reading back the emptiness the card already states.
+	const summary = rows.length > 0 ? <WindowSummary rows={rows} /> : undefined;
+
 	return view === "hours" ? (
 		<SpeciesByHourCard
 			rows={rows}
 			newLabel={windowLabel}
 			emptyMessage={emptyMessage}
+			summary={summary}
 			action={toggle}
 		/>
 	) : (
@@ -360,30 +331,35 @@ function TimelineCards({
 			species={gridItems}
 			newLabel={windowLabel}
 			emptyMessage={emptyMessage}
+			summary={summary}
 			action={toggle}
 		/>
 	);
 }
+
+/**
+ * The masthead subtitle -- one line for every period and both bodies. The view
+ * toggle and the bodies themselves show *how* the detections are drawn, so the
+ * subtitle stays fixed and just says what the page is: every detection, grouped
+ * by species, across whatever window the toolbar has selected.
+ */
+const TIMELINE_DESCRIPTION =
+	"Every detection, by species, over the selected time period";
 
 const VIEW_META: Record<
 	TimelineView,
 	{
 		label: string;
 		icon: React.ComponentType<{ className?: string }>;
-		/** The masthead subtitle when this view is showing -- says what the body
-		 * below draws, since the scope has moved up into the title. */
-		description: string;
 	}
 > = {
 	hours: {
 		label: "By-hour heat map",
 		icon: Clock3,
-		description: "When each species was heard, hour by hour",
 	},
 	grid: {
 		label: "Grid",
 		icon: LayoutGrid,
-		description: "Every species heard — how often, and how sure",
 	},
 };
 

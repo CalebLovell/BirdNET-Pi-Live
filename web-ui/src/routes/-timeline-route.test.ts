@@ -24,9 +24,10 @@ test("one loader serves every period", async () => {
 	assert.match(source, /period: z\s*\n?\s*\.enum\(TIMELINE_PERIODS\)/);
 	assert.match(source, /date: z\.coerce\.string\(\)\.optional\(\)/);
 	// Daily is the default: a bare /timeline shows today, and the middleware
-	// strips the param so only non-default periods carry ?period=.
+	// strips the param so only non-default periods carry ?period= (alongside any
+	// other defaulted params, like the view, that ride the same call).
 	assert.match(source, /const DEFAULT_PERIOD: TimelinePeriod = "day"/);
-	assert.match(source, /stripSearchParams\(\{ period: DEFAULT_PERIOD \}\)/);
+	assert.match(source, /stripSearchParams\(\{ period: DEFAULT_PERIOD[,}]/);
 });
 
 test("every period draws the same body", async () => {

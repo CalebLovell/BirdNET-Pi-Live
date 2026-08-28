@@ -76,6 +76,7 @@ export function SpeciesByHourCard({
 	rows,
 	newLabel = null,
 	emptyMessage,
+	summary,
 	action,
 	className = "",
 }: {
@@ -84,6 +85,10 @@ export function SpeciesByHourCard({
 	 * which is what "all time" wants: everything is trivially first heard. */
 	newLabel?: string | null;
 	emptyMessage: string;
+	/** The window's headline figures, set beside the kicker -- the timeline
+	 * page's detections/species readout. Omitted by callers that show the card
+	 * on its own. */
+	summary?: ReactNode;
 	/** A control set against the card title, top-right -- the view switcher on
 	 * the timeline page. Omitted by callers that show the card on its own. */
 	action?: ReactNode;
@@ -107,7 +112,15 @@ export function SpeciesByHourCard({
 				<div
 					className={`flex items-center justify-between gap-3 ${isEmpty && !action ? "" : "mb-4"}`}
 				>
-					<div className="island-kicker">Species by hour</div>
+					{/* "Activity" -- identical to the grid view's kicker -- so the summary
+					    beside it sits at the same x in both bodies and doesn't jump when
+					    the view toggle swaps one card for the other. Not "Species": the
+					    summary already says "N species" right beside it. The masthead
+					    subtitle carries the by-hour vs. how-often distinction. */}
+					<div className="flex min-w-0 items-center gap-3">
+						<div className="island-kicker shrink-0">Activity</div>
+						{summary}
+					</div>
 					{action}
 				</div>
 
@@ -121,18 +134,11 @@ export function SpeciesByHourCard({
 						    heatmap gives way and scrolls rather than the names collapsing.
 						    p-1/-m-1 give the row links' focus ring room against the edge. */}
 						<div className="-m-1 min-w-0 flex-1 p-1">
-							<div
-								// gap-6 matches the bar rows, so the "Detections" caption
-								// sits over the bar column's left edge rather than shy of it.
-								className={`grid items-end gap-6 ${HEADER_HEIGHT}`}
-								style={{ gridTemplateColumns: LABEL_GRID_COLUMNS }}
-							>
-								<span />
-								<span className="text-[10px] text-muted-foreground">
-									Detections
-								</span>
-								<span />
-							</div>
+							{/* An empty spacer the height of the heatmap's hour-tick header,
+							    so the first bar row lines up with the first heatmap row. The
+							    "Detections" caption that sat here is gone -- the card's
+							    summary already names the detection count. */}
+							<div className={HEADER_HEIGHT} />
 
 							{rows.map((row) => (
 								<BarRow

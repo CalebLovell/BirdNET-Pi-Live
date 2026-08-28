@@ -81,22 +81,6 @@ export function PeriodToolbar({
 }) {
 	return (
 		<div className="flex flex-wrap items-center justify-between gap-3">
-			{/* Date picker on the left. "all" has no window to pick, so an empty slot
-			    holds the left edge and keeps the period switcher pinned right rather
-			    than letting it slide over. */}
-			{period !== "all" ? (
-				<WindowPicker
-					period={period}
-					anchor={anchor}
-					stationRange={stationRange}
-					prevAnchor={prevAnchor}
-					nextAnchor={nextAnchor}
-					onPick={(date) => onChange({ date })}
-				/>
-			) : (
-				<div />
-			)}
-
 			{/* Five joined segments are wider than a phone, and a segmented control
 			    cannot wrap without breaking its own shape -- so on a narrow screen
 			    the row scrolls instead, the same way the site nav above it does. The
@@ -135,6 +119,22 @@ export function PeriodToolbar({
 					})}
 				</ToggleGroup>
 			</div>
+
+			{/* Date picker on the right. "all" has no window to pick, so an empty slot
+			    holds the right edge and keeps the period switcher pinned left rather
+			    than letting it slide over. */}
+			{period !== "all" ? (
+				<WindowPicker
+					period={period}
+					anchor={anchor}
+					stationRange={stationRange}
+					prevAnchor={prevAnchor}
+					nextAnchor={nextAnchor}
+					onPick={(date) => onChange({ date })}
+				/>
+			) : (
+				<div />
+			)}
 		</div>
 	);
 }

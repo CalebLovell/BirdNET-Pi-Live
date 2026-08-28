@@ -68,6 +68,7 @@ export function SpeciesGrid({
 	species,
 	newLabel,
 	emptyMessage,
+	summary,
 	action,
 	className = "",
 }: {
@@ -76,6 +77,10 @@ export function SpeciesGrid({
 	    which is what "all time" wants: everything is trivially first heard. */
 	newLabel: string | null;
 	emptyMessage: string;
+	/** The window's headline figures, set beside the kicker -- the timeline
+	    page's detections/species readout, kept on both bodies so the view toggle
+	    doesn't drop it. Omitted by callers that show the card on its own. */
+	summary?: ReactNode;
 	/** A control set against the card title, top-right -- the view switcher on
 	    the timeline page. Omitted by callers that show the card on its own. */
 	action?: ReactNode;
@@ -90,7 +95,13 @@ export function SpeciesGrid({
 				<div
 					className={`flex items-center justify-between gap-3 ${species.length === 0 && !action ? "" : "mb-4"}`}
 				>
-					<div className="island-kicker">Species</div>
+					{/* "Activity" -- identical to the heat-map view's kicker -- so the
+					    summary beside it stays put when the view toggle swaps the cards.
+					    Not "Species": the summary already says "N species" beside it. */}
+					<div className="flex min-w-0 items-center gap-3">
+						<div className="island-kicker shrink-0">Activity</div>
+						{summary}
+					</div>
 					{action}
 				</div>
 

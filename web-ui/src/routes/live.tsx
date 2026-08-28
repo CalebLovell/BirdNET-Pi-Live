@@ -85,7 +85,6 @@ function Live() {
 		<div className="page-wrap py-4">
 			<CurrentBirdCard
 				current={snapshot.current}
-				summary={snapshot.summary}
 				offsetMs={offsetMs}
 				flash={heroIsNew}
 			/>

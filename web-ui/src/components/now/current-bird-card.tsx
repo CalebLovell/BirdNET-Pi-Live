@@ -5,10 +5,7 @@ import {
 	HeroCardShell,
 	SpeciesHeroCard,
 } from "~/components/species-hero-card.tsx";
-import { useShareCard } from "~/components/use-share-card.tsx";
-import type { CurrentBird, NowSummary } from "~/lib/now.ts";
-import { formatShareCard } from "~/lib/share-card.ts";
-import { getShareCard } from "~/lib/share-card-data.ts";
+import type { CurrentBird } from "~/lib/now.ts";
 import { formatClockTime, formatTimeAgo } from "~/lib/time-ago.ts";
 
 /**
@@ -22,23 +19,13 @@ import { formatClockTime, formatTimeAgo } from "~/lib/time-ago.ts";
  */
 export function CurrentBirdCard({
 	current,
-	summary,
 	offsetMs,
 	flash,
 }: {
 	current: CurrentBird | null;
-	summary: NowSummary;
 	offsetMs: number;
 	flash: boolean;
 }) {
-	// The share control belongs to the card holding the figures it summarises,
-	// not to a button standing on its own beneath it. Nothing in the window means
-	// the card it would produce would be empty, so the control goes with it.
-	const share = useShareCard({
-		load: () => getShareCard().then(formatShareCard),
-	});
-	const canShare = summary.detections > 0;
-
 	// The only state worth distinguishing: a station whose database is still
 	// empty, where there is no detection to render a card from at all.
 	if (!current) {
@@ -67,8 +54,6 @@ export function CurrentBirdCard({
 	return (
 		<SpeciesHeroCard
 			label="Last 24 hours"
-			actions={canShare ? share.trigger : undefined}
-			footer={canShare ? share.summary : undefined}
 			comName={current.comName}
 			sciName={current.sciName}
 			speciesSlug={current.speciesSlug}
